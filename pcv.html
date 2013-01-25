@@ -1,0 +1,27 @@
+<html>
+
+  <head>
+    <link rel="stylesheet" type="text/css" href="demos/style.css" />
+    <script src="xbps.js"></script>
+    <script src="libs/camera.js"></script>
+    <script src="parsers/ply.js"></script>
+    <script src="pcv.js"></script>
+  </head>
+
+  <body onLoad="start();" bgcolor="#222222">   
+    <canvas id="canvas" width="600" height="600"></canvas>
+	<canvas id="canvas2" width="300" height="300"></canvas>
+	<div>
+	<span>leaf_on.ply:</span> <input type="checkbox" id="pc2" checked="checked"/>
+	<span>leaf_off.ply:</span> <input type="checkbox" id="pc1" checked="checked"/> 
+	[WASD/mouse to move/rotate; ZX/wheel to zoom; V to cycle through camera modes]
+	<br />
+	<input type="radio" name="camera" checked="checked" onclick="viewRadioButton(0);"> Orbit Camera
+	<input type="radio" name="camera" onclick="viewRadioButton(1);"> Free Form Camera
+	<input type="radio" name="camera" onclick="viewRadioButton(2);"> Ground Camera
+	<input type="radio" name="camera" onclick="viewRadioButton(3);"> Hover Camera
+	<input type="radio" name="camera" onclick="viewRadioButton(4);"> Map Camera
+	</div>
+  </body>
+
+</html>
