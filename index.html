@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <!--<link rel="stylesheet" type="text/css" href="demos/style.css" />-->
+    <link rel="stylesheet" type="text/css" href="Viewer.css" />
+    <script type="text/javascript" src="asset/js/html5slider.js"></script> <!-- Firefox doesn't support sliders yet. This is a temporary fix -->
+    <script src="asset/jquery-1.9.0.js"></script>
+    <script src="updateScalebar.js"></script>
+    <script src="xbps.js"></script>
+    <script src="libs/orbitcam.js"></script>
+    <script src="parsers/ply.js"></script>
+    <script src="andor.js"></script>
+
+  </head>
+
+  <body onLoad="start();" bgcolor="#222222">
+    <!--</br>-->
+    <canvas id="canvas" width="500" height="500" >
+        <!--<Rectangle Fill="#0099FF" Width="100" Height="80" canvas.Top="0" canvas.Left="0" canvas.zindex="99" />-->
+    </canvas><br />
+    <span>Invert scroll wheel:</span> <input type="checkbox" id="invertScroll" /><br />
+  
+  <span>choose files to load</span> </br>
+  <label for="multipleselect"> </label>
+  <select id="objsel" size =5 multiple="multiple" name="multipleaselect">
+    <option value="1">spring
+    <option value="2">leaf_on
+    <option value="3">leaf_off
+    <option value="4">lidar
+    <option value="5">senesce 
+      </br>
+  </select>
+  <input type="button" onclick="checkselect('objsel')" value="load:">
+  <input type="text" id="output">
+<!--   <input type="text" id="output" onchange="loadfile()"> -->
+  </br>
+  <a id="ecosynth" href="http://ecosynth.org/">
+    <span>This is a web application for ecosynth.org</span>
+  </a>
+  
+  </body>
+
+</html>
