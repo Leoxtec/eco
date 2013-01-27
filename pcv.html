@@ -1,7 +1,6 @@
 <html>
 
   <head>
-    <link rel="stylesheet" type="text/css" href="demos/style.css" />
     <script src="xbps.js"></script>
     <script src="libs/camera.js"></script>
     <script src="parsers/ply.js"></script>
@@ -10,10 +9,12 @@
 
   <body onLoad="start();" bgcolor="#222222">   
     <canvas id="canvas" width="600" height="600"></canvas>
-	<canvas id="canvas2" width="300" height="300"></canvas>
+	<canvas id="canvas2" width="250" height="250"></canvas>
+	<canvas id="canvas3" width="250" height="250"></canvas>
 	<div>
 	<span>leaf_on.ply:</span> <input type="checkbox" id="pc2" checked="checked"/>
-	<span>leaf_off.ply:</span> <input type="checkbox" id="pc1" checked="checked"/> 
+	<span>leaf_off.ply:</span> <input type="checkbox" id="pc1" checked="checked"/>
+	<span>attentuation:</span> <input type="checkbox" id="atten"/>
 	[WASD/mouse to move/rotate; ZX/wheel to zoom; V to cycle through camera modes]
 	<br />
 	<input type="radio" name="camera" checked="checked" onclick="viewRadioButton(0);"> Orbit Camera

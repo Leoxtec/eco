@@ -40,6 +40,7 @@ var PointStream = (function() {
 	var eastMiddleVBO;
 	var eastTopVBO;
 	var upwardVBO;
+	var arrowVBO;
     
     // Mouse
     var userMouseReleased = __empty_func;
@@ -79,7 +80,7 @@ var PointStream = (function() {
     
     // default rendering states
     var bk = [1, 1, 1, 1];
-    //var attn = [0.01, 0.0, 0.003];
+    var attn = [0.01, 0.0, 0.003];
     
     // tinylogLite
     var logBuffer = [];
@@ -149,13 +150,13 @@ var PointStream = (function() {
     "void main(void) {" +
     "  frontColor = ps_Color;" +
     "  vec4 ecPos4 = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
-    // "  float dist = length(ecPos4);" +
-    // "  float attn = ps_Attenuation[0] + " +
-    // "              (ps_Attenuation[1] * dist) + " + 
-    // "              (ps_Attenuation[2] * dist * dist);" +
+    "  float dist = length(ecPos4);" +
+    "  float attn = ps_Attenuation[0] + " +
+    "              (ps_Attenuation[1] * dist) + " + 
+    "              (ps_Attenuation[2] * dist * dist);" +
     
-    // "  gl_PointSize = (attn > 0.0) ? ps_PointSize * sqrt(1.0/attn) : 1.0;" +
-	"  gl_PointSize = ps_PointSize;" +
+    "  gl_PointSize = (attn > 0.0 && attn < 1.0) ? ps_PointSize * sqrt(1.0/attn) : 1.0;" +
+	// "  gl_PointSize = ps_PointSize;" +
     "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
     "}";
 
@@ -954,7 +955,7 @@ var PointStream = (function() {
     */
     function setDefaultUniforms(){
       uniformf(currProgram, "ps_PointSize", 1);
-      //uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]); 
+      uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]); 
 	  uniformMatrix(currProgram, "ps_ProjectionMatrix", false, perspectiveMatrix);
     }
     
@@ -1351,6 +1352,21 @@ var PointStream = (function() {
 		disableVertexAttribPointer(currProgram, "ps_Color");
       }
     };
+	
+	this.render3 = function(pos, pan) {
+		if(ctx) {
+			this.translate(pos[0], pos[1], 0.0);
+			//this.scale(50.0, 50.0, 1.0);
+			this.rotateZ(pan);
+			topMatrix = this.peekMatrix();
+			uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
+			vertexAttribPointer(currProgram, "ps_Vertex", 3, arrowVBO.VBO);
+			vertexAttribPointer(currProgram, "ps_Color", 3, axesColorsVBO.VBO);
+			ctx.drawArrays(ctx.TRIANGLES, 0, arrowVBO.length / 3);
+			disableVertexAttribPointer(currProgram, "ps_Vertex");
+			disableVertexAttribPointer(currProgram, "ps_Color");
+		}
+	};
         
     /**
       Resize the viewport.
@@ -1873,6 +1889,25 @@ var PointStream = (function() {
 									  -2.5, 0.0, 3.5]);
 		upwardVBO = createBufferObject(northTemp);
 	};
+	
+	this.initializeMap = function() {
+		this.useOrthographic();
+		var temp = new Float32Array([-0.5, -6.0, 50.0,
+									 0.5, -6.0, 50.0,
+									 0.5, -2.0, 50.0,
+									 -0.5, -6.0, 50.0,
+									 0.5, -2.0, 50.0,
+									 -0.5, -2.0, 50.0,
+									 0.0, 0.0, 50.0,
+									 -1.5, -2.0, 50.0,
+									 1.5, -2.0, 50.0]);
+		arrowVBO = createBufferObject(temp);
+		temp = new Float32Array(27);
+		for(var i = 0; i < 27; i++) {
+			temp[i] = 1.0;
+		}
+		axesColorsVBO = createBufferObject(temp);
+	};
     
     /**
       Set the point attenuation factors.
@@ -1881,9 +1916,9 @@ var PointStream = (function() {
       @param {Number} linear
       @param {Number} quadratic
     */
-    // this.attenuation = function(constant, linear, quadratic){
-      // uniformf(currProgram, "ps_Attenuation", [constant, linear, quadratic]);
-    // };
+    this.attenuation = function(constant, linear, quadratic){
+      uniformf(currProgram, "ps_Attenuation", [constant, linear, quadratic]);
+    };
 	
 	this.scaleOrthographic = function(deltaS) {
 		scaleFactor += deltaS;
@@ -1899,12 +1934,10 @@ var PointStream = (function() {
 	this.useOrthographic = function() {
 		scaleFactor = 600;
 		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
-		//uniformf(currProgram, "ps_Attenuation", [1, 0, 0]);
 	};
 
 	this.usePerspective = function() {
 		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, perspectiveMatrix);
-		//uniformf(currProgram, "ps_Attenuation", [1, 0, 0]);
 	};
     
     /**

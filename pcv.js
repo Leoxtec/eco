@@ -1,4 +1,4 @@
-var ps, ps2, cloud1, cloud2;
+var ps, ps2, ps3, cloud1, cloud2, cloud3, cloud4;
 var cam = new Camera({});
 var isDragging = false;
 var StartCoords = [0, 0];
@@ -131,6 +131,13 @@ function render() {
 	if(viewMode === 4 && orthoZoom) {
 		ps.scaleOrthographic(cam.timeElapsed() * cam.zoomVelocity() * 5);
 	}
+	
+	if(document.getElementById('atten').checked) {
+		ps.attenuation(0.01, 0.0, 0.003);
+	}
+	else {
+		ps.attenuation(1.0, 0.0, 0.0);
+	}
   
 	ps.clear();
 	if(document.getElementById('pc1').checked) {
@@ -158,11 +165,47 @@ function renderAxes() {
 			ps2.multMatrix(M4x4.makeLookAt(V3.$(0, 0, 3), V3.$(0, 0, 0), cam.up()));
 			ps2.render2(0, -Math.PI / 2);
 			break;
+	}	
+}
+
+function renderMap() {
+	ps3.clear();
+	ps3.multMatrix(M4x4.makeLookAt(V3.$(0, 0, 80), V3.$(0, 0, 0), V3.$(0, 1, 0)));
+	ps3.pushMatrix();
+	var c = cloud3.getCenter();
+	ps3.translate(-c[0], -c[1], -c[2]);
+	if(document.getElementById('pc1').checked) {
+		ps3.render(cloud3);
 	}
-	
+	if(document.getElementById('pc2').checked) {
+		ps3.render(cloud4);
+	}
+	ps3.popMatrix();
+	switch(viewMode) {
+		case 0:
+			ps3.render3(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + Math.PI / 2);
+			break;
+		case 1:
+		case 2:
+			ps3.render3(cam.getPoint(), cam.getPan() - Math.PI / 2);
+			break;
+		case 3:
+		case 4:
+			ps3.render3(cam.getPoint(), 0.0);
+			break;
+	}
 }
 
 function start() {
+	ps3 = new PointStream();
+	ps3.setup(document.getElementById('canvas3'));
+	ps3.initializeMap();
+	ps3.background([0, 0, 0, 0.5]);
+	ps3.onRender = renderMap;
+	
+	cloud3 = ps3.load("clouds/leaf_off.ply");
+	cloud4 = ps3.load("clouds/leaf_on.ply");
+
 	ps2 = new PointStream();
   
 	ps2.setup(document.getElementById('canvas2'));
@@ -175,6 +218,7 @@ function start() {
 	ps.setup(document.getElementById('canvas'));  
 	ps.background([0, 0, 0, 0.5]);
 	ps.onRender = render;
+	ps.attenuation(1.0, 0.0, 0.0);
 	
 	ps.onMouseScroll = zoom;
 	ps.onMousePressed = mousePressed;

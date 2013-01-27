@@ -115,6 +115,14 @@ var Camera = (function(){
 			return tilt;
 		};
 		
+		this.getPoint = function() {
+			return point;
+		};
+		
+		this.getRadius = function() {
+			return radius;
+		};
+		
 		this.updateRadius = function(deltaR) {
 			radius += deltaR;
 			if(radius > farR) {
