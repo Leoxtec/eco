@@ -41,6 +41,7 @@ var PointStream = (function() {
 	var eastTopVBO;
 	var upwardVBO;
 	var arrowVBO;
+	var linesVBO;
     
     // Mouse
     var userMouseReleased = __empty_func;
@@ -146,6 +147,8 @@ var PointStream = (function() {
     
     "uniform mat4 ps_ModelViewMatrix;" +
     "uniform mat4 ps_ProjectionMatrix;" +
+	
+	"uniform float ps_overlay;" +
     
     "void main(void) {" +
     "  frontColor = ps_Color;" +
@@ -158,6 +161,9 @@ var PointStream = (function() {
     "  gl_PointSize = (attn > 0.0 && attn < 1.0) ? ps_PointSize * sqrt(1.0/attn) : 1.0;" +
 	// "  gl_PointSize = ps_PointSize;" +
     "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+	"  if(ps_overlay == 1.0) {" +
+	"    gl_Position[2] = -1.0;" +
+	"  }" +
     "}";
 
     var fragmentShaderSource =
@@ -955,7 +961,8 @@ var PointStream = (function() {
     */
     function setDefaultUniforms(){
       uniformf(currProgram, "ps_PointSize", 1);
-      uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]); 
+      uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]);
+	  uniformf(currProgram, "ps_overlay", 0.0);
 	  uniformMatrix(currProgram, "ps_ProjectionMatrix", false, perspectiveMatrix);
     }
     
@@ -1365,6 +1372,22 @@ var PointStream = (function() {
 			ctx.drawArrays(ctx.TRIANGLES, 0, arrowVBO.length / 3);
 			disableVertexAttribPointer(currProgram, "ps_Vertex");
 			disableVertexAttribPointer(currProgram, "ps_Color");
+		}
+	};
+	
+	this.renderScaleBar = function(flag) {
+		if(ctx) {
+			topMatrix = this.peekMatrix();
+			uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
+			vertexAttribPointer(currProgram, "ps_Vertex", 3, linesVBO.VBO);
+			vertexAttribPointer(currProgram, "ps_Color", 3, axesColorsVBO.VBO);
+			if(flag) {
+				uniformf(currProgram, "ps_overlay", 1.0);
+			}
+			ctx.drawArrays(ctx.TRIANGLES, 0, linesVBO.length / 3);
+			disableVertexAttribPointer(currProgram, "ps_Vertex");
+			disableVertexAttribPointer(currProgram, "ps_Color");
+			uniformf(currProgram, "ps_overlay", 0.0);
 		}
 	};
         
@@ -1905,6 +1928,41 @@ var PointStream = (function() {
 		temp = new Float32Array(27);
 		for(var i = 0; i < 27; i++) {
 			temp[i] = 1.0;
+		}
+		axesColorsVBO = createBufferObject(temp);
+	};
+	
+	this.initializeScaleBar = function() {
+		var temp = new Float32Array([0.0, 0.0, -1.0,
+									 1000.0, 0.0, -1.0,
+									 0.0, 0.0, 1.0,
+									 0.0, 0.0, 1.0,
+									 1000.0, 0.0, -1.0,
+									 1000.0, 0.0, 1.0,									 
+									 9.0, 0.0, 3.0,
+									 11.0, 0.0, -3.0,
+									 11.0, 0.0, 3.0,
+									 11.0, 0.0, -3.0,
+									 9.0, 0.0, 3.0,
+									 9.0, 0.0, -3.0,									 
+									 99.0, 0.0, 3.0,
+									 101.0, 0.0, -3.0,
+									 101.0, 0.0, 3.0,
+									 101.0, 0.0, -3.0,
+									 99.0, 0.0, 3.0,
+									 99.0, 0.0, -3.0,									 
+									 999.0, 0.0, 3.0,
+									 1001.0, 0.0, -3.0,
+									 1001.0, 0.0, 3.0,
+									 1001.0, 0.0, -3.0,
+									 999.0, 0.0, 3.0,
+									 999.0, 0.0, -3.0]);
+		linesVBO = createBufferObject(temp);
+		temp = new Float32Array(72);
+		for(var i = 0; i < 72; i += 3) {
+			temp[i] = 1.0;
+			temp[i + 1] = 0.0;
+			temp[i + 2] = 0.0;
 		}
 		axesColorsVBO = createBufferObject(temp);
 	};

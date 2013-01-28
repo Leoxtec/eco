@@ -126,6 +126,7 @@ function render() {
 
     var c = cloud1.getCenter();
 	ps.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
+	ps.pushMatrix();
 	ps.translate(-c[0], -c[1], -c[2]);
 	
 	if(viewMode === 4 && orthoZoom) {
@@ -145,6 +146,15 @@ function render() {
 	}
 	if(document.getElementById('pc2').checked) {
 		ps.render(cloud2);
+	}
+	ps.popMatrix();
+	if(document.getElementById('scale').checked) {
+		if(document.getElementById('overlay').checked) {
+			ps.renderScaleBar(true);
+		}
+		else {
+			ps.renderScaleBar(false);
+		}
 	}
 }
 
@@ -219,6 +229,7 @@ function start() {
 	ps.background([0, 0, 0, 0.5]);
 	ps.onRender = render;
 	ps.attenuation(1.0, 0.0, 0.0);
+	ps.initializeScaleBar();
 	
 	ps.onMouseScroll = zoom;
 	ps.onMousePressed = mousePressed;
