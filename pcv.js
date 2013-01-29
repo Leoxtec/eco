@@ -156,10 +156,6 @@ function render() {
 			ps.renderScaleBar(false);
 		}
 	}
-//////draw grid 	
-	// if(document.getElementById('grid').checked) {
-// 	   ps.drawGrid();	   
-// 	}
 }
 
 function renderAxes() {

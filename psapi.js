@@ -1384,29 +1384,12 @@ var PointStream = (function() {
 			if(flag) {
 				uniformf(currProgram, "ps_overlay", 1.0);
 			}
-
 			ctx.drawArrays(ctx.TRIANGLES, 0, linesVBO.length / 3);
 			disableVertexAttribPointer(currProgram, "ps_Vertex");
 			disableVertexAttribPointer(currProgram, "ps_Color");
 			uniformf(currProgram, "ps_overlay", 0.0);
 		}
 	};
-
-//////////add grid //////////////////////	
-// 	this.drawGrid = function() {
-//       if(ctx) {         
-//          for(var x=0.5; x<500; x+=10) {
-//              ctx.moveTo(x,0);
-//              ctx.lineTo(x,375);
-//          }
-//          for(var y=0.5; y<500; y+=10) {
-//              ctx.moveTo(0,y);
-//              ctx.lineTo(500,y);
-//          }
-//          ctx.strokeStyle = "#eee";
-//          ctx.stroke;
-//       } 		
-// 	};
         
     /**
       Resize the viewport.
