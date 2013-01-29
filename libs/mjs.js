@@ -458,7 +458,7 @@ V3.mul4x4 = function V3_mul4x4(m, v, r) {
     var w;
     var tmp = V3._temp1;
     if (r == undefined)
-        r = new MJS_FLOAT_ARRAY_TYPE(3);
+        r = new MJS_FLOAT_ARRAY_TYPE(3);  	
     tmp[0] = m[ 3];
     tmp[1] = m[ 7];
     tmp[2] = m[11];
@@ -701,13 +701,6 @@ M4x4.makeFrustum = function M4x4_makeFrustum(left, right, bottom, top, znear, zf
     if (r == undefined)
         r = new MJS_FLOAT_ARRAY_TYPE(16);
 
-    var X = 2*znear/(right-left);
-    var Y = 2*znear/(top-bottom);
-    var A = (right+left)/(right-left);
-    var B = (top+bottom)/(top-bottom);
-    var C = -(zfar+znear)/(zfar-znear);
-    var D = -2*zfar*znear/(zfar-znear);
-
     r[0] = 2*znear/(right-left);
     r[1] = 0;
     r[2] = 0;
@@ -782,13 +775,6 @@ M4x4.makeOrtho = function M4x4_makeOrtho (left, right, bottom, top, znear, zfar,
 
     if (r == undefined)
         r = new MJS_FLOAT_ARRAY_TYPE(16);
-
-    var tX = -(right+left)/(right-left);
-    var tY = -(top+bottom)/(top-bottom);
-    var tZ = -(zfar+znear)/(zfar-znear);
-    var X = 2 / (right-left);
-    var Y = 2 / (top-bottom);
-    var Z = -2 / (zfar-znear);
 
     r[0] = 2 / (right-left);
     r[1] = 0;

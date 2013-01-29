@@ -266,22 +266,14 @@ var PLYParser = (function() {
             //
             for(var i = 0, j = 0; i < chunk.length; i += numValuesPerLine, j += 3){
 
-              // verts[j]   = parseFloat(chunk[ i + map["x"] ]);
-              // verts[j+1] = parseFloat(chunk[ i + map["y"] ]);
-              // verts[j+2] = parseFloat(chunk[ i + map["z"] ]);
-			  
-			  verts[j+2]   = parseFloat(chunk[ i + map["x"] ]);
-              verts[j] = parseFloat(chunk[ i + map["y"] ]);
-              verts[j+1] = parseFloat(chunk[ i + map["z"] ]);
+              verts[j]   = parseFloat(chunk[ i + map["x"] ]);
+              verts[j+1] = parseFloat(chunk[ i + map["y"] ]);
+              verts[j+2] = parseFloat(chunk[ i + map["z"] ]);
               
               if(norms){
-                // norms[j] =   parseFloat(chunk[ i + map["nx"] ]);
-                // norms[j+1] = parseFloat(chunk[ i + map["ny"] ]);
-                // norms[j+2] = parseFloat(chunk[ i + map["nz"] ]);
-				
-				norms[j+2] =   parseFloat(chunk[ i + map["nx"] ]);
-                norms[j] = parseFloat(chunk[ i + map["ny"] ]);
-                norms[j+1] = parseFloat(chunk[ i + map["nz"] ]);
+                norms[j] =   parseFloat(chunk[ i + map["nx"] ]);
+                norms[j+1] = parseFloat(chunk[ i + map["ny"] ]);
+                norms[j+2] = parseFloat(chunk[ i + map["nz"] ]);
               }
               
              if(cols){

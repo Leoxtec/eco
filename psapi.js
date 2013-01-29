@@ -29,6 +29,19 @@ var PointStream = (function() {
         return !e ? this.slice(0) : this.slice(s,e);
       };
     }
+								 
+	var axesVBO;									   
+	var axesColorsVBO;
+	var northLeftVBO;
+	var northMiddleVBO;
+	var northRightVBO;
+	var northColorVBO;
+	var eastBottomVBO;
+	var eastMiddleVBO;
+	var eastTopVBO;
+	var upwardVBO;
+	var arrowVBO;
+	var linesVBO;
     
     // Mouse
     var userMouseReleased = __empty_func;
@@ -51,9 +64,6 @@ var PointStream = (function() {
     var pointClouds = [];
     
     var registeredParsers = {};
-    registeredParsers["asc"] = ASCParser;
-    registeredParsers["psi"] = PSIParser;
-    registeredParsers["pts"] = PTSParser;
     registeredParsers["ply"] = PLYParser;
     
     const VERSION  = "0.75";
@@ -94,8 +104,11 @@ var PointStream = (function() {
 
     // Transformation matrices
     var matrixStack = [];
-    var projectionMatrix;
+    //var projectionMatrix;
+	var perspectiveMatrix;
+	var orthographicMatrix;
     var normalMatrix;
+	var scaleFactor;
 
     var currProgram;
     // Keep a reference to the default program object
@@ -134,6 +147,8 @@ var PointStream = (function() {
     
     "uniform mat4 ps_ModelViewMatrix;" +
     "uniform mat4 ps_ProjectionMatrix;" +
+	
+	"uniform float ps_overlay;" +
     
     "void main(void) {" +
     "  frontColor = ps_Color;" +
@@ -142,9 +157,13 @@ var PointStream = (function() {
     "  float attn = ps_Attenuation[0] + " +
     "              (ps_Attenuation[1] * dist) + " + 
     "              (ps_Attenuation[2] * dist * dist);" +
-    "  gl_PointSize = ps_PointSize; " +
-//    "  gl_PointSize = (attn > 0.0) ? ps_PointSize * sqrt(1.0/attn) : 1.0;" +
+    
+    "  gl_PointSize = (attn > 0.0 && attn < 1.0) ? ps_PointSize * sqrt(1.0/attn) : 1.0;" +
+	// "  gl_PointSize = ps_PointSize;" +
     "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+	"  if(ps_overlay == 1.0) {" +
+	"    gl_Position[2] = -1.0;" +
+	"  }" +
     "}";
 
     var fragmentShaderSource =
@@ -911,25 +930,9 @@ var PointStream = (function() {
       var ymin = -ymax;
       var xmin = ymin * aspect;
       var xmax = ymax * aspect;
-
-      var left = xmin;
-      var right = xmax;
-      var top =  ymax;
-      var bottom = ymin;
-
-      var X = 2 * znear / (right - left);
-      var Y = 2 * znear / (top - bottom);
-      var A = (right + left) / (right - left);
-      var B = (top + bottom) / (top - bottom);
-      var C = -(zfar + znear) / (zfar - znear);
-      var D = -2 * zfar * znear / (zfar - znear);
-      
-      projectionMatrix = M4x4.$(
-      X, 0, 0, 0, 
-      0, Y, 0, 0, 
-      A, B, C, -1, 
-      0, 0, D, 0);
-      
+	  
+	  perspectiveMatrix = M4x4.makeFrustum(xmin, xmax, ymin, ymax, znear, zfar);
+	  orthographicMatrix = M4x4.makeOrtho(xmin, xmax, ymin, ymax, znear, zfar);
       normalMatrix = M4x4.I;
     };
     
@@ -958,8 +961,9 @@ var PointStream = (function() {
     */
     function setDefaultUniforms(){
       uniformf(currProgram, "ps_PointSize", 1);
-      uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]); 
-      uniformMatrix(currProgram, "ps_ProjectionMatrix", false, projectionMatrix);
+      uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]);
+	  uniformf(currProgram, "ps_overlay", 0.0);
+	  uniformMatrix(currProgram, "ps_ProjectionMatrix", false, perspectiveMatrix);
     }
     
     /**
@@ -969,7 +973,7 @@ var PointStream = (function() {
     */
     function mouseScroll(evt){
       var delta = 0;
-      
+     
       if(evt.detail){
         delta = evt.detail / 3;
       }
@@ -977,7 +981,6 @@ var PointStream = (function() {
         delta = -evt.wheelDelta / 360;
       }
       userMouseScroll(delta);
-      updateScalebar(delta);
     }
     
     /**
@@ -1224,8 +1227,8 @@ var PointStream = (function() {
         // We need to find a way to detect normals. If normals don't exist,
         // we don't need to figure out the normal transformation.
         var topMatrix = this.peekMatrix();
-        normalMatrix = M4x4.inverseOrthonormal(topMatrix);
-        uniformMatrix(currProgram, "ps_NormalMatrix", false, M4x4.transpose(normalMatrix));
+        //normalMatrix = M4x4.inverseOrthonormal(topMatrix);
+        //uniformMatrix(currProgram, "ps_NormalMatrix", false, M4x4.transpose(normalMatrix));
         uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
         
         // Get the list of semantic names.
@@ -1270,6 +1273,140 @@ var PointStream = (function() {
         }
       }
     };
+	
+	this.render2 = function(pan, tilt){
+    
+      // Don't bother doing any work if we don't have a context yet.
+      if(ctx){
+        var topMatrix = this.peekMatrix();
+		uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);		
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, axesVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, axesColorsVBO.VBO);
+		ctx.drawArrays(ctx.LINES, 0, axesVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		this.pushMatrix();
+		this.loadMatrix(M4x4.I);
+		var factor = 1 / 52.5;
+		this.scale(factor, factor, factor);
+		this.rotateZ(pan);
+		this.rotateX(tilt);
+		var tempMatrix = this.peekMatrix();
+		this.popMatrix();
+		this.pushMatrix();		
+		this.translate(0, 1.075, 0);
+		this.multMatrix(tempMatrix);
+		topMatrix = this.peekMatrix();		
+		uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);	
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, northLeftVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, northLeftVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, northMiddleVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, northMiddleVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, northRightVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, northRightVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		this.popMatrix();
+		this.pushMatrix();
+		this.translate(1.075, 0, 0);
+		this.multMatrix(tempMatrix);
+		topMatrix = this.peekMatrix();		
+		uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);	
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, northLeftVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, northLeftVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, eastBottomVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, eastBottomVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, eastMiddleVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, eastMiddleVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, eastTopVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, eastTopVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+		
+		this.popMatrix();
+		this.translate(0, 0, 1.075);
+		this.multMatrix(tempMatrix);
+		topMatrix = this.peekMatrix();
+		uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
+		vertexAttribPointer(currProgram, "ps_Vertex", 3, upwardVBO.VBO);
+		vertexAttribPointer(currProgram, "ps_Color", 3, northColorVBO.VBO);
+		ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, upwardVBO.length / 3);
+		disableVertexAttribPointer(currProgram, "ps_Vertex");
+		disableVertexAttribPointer(currProgram, "ps_Color");
+      }
+    };
+	
+	this.render3 = function(pos, pan) {
+		if(ctx) {
+			this.translate(pos[0], pos[1], 0.0);
+			//this.scale(50.0, 50.0, 1.0);
+			this.rotateZ(pan);
+			topMatrix = this.peekMatrix();
+			uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
+			vertexAttribPointer(currProgram, "ps_Vertex", 3, arrowVBO.VBO);
+			vertexAttribPointer(currProgram, "ps_Color", 3, axesColorsVBO.VBO);
+			ctx.drawArrays(ctx.TRIANGLES, 0, arrowVBO.length / 3);
+			disableVertexAttribPointer(currProgram, "ps_Vertex");
+			disableVertexAttribPointer(currProgram, "ps_Color");
+		}
+	};
+	
+	this.renderScaleBar = function(flag) {
+		if(ctx) {
+			topMatrix = this.peekMatrix();
+			uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
+			vertexAttribPointer(currProgram, "ps_Vertex", 3, linesVBO.VBO);
+			vertexAttribPointer(currProgram, "ps_Color", 3, axesColorsVBO.VBO);
+			if(flag) {
+				uniformf(currProgram, "ps_overlay", 1.0);
+			}
+
+			ctx.drawArrays(ctx.TRIANGLES, 0, linesVBO.length / 3);
+			disableVertexAttribPointer(currProgram, "ps_Vertex");
+			disableVertexAttribPointer(currProgram, "ps_Color");
+			uniformf(currProgram, "ps_overlay", 0.0);
+		}
+	};
+
+//////////add grid //////////////////////	
+// 	this.drawGrid = function() {
+//       if(ctx) {         
+//          for(var x=0.5; x<500; x+=10) {
+//              ctx.moveTo(x,0);
+//              ctx.lineTo(x,375);
+//          }
+//          for(var y=0.5; y<500; y+=10) {
+//              ctx.moveTo(0,y);
+//              ctx.lineTo(500,y);
+//          }
+//          ctx.strokeStyle = "#eee";
+//          ctx.stroke;
+//       } 		
+// 	};
         
     /**
       Resize the viewport.
@@ -1709,6 +1846,143 @@ var PointStream = (function() {
       attach(document, "keypress", keyPressed);
       attach(document, "keyup", keyUp);
     };
+	
+	this.initializeAxes = function() {
+		var axes = new Float32Array([0.0,0.0,0.0,
+									 1.0,0.0,0.0,
+									 0.0,0.0,0.0,
+									 0.0,1.0,0.0,
+									 0.0,0.0,0.0,
+									 0.0,0.0,1.0]);
+								 
+		var axesColors = new Float32Array([1.0,0.0,0.0,
+										   1.0,0.0,0.0,
+										   0.0,1.0,0.0, 
+										   0.0,1.0,0.0, 
+										   0.0,0.0,1.0,
+										   0.0,0.0,1.0]);
+		axesVBO = createBufferObject(axes);
+		axesColorsVBO = createBufferObject(axesColors);
+		
+		var northTemp = new Float32Array([-2.5, 0.0, -3.5,
+										  -1.5, 0.0, -3.5,
+										  -2.5, 0.0, -2.5,
+										  -1.5, 0.0, -1.5,
+										  -2.5, 0.0, -0.5,
+										  -1.5, 0.0, 0.5,
+										  -2.5, 0.0, 1.5,
+										  -1.5, 0.0, 2.5,
+										  -2.5, 0.0, 3.5]);
+		northLeftVBO = createBufferObject(northTemp);
+		for(var i = 0; i < northTemp.length; i++) {
+			northTemp[i] *= -1;
+		}
+		northRightVBO = createBufferObject(northTemp);
+		northTemp = new Float32Array([-1.5, 0.0, 3.5,
+									  -2.5, 0.0, 3.5,
+									  -0.5/3, 0.0, 3.5/3,
+									  -0.5, 0.0, 0.0,
+									  3.5/3, 0.0, -3.5/3,
+									  1.5, 0.0, -3.5,
+									  2.5, 0.0, -3.5]);
+		northMiddleVBO = createBufferObject(northTemp);
+		northTemp = new Float32Array(51);
+		for(var i = 0; i < 51; i++) {
+			northTemp[i] = 1.0;
+		}
+		northColorVBO = createBufferObject(northTemp);
+		northTemp = new Float32Array([2.5, 0.0, -3.5,
+									  2.5, 0.0, -2.5,
+									  0.5, 0.0, -3.5,
+									  -1.5, 0.0, -2.5,
+									  -1.5, 0.0, -3.5]);
+		eastBottomVBO = createBufferObject(northTemp);
+		northTemp = new Float32Array([1.5, 0.0, -0.5,
+									  1.5, 0.0, 0.5,
+									  0.0, 0.0, -0.5,
+									  -1.5, 0.0, 0.5,
+									  -1.5, 0.0, -0.5]);
+		eastMiddleVBO = createBufferObject(northTemp);
+		northTemp = new Float32Array([2.5, 0.0, 2.5,
+									  2.5, 0.0, 3.5,
+									  0.5, 0.0, 2.5,
+									  -1.5, 0.0, 3.5,
+									  -1.5, 0.0, 2.5,
+									  -2.5, 0.0, 3.5]);
+		eastTopVBO = createBufferObject(northTemp);
+		northTemp = new Float32Array([2.5, 0.0, 3.5,
+									  1.5, 0.0, 3.5,
+									  2.5, 0.0, 1.5,
+									  1.5, 0.0, -0.5,
+									  2.5, 0.0, -2.5,
+									  1.5, 0.0, -2.2,
+									  1.5, 0.0, -3.5,
+									  1.2, 0.0, -2.5,
+									  0.0, 0.0, -3.5,
+									  -1.2, 0.0, -2.5,
+									  -1.5, 0.0, -3.5,
+									  -1.5, 0.0, -2.2,
+									  -2.5, 0.0, -2.5,
+									  -1.5, 0.0, -0.5,
+									  -2.5, 0.0, 1.5,
+									  -1.5, 0.0, 3.5,
+									  -2.5, 0.0, 3.5]);
+		upwardVBO = createBufferObject(northTemp);
+	};
+	
+	this.initializeMap = function() {
+		this.useOrthographic();
+		var temp = new Float32Array([-0.5, -6.0, 50.0,
+									 0.5, -6.0, 50.0,
+									 0.5, -2.0, 50.0,
+									 -0.5, -6.0, 50.0,
+									 0.5, -2.0, 50.0,
+									 -0.5, -2.0, 50.0,
+									 0.0, 0.0, 50.0,
+									 -1.5, -2.0, 50.0,
+									 1.5, -2.0, 50.0]);
+		arrowVBO = createBufferObject(temp);
+		temp = new Float32Array(27);
+		for(var i = 0; i < 27; i++) {
+			temp[i] = 1.0;
+		}
+		axesColorsVBO = createBufferObject(temp);
+	};
+	
+	this.initializeScaleBar = function() {
+		var temp = new Float32Array([0.0, 0.0, -1.0,
+									 1000.0, 0.0, -1.0,
+									 0.0, 0.0, 1.0,
+									 0.0, 0.0, 1.0,
+									 1000.0, 0.0, -1.0,
+									 1000.0, 0.0, 1.0,									 
+									 9.0, 0.0, 3.0,
+									 11.0, 0.0, -3.0,
+									 11.0, 0.0, 3.0,
+									 11.0, 0.0, -3.0,
+									 9.0, 0.0, 3.0,
+									 9.0, 0.0, -3.0,									 
+									 99.0, 0.0, 3.0,
+									 101.0, 0.0, -3.0,
+									 101.0, 0.0, 3.0,
+									 101.0, 0.0, -3.0,
+									 99.0, 0.0, 3.0,
+									 99.0, 0.0, -3.0,									 
+									 999.0, 0.0, 3.0,
+									 1001.0, 0.0, -3.0,
+									 1001.0, 0.0, 3.0,
+									 1001.0, 0.0, -3.0,
+									 999.0, 0.0, 3.0,
+									 999.0, 0.0, -3.0]);
+		linesVBO = createBufferObject(temp);
+		temp = new Float32Array(72);
+		for(var i = 0; i < 72; i += 3) {
+			temp[i] = 1.0;
+			temp[i + 1] = 0.0;
+			temp[i + 2] = 0.0;
+		}
+		axesColorsVBO = createBufferObject(temp);
+	};
     
     /**
       Set the point attenuation factors.
@@ -1720,6 +1994,26 @@ var PointStream = (function() {
     this.attenuation = function(constant, linear, quadratic){
       uniformf(currProgram, "ps_Attenuation", [constant, linear, quadratic]);
     };
+	
+	this.scaleOrthographic = function(deltaS) {
+		scaleFactor += deltaS;
+		if(scaleFactor < 100) {
+			scaleFactor = 100;
+		}
+		else if(scaleFactor > 1000) {
+			scaleFactor = 1000;
+		}
+		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
+	};
+	
+	this.useOrthographic = function() {
+		scaleFactor = 600;
+		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
+	};
+
+	this.usePerspective = function() {
+		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, perspectiveMatrix);
+	};
     
     /**
       @param {Number} size - in pixels

@@ -1,0 +1,56 @@
+<html style="overflow-x: hidden; overflow-y: hidden; ">
+
+  <head>
+    <script src="xbps.js"></script>
+    <script src="libs/camera.js"></script>
+    <script src="parsers/ply.js"></script>
+    <script src="pcv.js"></script>
+  </head>
+
+  <body onLoad="start();" bgcolor="#222222">   
+<!-- header -->
+    <div id="header" style="background-color:#FFA500;">
+    <h1 style="margin-bottom:0;">Ecosynth browser</h1>
+    </div>
+   
+    <div id="menu" style="background-color:#FFD700;height:540px;width:300px;float:left;">
+    <b>Menu</b><br>
+<!-- 	<div> -->
+	<span>leaf_on.ply:</span> <input type="checkbox" id="pc2" checked="checked"/></br>
+	<span>leaf_off.ply:</span> <input type="checkbox" id="pc1" checked="checked"/></br>
+	<span>attentuation:</span> <input type="checkbox" id="atten"/></br>
+	<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
+	<span>overlay:</span> <input type="checkbox" id="overlay"/></br>
+	[WASD/mouse to move/rotate; ZX/wheel to zoom; V to cycle through camera modes]
+	<br />
+	<!-- add grid  -->
+<!-- 	<span>draw grid</span> <input type="checkbox" id="grid"></br> -->
+	</br>
+	<input type="radio" name="camera" checked="checked" onclick="viewRadioButton(0);"> Orbit Camera</br>
+	<input type="radio" name="camera" onclick="viewRadioButton(1);"> Free Form Camera</br>
+	<input type="radio" name="camera" onclick="viewRadioButton(2);"> Ground Camera</br>
+	<input type="radio" name="camera" onclick="viewRadioButton(3);"> Hover Camera</br>
+	<input type="radio" name="camera" onclick="viewRadioButton(4);"> Map Camera</br>
+	</div>
+   
+    <div id="content1" style="background-color:#22222;height:540px;width:540px;float:left;">
+    <canvas id="canvas" width="540" height="540"></canvas>
+    </div>
+    
+    <div id="content2" style="background-color:#555555;height:270px;width:270px;float:left;">
+	<canvas id="canvas2" width="270" height="270"></canvas>
+	</div>
+	
+	<div id="content3" style="background-color:#EEEEEE;height:270px;width:270px;float:left;">
+	<canvas id="canvas3" width="270" height="270"></canvas>
+	</div>
+	
+	<div id="footer" style="background-color:#FFA500;clear:both;text-align:center;">  
+    <a id="ecosynth" href="http://ecosynth.org/">
+    <span>This is a web application for ecosynth.org</span>
+    </a>
+    </div>
+	
+  </body>
+
+</html>

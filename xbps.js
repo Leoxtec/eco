@@ -13,9 +13,4 @@ var ps_include = function(path){
 
 ps_include('psapi.js');
 ps_include('./libs/mjs.js');
-ps_include('./parsers/asc.js');
-ps_include('./parsers/psi.js');
-ps_include('./parsers/pts.js');
 ps_include('./parsers/ply.js');
-ps_include('./parsers/hps0.js');
-ps_include('./parsers/psi2.js');
