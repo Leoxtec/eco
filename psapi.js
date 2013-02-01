@@ -158,7 +158,7 @@ var PointStream = (function() {
     "              (ps_Attenuation[1] * dist) + " + 
     "              (ps_Attenuation[2] * dist * dist);" +
     
-    "  gl_PointSize = (attn > 0.0 && attn < 1.0) ? ps_PointSize * sqrt(1.0/attn) : 1.0;" +
+    "  gl_PointSize = (attn > 0.0 && attn < ps_PointSize) ? ps_PointSize * sqrt(1.0/attn) : ps_PointSize;" +
 	// "  gl_PointSize = ps_PointSize;" +
     "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
 	"  if(ps_overlay == 1.0) {" +
@@ -1363,7 +1363,6 @@ var PointStream = (function() {
 	this.render3 = function(pos, pan) {
 		if(ctx) {
 			this.translate(pos[0], pos[1], 0.0);
-			//this.scale(50.0, 50.0, 1.0);
 			this.rotateZ(pan);
 			topMatrix = this.peekMatrix();
 			uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
@@ -1926,8 +1925,9 @@ var PointStream = (function() {
 									 1.5, -2.0, 50.0]);
 		arrowVBO = createBufferObject(temp);
 		temp = new Float32Array(27);
-		for(var i = 0; i < 27; i++) {
-			temp[i] = 1.0;
+		for(var i = 0; i < 27; i = i + 3) {
+			temp[i] = temp[i + 2] = 1.0;
+			temp[i + 1] = 0.0;
 		}
 		axesColorsVBO = createBufferObject(temp);
 	};

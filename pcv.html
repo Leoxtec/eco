@@ -5,6 +5,28 @@
     <script src="libs/camera.js"></script>
     <script src="parsers/ply.js"></script>
     <script src="pcv.js"></script>
+	<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.0/themes/base/jquery-ui.css" />
+	<script src="http://code.jquery.com/jquery-1.8.3.js"></script>
+    <script src="http://code.jquery.com/ui/1.10.0/jquery-ui.js"></script>
+	
+	<style>
+		#pointSizeSlider{float: left; clear: left; width: 250px; height: 10px; margin: 15px;}
+		#pointSizeSlider .ui-slider-range { background: #000000; }
+	</style>
+	<script>
+		$(function() {
+			$("#pointSizeSlider").slider({min: 1, 
+										  max: 20, 
+										  range: "min", 
+										  value: 1, 
+										  slide: function( event, ui ) {
+													$("#pSize").val(ui.value);
+													changePointSize(ui.value);
+												 }
+										});
+		$("#pSize").val($( "#pointSizeSlider" ).slider("value"));
+		});
+	</script>
   </head>
 
   <body onLoad="start();" bgcolor="#222222">   
@@ -31,6 +53,11 @@
 	<input type="radio" name="camera" onclick="viewRadioButton(2);"> Ground Camera</br>
 	<input type="radio" name="camera" onclick="viewRadioButton(3);"> Hover Camera</br>
 	<input type="radio" name="camera" onclick="viewRadioButton(4);"> Map Camera</br>
+	<p>
+		<label for="pSize">Point Size:</label>
+		<input type="text" id="pSize" style="border: 0; font-weight: bold; background-color: #FFD700;" />
+		<div id="pointSizeSlider"></div>
+	</p>
 	</div>
    
     <div id="content1" style="background-color:#22222;height:540px;width:540px;float:left;">
