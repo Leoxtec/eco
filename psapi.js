@@ -109,6 +109,10 @@ var PointStream = (function() {
 	var orthographicMatrix;
     var normalMatrix;
 	var scaleFactor;
+	var ymax;
+    var ymin;
+    var xmin;
+    var xmax;
 
     var currProgram;
     // Keep a reference to the default program object
@@ -926,10 +930,10 @@ var PointStream = (function() {
 
       var zfar = 1000;
 
-      var ymax = znear * Math.tan(fovy * Math.PI / 360.0);
-      var ymin = -ymax;
-      var xmin = ymin * aspect;
-      var xmax = ymax * aspect;
+      ymax = znear * Math.tan(fovy * Math.PI / 360.0);
+      ymin = -ymax;
+      xmin = ymin * aspect;
+      xmax = ymax * aspect;
 	  
 	  perspectiveMatrix = M4x4.makeFrustum(xmin, xmax, ymin, ymax, znear, zfar);
 	  orthographicMatrix = M4x4.makeOrtho(xmin, xmax, ymin, ymax, znear, zfar);
@@ -1361,8 +1365,27 @@ var PointStream = (function() {
     };
 	
 	this.render3 = function(pos, pan) {
+		var arrowPos = V3.clone(pos);
+		var offTheMap = false;
 		if(ctx) {
-			this.translate(pos[0], pos[1], 0.0);
+			if(arrowPos[0] < xmin) {
+				arrowPos[0] = xmin;
+				offTheMap = true;
+			}
+			if(arrowPos[0] > xmax) {
+				arrowPos[0] = xmax;
+				offTheMap = true;
+			}
+			if(arrowPos[1] < ymin) {
+				arrowPos[1] = ymin;
+				offTheMap = true;
+			}
+			if(arrowPos[1] > ymax) {
+				arrowPos[1] = ymax;
+				offTheMap = true;
+			}
+			
+			this.translate(arrowPos[0], arrowPos[1], 0.0);
 			this.rotateZ(pan);
 			topMatrix = this.peekMatrix();
 			uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
@@ -1371,6 +1394,13 @@ var PointStream = (function() {
 			ctx.drawArrays(ctx.TRIANGLES, 0, arrowVBO.length / 3);
 			disableVertexAttribPointer(currProgram, "ps_Vertex");
 			disableVertexAttribPointer(currProgram, "ps_Color");
+			
+			if(offTheMap) {
+				$("#onOffMap").val('Off the map');
+			}
+			else {
+				$("#onOffMap").val('');
+			}
 		}
 	};
 	
@@ -1914,6 +1944,10 @@ var PointStream = (function() {
 	
 	this.initializeMap = function() {
 		this.useOrthographic();
+		xmin = xmin * scaleFactor + 2;
+		xmax= xmax * scaleFactor - 2;
+		ymin = ymin * scaleFactor + 2;
+		ymax = ymax * scaleFactor - 2;
 		var temp = new Float32Array([-0.5, -6.0, 50.0,
 									 0.5, -6.0, 50.0,
 									 0.5, -2.0, 50.0,
