@@ -5,6 +5,10 @@ var StartCoords = [0, 0];
 var viewMode = 0;
 var orthoZoom = false;
 
+function changePointSize(val) {
+	ps.pointSize(val);
+}
+
 function viewRadioButton(value) {
 	cam.setViewMode(value);
 	viewMode = value;
