@@ -285,7 +285,7 @@ var PointStream = (function() {
         var obj = {
           length: arr.length,
           VBO: VBO,
-          array: arr
+          //array: arr
         }
         
         return obj;
@@ -814,7 +814,7 @@ var PointStream = (function() {
         "ps_Normal": [.....]
       }
     */
-    function parseCallback(parser, attributes){
+    function parseCallback(parser, attributes, totalVertices){
 
       var parserIndex = getParserIndex(parser);
       var pc = pointClouds[parserIndex];
@@ -828,13 +828,21 @@ var PointStream = (function() {
       
       for(var semantic in attributes){
         
-        // if not yet created
-        if(!pc.attributes[semantic]){
-          pc.attributes[semantic] = [];
-        }
-        
-        var buffObj = createBufferObject(attributes[semantic]);
-        pc.attributes[semantic].push(buffObj);
+        //if not yet created		
+		if(!pc.attributes[semantic]){
+			var VBO = ctx.createBuffer();
+			var obj = {
+				VBO: VBO,
+				currentPos: 0
+			}
+			pc.attributes[semantic] = obj;
+			ctx.bindBuffer(ctx.ARRAY_BUFFER, pc.attributes[semantic].VBO);
+			ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(totalVertices * 3), ctx.DYNAMIC_DRAW);
+		}
+		
+		ctx.bindBuffer(ctx.ARRAY_BUFFER, pc.attributes[semantic].VBO);
+		ctx.bufferSubData(ctx.ARRAY_BUFFER, pc.attributes[semantic].currentPos, attributes[semantic]);
+		pc.attributes[semantic].currentPos += attributes[semantic].length;
         
         if(gotVertexData === false){
           gotVertexData = true;
@@ -1243,12 +1251,10 @@ var PointStream = (function() {
         // We need at least positional data.
         if(pointCloud.attributes[firstSemantic]){
 
-          var arrayOfBufferObjsV = pointCloud.attributes[firstSemantic];
+          var mainVBO = pointCloud.attributes[firstSemantic];
 
-          // Iterate over all the vertex buffer objects.
-          for(var currVBO = 0; currVBO < arrayOfBufferObjsV.length; currVBO++){
             // iterate over all the semantic names "ps_Vertex", "ps_Normal", etc.
-            for(name in semantics){
+            for(var name in semantics){
               /*
                 There is a chance we don't have the correspoding semantic data
                 for this vertex. In that case, we skip it.
@@ -1260,11 +1266,12 @@ var PointStream = (function() {
                 We iterate over each set of vertex vbo, enabling
                 the corresponding attributes which exist.
               */
-              if(pointCloud.attributes[semantics[name]][currVBO]){
-                vertexAttribPointer(currProgram, semantics[name], 3, pointCloud.attributes[semantics[name]][currVBO].VBO);
-              }
+			
+				if(pointCloud.attributes[semantics[name]]){
+					vertexAttribPointer(currProgram, semantics[name], 3, pointCloud.attributes[semantics[name]].VBO);
+				}
             }
-            ctx.drawArrays(ctx.POINTS, 0, arrayOfBufferObjsV[currVBO].length/3);
+            ctx.drawArrays(ctx.POINTS, 0, mainVBO.currentPos / 3);
             
             // If we render a point cloud with vertices and colors, then 
             // another one with only vertices, this may cause issues if we
@@ -1272,8 +1279,6 @@ var PointStream = (function() {
             for(var name in semantics){
               disableVertexAttribPointer(currProgram, semantics[name]);
             }
-            
-          }
         }
       }
     };
