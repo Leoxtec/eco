@@ -68,6 +68,7 @@ var PLYParser = (function() {
     var colorsPresent = false;
     
     var gotHeader = false;
+	//var totalVertices;
         
     // This will hold labels and indices
     // such as:
@@ -207,6 +208,8 @@ var PLYParser = (function() {
         
           if(!gotHeader){
             var header = "" + chunk.match(/(\s|\S)+?end_header/);
+			//totalVertices = parseInt(header.match(/vertex.*/g)[0].replace(/vertex\s+/, ''));
+			
             var properties = header.match(/property.*/g);
             
             if(properties){
@@ -290,7 +293,8 @@ var PLYParser = (function() {
             if(verts){attributes["ps_Vertex"] = verts;}
             if(cols){attributes["ps_Color"] = cols;}
             if(norms){attributes["ps_Normal"] = norms;}
-            parse(AJAX.parser, attributes);
+            //parse(AJAX.parser, attributes, totalVertices);
+			parse(AJAX.parser, attributes);
           }
         }
       };
