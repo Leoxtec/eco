@@ -42,6 +42,10 @@ var PointStream = (function() {
 	var upwardVBO;
 	var arrowVBO;
 	var linesVBO;
+	
+	var markerTexCoords;
+	var markerBegin;
+	var markers = [];
     
     // Mouse
     var userMouseReleased = __empty_func;
@@ -163,7 +167,6 @@ var PointStream = (function() {
     "              (ps_Attenuation[2] * dist * dist);" +
     
     "  gl_PointSize = (attn > 0.0 && attn < ps_PointSize) ? ps_PointSize * sqrt(1.0/attn) : ps_PointSize;" +
-	// "  gl_PointSize = ps_PointSize;" +
     "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
 	"  if(ps_overlay == 1.0) {" +
 	"    gl_Position[2] = -1.0;" +
@@ -178,6 +181,37 @@ var PointStream = (function() {
     varying vec4 frontColor;      \n\
     void main(void){              \n\
       gl_FragColor = frontColor;  \n\
+    }';
+	
+	var orthoMarkupVertexShader =
+    "attribute vec3 ps_Vertex;" +
+    "attribute vec2 vTexCoord;" +
+	
+    "uniform mat4 ps_ModelViewMatrix;" +
+    "uniform mat4 ps_ProjectionMatrix;" +
+	
+	"varying vec2 v_texCoord;" + 
+    
+    "void main(void) {" +
+    "  vec4 ecPos4 = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +    
+    "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+	"  v_texCoord = vTexCoord;" +
+    "}";
+	
+	var orthoMarkupFragmentShader =
+    '#ifdef GL_ES                 \n\
+    precision highp float;        \n\
+    #endif                        \n\
+                                  \n\
+	varying vec2 v_texCoord;      \n\
+    void main(void){              \n\
+	  vec2 pos = v_texCoord - vec2(0.5, 0.5);      \n\
+	  float dist_squared = dot(pos, pos);		\n\
+												\n\
+	  if(dist_squared > 0.25) {		\n\
+		discard;								\n\
+	  }											\n\
+      gl_FragColor = vec4(0.0, 0.0, 1.0, 0.5);  	\n\
     }';
 
     /**
@@ -814,7 +848,8 @@ var PointStream = (function() {
         "ps_Normal": [.....]
       }
     */
-    function parseCallback(parser, attributes, totalVertices){
+    //function parseCallback(parser, attributes, totalVertices){
+	function parseCallback(parser, attributes){
 
       var parserIndex = getParserIndex(parser);
       var pc = pointClouds[parserIndex];
@@ -830,19 +865,27 @@ var PointStream = (function() {
         
         //if not yet created		
 		if(!pc.attributes[semantic]){
-			var VBO = ctx.createBuffer();
-			var obj = {
-				VBO: VBO,
-				currentPos: 0
-			}
-			pc.attributes[semantic] = obj;
-			ctx.bindBuffer(ctx.ARRAY_BUFFER, pc.attributes[semantic].VBO);
-			ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(totalVertices * 3), ctx.DYNAMIC_DRAW);
-		}
+			pc.attributes[semantic] = [];
+        }
 		
-		ctx.bindBuffer(ctx.ARRAY_BUFFER, pc.attributes[semantic].VBO);
-		ctx.bufferSubData(ctx.ARRAY_BUFFER, pc.attributes[semantic].currentPos, attributes[semantic]);
-		pc.attributes[semantic].currentPos += attributes[semantic].length;
+		var buffObj = createBufferObject(attributes[semantic]);
+        pc.attributes[semantic].push(buffObj);
+		
+		// if(!pc.attributes[semantic]){
+			// var VBO = ctx.createBuffer();
+			// var obj = {
+				// VBO: VBO,
+				// currentPos: 0
+			// }
+			// pc.attributes[semantic] = obj;
+			// ctx.bindBuffer(ctx.ARRAY_BUFFER, pc.attributes[semantic].VBO);
+			// ctx.bufferData(ctx.ARRAY_BUFFER, new Float32Array(totalVertices * 3), ctx.STREAM_DRAW);
+		// }
+		// else {
+			// ctx.bindBuffer(ctx.ARRAY_BUFFER, pc.attributes[semantic].VBO);
+		// }
+		// ctx.bufferSubData(ctx.ARRAY_BUFFER, pc.attributes[semantic].currentPos, attributes[semantic]);
+		// pc.attributes[semantic].currentPos += attributes[semantic].length;
         
         if(gotVertexData === false){
           gotVertexData = true;
@@ -1251,34 +1294,41 @@ var PointStream = (function() {
         // We need at least positional data.
         if(pointCloud.attributes[firstSemantic]){
 
-          var mainVBO = pointCloud.attributes[firstSemantic];
+			var arrayOfBufferObjsV = pointCloud.attributes[firstSemantic];
+			//var mainVBO = pointCloud.attributes[firstSemantic];
 
+			for(var currVBO = 0; currVBO < arrayOfBufferObjsV.length; currVBO++){
             // iterate over all the semantic names "ps_Vertex", "ps_Normal", etc.
-            for(var name in semantics){
-              /*
-                There is a chance we don't have the correspoding semantic data
-                for this vertex. In that case, we skip it.
-                
-                vertex [...] [.] [.......] [..]
-                color  [...] [.] [.......] [..]
-                normal [...] [.] <-- only have 2 VBOS
-                
-                We iterate over each set of vertex vbo, enabling
-                the corresponding attributes which exist.
-              */
-			
-				if(pointCloud.attributes[semantics[name]]){
-					vertexAttribPointer(currProgram, semantics[name], 3, pointCloud.attributes[semantics[name]].VBO);
+				for(name in semantics){
+				  /*
+					There is a chance we don't have the correspoding semantic data
+					for this vertex. In that case, we skip it.
+					
+					vertex [...] [.] [.......] [..]
+					color  [...] [.] [.......] [..]
+					normal [...] [.] <-- only have 2 VBOS
+					
+					We iterate over each set of vertex vbo, enabling
+					the corresponding attributes which exist.
+				  */
+					if(pointCloud.attributes[semantics[name]][currVBO]){
+						vertexAttribPointer(currProgram, semantics[name], 3, pointCloud.attributes[semantics[name]][currVBO].VBO);
+					}
+					
+					// if(pointCloud.attributes[semantics[name]]){
+						// vertexAttribPointer(currProgram, semantics[name], 3, pointCloud.attributes[semantics[name]].VBO);
+					// }
 				}
-            }
-            ctx.drawArrays(ctx.POINTS, 0, mainVBO.currentPos / 3);
-            
-            // If we render a point cloud with vertices and colors, then 
-            // another one with only vertices, this may cause issues if we
-            // don't disabled all the current attributes after each draw.
-            for(var name in semantics){
-              disableVertexAttribPointer(currProgram, semantics[name]);
-            }
+				ctx.drawArrays(ctx.POINTS, 0, arrayOfBufferObjsV[currVBO].length/3);
+				//ctx.drawArrays(ctx.POINTS, 0, mainVBO.currentPos / 3);
+				
+				// If we render a point cloud with vertices and colors, then 
+				// another one with only vertices, this may cause issues if we
+				// don't disabled all the current attributes after each draw.
+				for(var name in semantics){
+				  disableVertexAttribPointer(currProgram, semantics[name]);
+				}
+			}
         }
       }
     };
@@ -1422,6 +1472,68 @@ var PointStream = (function() {
 			disableVertexAttribPointer(currProgram, "ps_Vertex");
 			disableVertexAttribPointer(currProgram, "ps_Color");
 			uniformf(currProgram, "ps_overlay", 0.0);
+		}
+	};
+	
+	this.renderNewMarker = function(center, edgePoint) {
+		if(ctx) {
+			ctx.enable(ctx.BLEND);
+			ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE);
+			ctx.useProgram(programCaches[1]);
+			topMatrix = this.peekMatrix();
+			uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
+			var dist = V3.length(V3.sub(center, edgePoint));
+			var vertexTemp = new Float32Array([center[0] + dist, center[1] - dist, center[2],
+											   center[0] + dist, center[1] + dist, center[2],
+											   center[0] - dist, center[1] + dist, center[2],
+											   center[0] + dist, center[1] - dist, center[2],
+											   center[0] - dist, center[1] + dist, center[2],
+											   center[0] - dist, center[1] - dist, center[2]]);
+			var vertexVBO = ctx.createBuffer();
+			ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexVBO);
+			ctx.bufferData(ctx.ARRAY_BUFFER, vertexTemp, ctx.DYNAMIC_DRAW);
+			var varLocation = ctx.getAttribLocation(programCaches[1], "ps_Vertex");
+			if (varLocation !== -1) {
+				ctx.vertexAttribPointer(varLocation, 3, ctx.FLOAT, false, 0, 0);
+				ctx.enableVertexAttribArray(varLocation);
+			}
+			vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
+			ctx.drawArrays(ctx.TRIANGLES, 0, 6);
+			disableVertexAttribPointer(programCaches[1], "ps_Vertex");
+			disableVertexAttribPointer(programCaches[1], "vTexCoord");
+			ctx.deleteBuffer(vertexVBO);
+			ctx.disable(ctx.BLEND);
+			ctx.useProgram(currProgram);
+		}
+	};
+	
+	this.recordNewMarker = function(center, edgePoint) {
+		var dist = V3.length(V3.sub(center, edgePoint));
+		var vertexTemp = new Float32Array([center[0] + dist, center[1] - dist, center[2],
+										   center[0] + dist, center[1] + dist, center[2],
+										   center[0] - dist, center[1] + dist, center[2],
+										   center[0] + dist, center[1] - dist, center[2],
+										   center[0] - dist, center[1] + dist, center[2],
+										   center[0] - dist, center[1] - dist, center[2]]);
+		markers.push(createBufferObject(vertexTemp));
+	};
+	
+	this.renderOrthoMarkers = function() {
+		if(ctx && markers) {
+			ctx.enable(ctx.BLEND);
+			ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE);
+			ctx.useProgram(programCaches[1]);
+			topMatrix = this.peekMatrix();
+			uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
+			vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
+			for(var i = 0; i < markers.length; i++) {
+				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
+				ctx.drawArrays(ctx.TRIANGLES, 0, 6);
+				disableVertexAttribPointer(programCaches[1], "ps_Vertex");
+			}			
+			disableVertexAttribPointer(programCaches[1], "vTexCoord");
+			ctx.disable(ctx.BLEND);
+			ctx.useProgram(currProgram);
 		}
 	};
         
@@ -1676,6 +1788,14 @@ var PointStream = (function() {
     this.getContext = function(){
       return ctx;
     };
+	
+	this.getSF = function() {
+		return scaleFactor;
+	};
+	
+	this.getOM = function() {
+		return orthographicMatrix;
+	};
 
    /**
       @name PointStream#useProgram
@@ -1829,9 +1949,18 @@ var PointStream = (function() {
       this.background(bk);
       
       // Create and use the program object
-      defaultProgram = currProgram = createProgramObject(ctx, vertexShaderSource, fragmentShaderSource);
-      ctx.useProgram(currProgram);
-      setDefaultUniforms();
+      //defaultProgram = 
+	  currProgram = createProgramObject(ctx, vertexShaderSource, fragmentShaderSource);
+	  programCaches.push(currProgram);	  
+	  programCaches.push(createProgramObject(ctx, orthoMarkupVertexShader, orthoMarkupFragmentShader));
+	  for(var i = programCaches.length - 1; i >= 0; i--) {
+		ctx.useProgram(programCaches[i]);
+		uniformMatrix(programCaches[i], "ps_ProjectionMatrix", false, perspectiveMatrix);
+	  }
+	  uniformf(currProgram, "ps_PointSize", 1);
+      uniformf(currProgram, "ps_Attenuation", [attn[0], attn[1], attn[2]]);
+	  uniformf(currProgram, "ps_overlay", 0.0);
+	  
       
       /**
         @private
@@ -2005,6 +2134,16 @@ var PointStream = (function() {
 		}
 		axesColorsVBO = createBufferObject(temp);
 	};
+	
+	this.initializeMarkers = function() {
+		var texCoords = new Float32Array([1.0, 0.0,
+											  1.0, 1.0,
+											  0.0, 1.0,
+											  1.0, 0.0,
+											  0.0, 1.0,
+											  0.0, 0.0]);
+		markerTexCoords = createBufferObject(texCoords);
+	};
     
     /**
       Set the point attenuation factors.
@@ -2025,16 +2164,25 @@ var PointStream = (function() {
 		else if(scaleFactor > 1000) {
 			scaleFactor = 1000;
 		}
-		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
+		for(var i = programCaches.length - 1; i >= 0; i--) {
+			ctx.useProgram(programCaches[i]);
+			uniformMatrix(programCaches[i], "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
+		}
 	};
 	
 	this.useOrthographic = function() {
 		scaleFactor = 600;
-		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
+		for(var i = programCaches.length - 1; i >= 0; i--) {
+			ctx.useProgram(programCaches[i]);
+			uniformMatrix(programCaches[i], "ps_ProjectionMatrix", false, M4x4.scale3(1 / scaleFactor, 1 / scaleFactor, 1, orthographicMatrix));
+		}
 	};
 
 	this.usePerspective = function() {
-		uniformMatrix(currProgram, "ps_ProjectionMatrix", false, perspectiveMatrix);
+		for(var i = programCaches.length - 1; i >= 0; i--) {
+			ctx.useProgram(programCaches[i]);
+			uniformMatrix(programCaches[i], "ps_ProjectionMatrix", false, perspectiveMatrix);
+		}
 	};
     
     /**

@@ -1,9 +1,13 @@
 var ps, ps2, ps3, cloud1, cloud2, cloud3, cloud4;
 var cam = new Camera({});
 var isDragging = false;
+var placingMarker = false;
 var StartCoords = [0, 0];
 var viewMode = 0;
 var orthoZoom = false;
+var viewportArray = [308, 585, 540, -540];
+var results1;
+var results2;
 
 function changePointSize(val) {
 	ps.pointSize(val);
@@ -80,6 +84,16 @@ function keyDown() {
 			cam.setZoomVel(-0.05);
 			orthoZoom = true;
 			break;
+		case 77:
+		case 109:
+			if(!placingMarker) {
+				StartCoords[0] = ps.mouseX;
+				StartCoords[1] = ps.mouseY;
+				ps.markerBegin = V3.$(StartCoords[0], StartCoords[1], 0);
+				isDragging = true;
+				placingMarker = true;
+			}
+			break;
 	}
 }
 
@@ -104,6 +118,12 @@ function keyUp() {
 			cam.setZoomVel(0);
 			orthoZoom = false;
 			break;
+		case 77:
+		case 109:
+			isDragging = false;
+			placingMarker = false;
+			ps.recordNewMarker(results1, results2);
+			break;
 	}
 }
 
@@ -117,20 +137,23 @@ function render() {
 		// now that the camera was updated, reset where the
 		// rotation will start for the next time this function is called.
 		StartCoords = [ps.mouseX, ps.mouseY];
-
-		if(viewMode === 3 || viewMode === 4) {
-			cam.mapScrollX(-deltaX * 0.25);
-			cam.mapScrollY(deltaY * 0.25);
-		}
-		else {
-			cam.updatePan(-deltaX * 0.015);
-			cam.updateTilt(-deltaY * 0.015);
+		
+		if(!placingMarker) {
+			if(viewMode === 3 || viewMode === 4) {
+				cam.mapScrollX(-deltaX * 0.25);
+				cam.mapScrollY(deltaY * 0.25);
+			}
+			else {
+				cam.updatePan(-deltaX * 0.015);
+				cam.updateTilt(-deltaY * 0.015);
+			}
 		}
 	}
 
     var c = cloud1.getCenter();
 	ps.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
 	ps.pushMatrix();
+	
 	ps.translate(-c[0], -c[1], -c[2]);
 	
 	if(viewMode === 4 && orthoZoom) {
@@ -160,6 +183,20 @@ function render() {
 			ps.renderScaleBar(false);
 		}
 	}
+	
+	if(placingMarker) {
+		results1 = [];
+		var sf = 1 / ps.getSF();
+		var omm = ps.getOM();
+		GLU.unProject(ps.markerBegin[0], ps.markerBegin[1], ps.markerBegin[2], ps.peekMatrix(),
+					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+		results2 = [];
+		GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
+					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results2);
+		ps.renderNewMarker(results1, results2);
+	}
+	
+	ps.renderOrthoMarkers();
 }
 
 function renderAxes() {
@@ -234,6 +271,7 @@ function start() {
 	ps.onRender = render;
 	ps.attenuation(1.0, 0.0, 0.0);
 	ps.initializeScaleBar();
+	ps.initializeMarkers();
 	
 	ps.onMouseScroll = zoom;
 	ps.onMousePressed = mousePressed;
