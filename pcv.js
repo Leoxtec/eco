@@ -2,6 +2,7 @@ var ps, ps2, ps3, cloud1, cloud2, cloud3, cloud4;
 var cam = new Camera({});
 var isDragging = false;
 var placingMarker = false;
+var removingMarker = false;
 var StartCoords = [0, 0];
 var viewMode = 0;
 var orthoZoom = false;
@@ -84,8 +85,7 @@ function keyDown() {
 			cam.setZoomVel(-0.05);
 			orthoZoom = true;
 			break;
-		case 77:
-		case 109:
+		case 49:
 			if(!placingMarker) {
 				StartCoords[0] = ps.mouseX;
 				StartCoords[1] = ps.mouseY;
@@ -93,6 +93,16 @@ function keyDown() {
 				isDragging = true;
 				placingMarker = true;
 			}
+			break;
+		case 50:
+			if(placingMarker) {
+				ps.recordNewMarker(results1, results2);
+			}
+			break;
+		case 51:
+			removingMarker = true;
+			StartCoords[0] = ps.mouseX;
+			StartCoords[1] = ps.mouseY;
 			break;
 	}
 }
@@ -118,11 +128,9 @@ function keyUp() {
 			cam.setZoomVel(0);
 			orthoZoom = false;
 			break;
-		case 77:
-		case 109:
+		case 49:
 			isDragging = false;
 			placingMarker = false;
-			ps.recordNewMarker(results1, results2);
 			break;
 	}
 }
@@ -194,6 +202,16 @@ function render() {
 		GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
 					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results2);
 		ps.renderNewMarker(results1, results2);
+	}
+	
+	if(removingMarker) {
+		results1 = [];
+		var sf = 1 / ps.getSF();
+		var omm = ps.getOM();
+		GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
+					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+		ps.removeMarker(results1);
+		removingMarker = false;
 	}
 	
 	ps.renderOrthoMarkers();

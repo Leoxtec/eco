@@ -1515,7 +1515,38 @@ var PointStream = (function() {
 										   center[0] + dist, center[1] - dist, center[2],
 										   center[0] - dist, center[1] + dist, center[2],
 										   center[0] - dist, center[1] - dist, center[2]]);
-		markers.push(createBufferObject(vertexTemp));
+		if(ctx){
+			var VBO = ctx.createBuffer();
+			ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO);
+			ctx.bufferData(ctx.ARRAY_BUFFER, vertexTemp, ctx.STATIC_DRAW);
+			var obj = {
+			  center: center,
+			  radius: dist,
+			  VBO: VBO
+			}
+			markers.push(obj);
+		}
+		//markers.push(createBufferObject(vertexTemp));
+	};
+	
+	this.removeMarker = function(clickPoint) {
+		clickPoint[2] = 0;
+		var closestDist = Number.POSITIVE_INFINITY;
+		var closestIndex = -1;
+		var distSqr;
+		var tempVec;
+		for(var i = 0; i < markers.length; i++) {
+			tempVec = V3.clone(markers[i].center);
+			tempVec[2] = 0;
+			distSqr = V3.lengthSquared(V3.sub(tempVec, clickPoint));
+			if((distSqr < markers[i].radius * markers[i].radius) && distSqr < closestDist) {
+				closestDist = distSqr;
+				closestIndex = i;
+			}
+		}
+		if(closestIndex > -1) {
+			markers.splice(closestIndex, 1);
+		}
 	};
 	
 	this.renderOrthoMarkers = function() {
