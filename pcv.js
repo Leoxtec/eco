@@ -284,12 +284,12 @@ function start() {
 
 	ps = new PointStream();
 	
-	ps.setup(document.getElementById('canvas'));  
+	ps.setup(document.getElementById('canvas'));
 	ps.background([0, 0, 0, 0.5]);
+	ps.initializeMarkers();
 	ps.onRender = render;
 	ps.attenuation(1.0, 0.0, 0.0);
 	ps.initializeScaleBar();
-	ps.initializeMarkers();
 	
 	ps.onMouseScroll = zoom;
 	ps.onMousePressed = mousePressed;

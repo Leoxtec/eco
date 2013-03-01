@@ -1520,10 +1520,18 @@ var PointStream = (function() {
 			ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO);
 			ctx.bufferData(ctx.ARRAY_BUFFER, vertexTemp, ctx.STATIC_DRAW);
 			var obj = {
+			  id : 0,
 			  center: center,
 			  radius: dist,
-			  VBO: VBO
+			  VBO: VBO,
+			  height: 50,
+			  species: 'tree',
+			  descr: 'testing inserts and deletes'
 			}
+			var xmlhttp = new XMLHttpRequest();
+			xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=add&radius="+obj.radius+"&centerX="+obj.center[0]+"&centerY="+obj.center[1]+"&centerZ="+obj.center[2]+"&height="+obj.height+"&species="+obj.species+"&descr="+obj.descr, false);
+			xmlhttp.send();
+			obj.id = xmlhttp.responseText;
 			markers.push(obj);
 		}
 		//markers.push(createBufferObject(vertexTemp));
@@ -1545,6 +1553,9 @@ var PointStream = (function() {
 			}
 		}
 		if(closestIndex > -1) {
+			var xmlhttp = new XMLHttpRequest();
+			xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=delete&id="+markers[closestIndex].id, false);
+			xmlhttp.send();
 			markers.splice(closestIndex, 1);
 		}
 	};
@@ -2174,6 +2185,42 @@ var PointStream = (function() {
 											  0.0, 1.0,
 											  0.0, 0.0]);
 		markerTexCoords = createBufferObject(texCoords);
+		var xmlhttp = new XMLHttpRequest();
+		//xmlhttp.responseType = 'json';
+		xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=start", false);
+		xmlhttp.send();
+		var init = xmlhttp.responseText;
+		var temp = JSON.parse(init);
+		//var temp = JSON.parse(xmlhttp.responseText);
+		// var temp = eval('(' + xmlhttp.responseText + ')');
+		if(temp) {
+			temp = temp.markers;
+			for(var i = 0; i < temp.length; i++) {
+				var center = V3.$(temp[i].centerX, temp[i].centerY, temp[i].centerZ);
+				var dist = temp[i].radius;
+				var vertexTemp = new Float32Array([center[0] + dist, center[1] - dist, center[2],
+												   center[0] + dist, center[1] + dist, center[2],
+												   center[0] - dist, center[1] + dist, center[2],
+												   center[0] + dist, center[1] - dist, center[2],
+												   center[0] - dist, center[1] + dist, center[2],
+												   center[0] - dist, center[1] - dist, center[2]]);
+				if(ctx){
+					var VBO = ctx.createBuffer();
+					ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO);
+					ctx.bufferData(ctx.ARRAY_BUFFER, vertexTemp, ctx.STATIC_DRAW);
+					var obj = {
+					  id : temp[i].id,
+					  center: center,
+					  radius: dist,
+					  VBO: VBO,
+					  height: temp[i].height,
+					  species: temp[i].species,
+					  descr: temp[i].descr
+					}
+					markers.push(obj);
+				}
+			}
+		}
 	};
     
     /**
