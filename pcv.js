@@ -10,6 +10,30 @@ var viewportArray = [308, 585, 540, -540];
 var results1;
 var results2;
 
+function switchDiv() {
+	var a = document.getElementById('markupInfo');
+	if(a.style.display == "block") {
+		a.style.display = "none";
+	}
+	else {
+		a.style.display = "block";
+	}
+	
+	a = document.getElementById('newMarkupInfo');
+	if(a.style.display == "block") {
+		a.style.display = "none";
+	}
+	else {
+		a.style.display = "block";
+	}
+}
+
+function setValues() {
+	var form = document.forms[0];
+	ps.setLatestMarkerValues(form.elements[0].value, form.elements[1].value);
+	switchDiv();
+}
+
 function changePointSize(val) {
 	ps.pointSize(val);
 }
@@ -96,6 +120,7 @@ function keyDown() {
 			break;
 		case 50:
 			if(placingMarker) {
+				switchDiv();
 				ps.recordNewMarker(results1, results2);
 			}
 			break;
@@ -192,7 +217,16 @@ function render() {
 		}
 	}
 	
-	if(placingMarker) {
+	if(viewMode === 4) {
+		results1 = [];
+		var sf = 1 / ps.getSF();
+		var omm = ps.getOM();
+		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
+					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+		ps.displayMarkerInfo(results1);
+	}
+	
+	if(viewMode === 4 && placingMarker) {
 		results1 = [];
 		var sf = 1 / ps.getSF();
 		var omm = ps.getOM();
@@ -204,7 +238,7 @@ function render() {
 		ps.renderNewMarker(results1, results2);
 	}
 	
-	if(removingMarker) {
+	if(viewMode === 4 && removingMarker) {
 		results1 = [];
 		var sf = 1 / ps.getSF();
 		var omm = ps.getOM();

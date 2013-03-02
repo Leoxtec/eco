@@ -1528,13 +1528,18 @@ var PointStream = (function() {
 			  species: 'tree',
 			  descr: 'testing inserts and deletes'
 			}
-			var xmlhttp = new XMLHttpRequest();
-			xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=add&radius="+obj.radius+"&centerX="+obj.center[0]+"&centerY="+obj.center[1]+"&centerZ="+obj.center[2]+"&height="+obj.height+"&species="+obj.species+"&descr="+obj.descr, false);
-			xmlhttp.send();
-			obj.id = xmlhttp.responseText;
 			markers.push(obj);
 		}
-		//markers.push(createBufferObject(vertexTemp));
+	};
+	
+	this.setLatestMarkerValues = function(spec, descr) {
+		var mark = markers[markers.length - 1];
+		mark.species = spec;
+		mark.descr = descr;
+		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=add&radius="+mark.radius+"&centerX="+mark.center[0]+"&centerY="+mark.center[1]+"&centerZ="+mark.center[2]+"&height="+mark.height+"&species="+mark.species+"&descr="+mark.descr, false);
+		xmlhttp.send();
+		mark.id = xmlhttp.responseText;
 	};
 	
 	this.removeMarker = function(clickPoint) {
@@ -1557,6 +1562,35 @@ var PointStream = (function() {
 			xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=delete&id="+markers[closestIndex].id, false);
 			xmlhttp.send();
 			markers.splice(closestIndex, 1);
+		}
+	};
+	
+	this.displayMarkerInfo = function(point) {
+		point[2] = 0;
+		var closestDist = Number.POSITIVE_INFINITY;
+		var closestIndex = -1;
+		var distSqr;
+		var tempVec;
+		for(var i = 0; i < markers.length; i++) {
+			tempVec = V3.clone(markers[i].center);
+			tempVec[2] = 0;
+			distSqr = V3.lengthSquared(V3.sub(tempVec, point));
+			if((distSqr < markers[i].radius * markers[i].radius) && distSqr < closestDist) {
+				closestDist = distSqr;
+				closestIndex = i;
+			}
+		}
+		if(closestIndex > -1) {
+			$("#markRadius").val(markers[closestIndex].radius);
+			$("#markHeight").val(markers[closestIndex].height);
+			$("#markSpecies").val(markers[closestIndex].species);
+			$("#markDescr").val(markers[closestIndex].descr);
+		}
+		else {
+			$("#markRadius").val('');
+			$("#markHeight").val('');
+			$("#markSpecies").val('');
+			$("#markDescr").val('');
 		}
 	};
 	
@@ -2186,13 +2220,10 @@ var PointStream = (function() {
 											  0.0, 0.0]);
 		markerTexCoords = createBufferObject(texCoords);
 		var xmlhttp = new XMLHttpRequest();
-		//xmlhttp.responseType = 'json';
 		xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=start", false);
 		xmlhttp.send();
 		var init = xmlhttp.responseText;
 		var temp = JSON.parse(init);
-		//var temp = JSON.parse(xmlhttp.responseText);
-		// var temp = eval('(' + xmlhttp.responseText + ')');
 		if(temp) {
 			temp = temp.markers;
 			for(var i = 0; i < temp.length; i++) {

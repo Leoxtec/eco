@@ -70,6 +70,27 @@
 	<canvas id="canvas2" width="270" height="270"></canvas>
 	</div>
 	
+	<div id="markupInfo" style="background-color:#222222;height:270px;width:225px;float:left;display:block">
+	<label for="markRadius">Radius:</label>
+	<input type="text" id="markRadius" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></br>
+	<label for="markHeight">Height:</label>
+	<input type="text" id="markHeight" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></br>
+	<label for="markSpecies">Species:</label>
+	<input type="text" id="markSpecies" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></br>
+	<label for="markDescr">Description:</label>
+	<textarea id="markDescr" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></textarea>
+	</div>
+	
+	<div id="newMarkupInfo" style="background-color:#222222;height:270px;width:225px;float:left;display:none">
+	<form>
+	<label for="newSpecies">Species:</label>
+	<input type="text" id="newSpecies" style="border: 0; color: #FFD700; font-weight: bold; background-color: #FFFFFF;" /></br>
+	<label for="newDescr">Description:</label>
+	<textarea id="newDescr" style="border: 0; color: #FFD700; font-weight: bold; background-color: #FFFFFF;" /></textarea>
+	<input type="button" value="Submit" onclick="setValues();">
+	</form>
+	</div>
+	
 	<div id="content3" style="background-color:#EEEEEE;height:270px;width:270px;float:left;">
 	<canvas id="canvas3" width="270" height="270"></canvas>
 	</div>
