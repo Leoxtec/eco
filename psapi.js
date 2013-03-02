@@ -319,7 +319,7 @@ var PointStream = (function() {
         var obj = {
           length: arr.length,
           VBO: VBO,
-          //array: arr
+          array: arr
         }
         
         return obj;
@@ -1519,12 +1519,13 @@ var PointStream = (function() {
 			var VBO = ctx.createBuffer();
 			ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO);
 			ctx.bufferData(ctx.ARRAY_BUFFER, vertexTemp, ctx.STATIC_DRAW);
+			
 			var obj = {
 			  id : 0,
 			  center: center,
 			  radius: dist,
 			  VBO: VBO,
-			  height: 50,
+			  height: 0,
 			  species: 'tree',
 			  descr: 'testing inserts and deletes'
 			}
@@ -1536,6 +1537,28 @@ var PointStream = (function() {
 		var mark = markers[markers.length - 1];
 		mark.species = spec;
 		mark.descr = descr;
+		
+		var highest = Number.NEGATIVE_INFINITY;
+		var tempCenter = V3.clone(mark.center);
+		tempCenter[2] = 0;
+		for(var i = 0; i < pointClouds.length; i++) {
+			var pcCenter = pointClouds[i].getCenter();
+			for(var j = 0; j < pointClouds[i].attributes["ps_Vertex"].length; j++) {
+				var temp = pointClouds[i].attributes["ps_Vertex"][j].array;
+				var distSqr;
+				var tempVec;
+				for(var k = 0; k < temp.length; k += 3) {
+					tempVec = V3.sub(V3.$(temp[k], temp[k + 1], temp[k + 2]), pcCenter);
+					tempVec[2] = 0;
+					distSqr = V3.lengthSquared(V3.sub(tempVec, tempCenter));
+					if((distSqr < mark.radius * mark.radius) && (temp[k + 2] - pcCenter[2]) > highest) {
+						highest = temp[k + 2] - pcCenter[2];
+					}
+				}
+			}
+		}
+		mark.height = highest;
+		
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=add&radius="+mark.radius+"&centerX="+mark.center[0]+"&centerY="+mark.center[1]+"&centerZ="+mark.center[2]+"&height="+mark.height+"&species="+mark.species+"&descr="+mark.descr, false);
 		xmlhttp.send();
@@ -2154,10 +2177,10 @@ var PointStream = (function() {
 	
 	this.initializeMap = function() {
 		this.useOrthographic();
-		xmin = xmin * scaleFactor + 2;
-		xmax= xmax * scaleFactor - 2;
-		ymin = ymin * scaleFactor + 2;
-		ymax = ymax * scaleFactor - 2;
+		xmin = xmin * scaleFactor + 4;
+		xmax= xmax * scaleFactor - 4;
+		ymin = ymin * scaleFactor + 4;
+		ymax = ymax * scaleFactor - 4;
 		var temp = new Float32Array([-0.5, -6.0, 50.0,
 									 0.5, -6.0, 50.0,
 									 0.5, -2.0, 50.0,
