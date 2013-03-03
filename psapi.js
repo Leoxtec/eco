@@ -46,6 +46,8 @@ var PointStream = (function() {
 	var markerTexCoords;
 	var markerBegin;
 	var markers = [];
+	var cylinders = [];
+	var cylinderNormals;
     
     // Mouse
     var userMouseReleased = __empty_func;
@@ -213,6 +215,45 @@ var PointStream = (function() {
 	  }											\n\
       gl_FragColor = vec4(0.0, 0.0, 1.0, 0.5);  	\n\
     }';
+	
+	var cylinderVertexShader = 
+	"attribute vec3 ps_Vertex;" +
+	"attribute vec3 ps_Normal;" +
+
+	"uniform mat4 ps_ModelViewMatrix;" +
+	"uniform mat4 ps_ProjectionMatrix;" +
+	"uniform mat3 ps_NormalMatrix;" +
+
+	"varying vec3 vTransformedNormal;" +
+	"varying vec4 vPosition;" +
+
+	"void main(void) {" +
+	"	vPosition = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
+	"	gl_Position = ps_ProjectionMatrix * vPosition;" +
+	"	vTransformedNormal = ps_NormalMatrix * ps_Normal;" +
+	"}";
+
+	var cylinderFragmentShader = 
+	'#ifdef GL_ES                 \n\
+    precision highp float;        \n\
+    #endif                        \n\
+							      \n\
+	varying vec3 vTransformedNormal;      \n\
+	varying vec4 vPosition;      \n\
+								      \n\
+								      \n\
+	void main(void) {      \n\
+		vec3 lightDirection = normalize(-vPosition.xyz);      \n\
+		float directionalLightWeighting = dot(normalize(vTransformedNormal), lightDirection);      \n\
+		if(directionalLightWeighting < 0.0) {      \n\
+			discard;								\n\
+		}      \n\
+		vec3 lightWeighting = vec3(0.0, 0.0, 0.2) + vec3(0.0, 0.0, 0.8) * directionalLightWeighting;      \n\
+		      \n\
+		vec4 fragmentColor;      \n\
+		fragmentColor = vec4(0.0, 0.0, 1.0, 0.5);      \n\
+		gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);      \n\
+	}';
 
     /**
       @private
@@ -1477,18 +1518,17 @@ var PointStream = (function() {
 	
 	this.renderNewMarker = function(center, edgePoint) {
 		if(ctx) {
+			center[2] = edgePoint[2] = 35.0;
 			ctx.enable(ctx.BLEND);
 			ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE);
 			ctx.useProgram(programCaches[1]);
 			topMatrix = this.peekMatrix();
 			uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
-			var dist = V3.length(V3.sub(center, edgePoint));
+			var dist = V3.length(V3.sub(center, edgePoint));			
 			var vertexTemp = new Float32Array([center[0] + dist, center[1] - dist, center[2],
 											   center[0] + dist, center[1] + dist, center[2],
-											   center[0] - dist, center[1] + dist, center[2],
-											   center[0] + dist, center[1] - dist, center[2],
-											   center[0] - dist, center[1] + dist, center[2],
-											   center[0] - dist, center[1] - dist, center[2]]);
+											   center[0] - dist, center[1] - dist, center[2],
+											   center[0] - dist, center[1] + dist, center[2]]);
 			var vertexVBO = ctx.createBuffer();
 			ctx.bindBuffer(ctx.ARRAY_BUFFER, vertexVBO);
 			ctx.bufferData(ctx.ARRAY_BUFFER, vertexTemp, ctx.DYNAMIC_DRAW);
@@ -1498,7 +1538,7 @@ var PointStream = (function() {
 				ctx.enableVertexAttribArray(varLocation);
 			}
 			vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
-			ctx.drawArrays(ctx.TRIANGLES, 0, 6);
+			ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);			
 			disableVertexAttribPointer(programCaches[1], "ps_Vertex");
 			disableVertexAttribPointer(programCaches[1], "vTexCoord");
 			ctx.deleteBuffer(vertexVBO);
@@ -1508,13 +1548,21 @@ var PointStream = (function() {
 	};
 	
 	this.recordNewMarker = function(center, edgePoint) {
-		var dist = V3.length(V3.sub(center, edgePoint));
+		center[2] = edgePoint[2] = 35.0;
+		var dist = V3.length(V3.sub(center, edgePoint));										   
 		var vertexTemp = new Float32Array([center[0] + dist, center[1] - dist, center[2],
 										   center[0] + dist, center[1] + dist, center[2],
-										   center[0] - dist, center[1] + dist, center[2],
-										   center[0] + dist, center[1] - dist, center[2],
-										   center[0] - dist, center[1] + dist, center[2],
-										   center[0] - dist, center[1] - dist, center[2]]);
+										   center[0] - dist, center[1] - dist, center[2],
+										   center[0] - dist, center[1] + dist, center[2]]);
+		var vertexCylTemp = new Float32Array(198);
+		for(var j = 0; j < 198; j += 6) {
+			var rads = (j * Math.PI) / 96;
+			vertexCylTemp[j] = vertexCylTemp[j + 3] = center[0] + dist * Math.cos(rads);
+			vertexCylTemp[j + 1] = vertexCylTemp[j + 4] = center[1] + dist * Math.sin(rads);
+			vertexCylTemp[j + 2] = center[2];
+			vertexCylTemp[j + 5] = -center[2] * 0.5;
+		}
+		
 		if(ctx){
 			var VBO = ctx.createBuffer();
 			ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO);
@@ -1526,10 +1574,18 @@ var PointStream = (function() {
 			  radius: dist,
 			  VBO: VBO,
 			  height: 0,
-			  species: 'tree',
-			  descr: 'testing inserts and deletes'
+			  species: 'tree type',
+			  descr: 'short description'
 			}
 			markers.push(obj);
+			
+			var VBO2 = ctx.createBuffer();
+			ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO2);
+			ctx.bufferData(ctx.ARRAY_BUFFER, vertexCylTemp, ctx.STATIC_DRAW);
+			var obj2 = {
+				VBO : VBO2
+			}
+			cylinders.push(obj2);
 		}
 	};
 	
@@ -1585,6 +1641,7 @@ var PointStream = (function() {
 			xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=delete&id="+markers[closestIndex].id, false);
 			xmlhttp.send();
 			markers.splice(closestIndex, 1);
+			cylinders.splice(closestIndex, 1);
 		}
 	};
 	
@@ -1627,10 +1684,23 @@ var PointStream = (function() {
 			vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
 			for(var i = 0; i < markers.length; i++) {
 				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
-				ctx.drawArrays(ctx.TRIANGLES, 0, 6);
+				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
 				disableVertexAttribPointer(programCaches[1], "ps_Vertex");
 			}			
 			disableVertexAttribPointer(programCaches[1], "vTexCoord");
+			ctx.enable(ctx.CULL_FACE);
+			ctx.useProgram(programCaches[2]);
+			uniformMatrix(programCaches[2], "ps_ModelViewMatrix", false, topMatrix);
+			normalMatrix = M4x4.inverseOrthonormal(topMatrix);
+			uniformMatrix(programCaches[2], "ps_NormalMatrix", false, M4x4.topLeft3x3(M4x4.transpose(normalMatrix)));
+			vertexAttribPointer(programCaches[2], "ps_Normal", 3, cylinderNormals.VBO);
+			for(var i = 0; i < markers.length; i++) {
+				vertexAttribPointer(programCaches[2], "ps_Vertex", 3, cylinders[i].VBO);
+				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 66);
+				disableVertexAttribPointer(programCaches[2], "ps_Vertex");
+			}
+			disableVertexAttribPointer(programCaches[2], "ps_Normal");
+			ctx.disable(ctx.CULL_FACE);
 			ctx.disable(ctx.BLEND);
 			ctx.useProgram(currProgram);
 		}
@@ -2052,6 +2122,7 @@ var PointStream = (function() {
 	  currProgram = createProgramObject(ctx, vertexShaderSource, fragmentShaderSource);
 	  programCaches.push(currProgram);	  
 	  programCaches.push(createProgramObject(ctx, orthoMarkupVertexShader, orthoMarkupFragmentShader));
+	  programCaches.push(createProgramObject(ctx, cylinderVertexShader, cylinderFragmentShader));
 	  for(var i = programCaches.length - 1; i >= 0; i--) {
 		ctx.useProgram(programCaches[i]);
 		uniformMatrix(programCaches[i], "ps_ProjectionMatrix", false, perspectiveMatrix);
@@ -2236,11 +2307,9 @@ var PointStream = (function() {
 	
 	this.initializeMarkers = function() {
 		var texCoords = new Float32Array([1.0, 0.0,
-											  1.0, 1.0,
-											  0.0, 1.0,
-											  1.0, 0.0,
-											  0.0, 1.0,
-											  0.0, 0.0]);
+										  1.0, 1.0,
+										  0.0, 0.0,
+										  0.0, 1.0]);
 		markerTexCoords = createBufferObject(texCoords);
 		var xmlhttp = new XMLHttpRequest();
 		xmlhttp.open("GET", "/repos/kensdevelopment/action.php?a=start", false);
@@ -2254,10 +2323,16 @@ var PointStream = (function() {
 				var dist = temp[i].radius;
 				var vertexTemp = new Float32Array([center[0] + dist, center[1] - dist, center[2],
 												   center[0] + dist, center[1] + dist, center[2],
-												   center[0] - dist, center[1] + dist, center[2],
-												   center[0] + dist, center[1] - dist, center[2],
-												   center[0] - dist, center[1] + dist, center[2],
-												   center[0] - dist, center[1] - dist, center[2]]);
+												   center[0] - dist, center[1] - dist, center[2],
+												   center[0] - dist, center[1] + dist, center[2]]);
+				var vertexCylTemp = new Float32Array(198);
+				for(var j = 0; j < 198; j += 6) {
+					var rads = (j * Math.PI) / 96;
+					vertexCylTemp[j] = vertexCylTemp[j + 3] = center[0] + dist * Math.cos(rads);
+					vertexCylTemp[j + 1] = vertexCylTemp[j + 4] = center[1] + dist * Math.sin(rads);
+					vertexCylTemp[j + 2] = center[2];
+					vertexCylTemp[j + 5] = -center[2] * 0.5;
+				}
 				if(ctx){
 					var VBO = ctx.createBuffer();
 					ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO);
@@ -2272,9 +2347,25 @@ var PointStream = (function() {
 					  descr: temp[i].descr
 					}
 					markers.push(obj);
+					
+					var VBO2 = ctx.createBuffer();
+					ctx.bindBuffer(ctx.ARRAY_BUFFER, VBO2);
+					ctx.bufferData(ctx.ARRAY_BUFFER, vertexCylTemp, ctx.STATIC_DRAW);
+					var obj2 = {
+						VBO : VBO2
+					}
+					cylinders.push(obj2);
 				}
 			}
 		}
+		var tempNorms = new Float32Array(198);
+		for(var k = 0; k < 198; k += 6) {
+			var rads = (k * Math.PI) / 96;
+			tempNorms[k] = tempNorms[k + 3] = Math.cos(rads);
+			tempNorms[k + 1] = tempNorms[k + 4] = Math.sin(rads);
+			tempNorms[k + 2] = tempNorms[k + 5] = 0;
+		}
+		cylinderNormals = createBufferObject(tempNorms);
 	};
     
     /**
