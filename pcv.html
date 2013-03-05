@@ -1,6 +1,12 @@
 <html style="overflow-x: hidden; overflow-y: hidden; ">
 
   <head>
+	<style>
+		h1 {
+			font-family: 'Permanent Marker', arial, serif;
+		}
+	</style>
+  
     <script src="xbps.js"></script>
     <script src="libs/camera.js"></script>
 	<script src="libs/GLU.js"></script>
@@ -31,17 +37,18 @@
 	</script>
   </head>
 
-  <body onLoad="start();" bgcolor="#222222">   
+  <body onLoad="start();" bgcolor="#666666">   
 <!-- header -->
-    <div id="header" style="background-color:#FFA500;">
-    <h1 style="margin-bottom:0;">Ecosynth browser</h1>
+    <div id="header" style="background-color:#949aa1;">
+    <h1 style="margin-bottom:0;color:#FFFFFF;font:arial">Ecosynth browser</h1>
     </div>
    
-    <div id="menu" style="background-color:#FFD700;height:540px;width:300px;float:left;">
+    <div id="menu" style="background-color:#FFFFFF;height:540px;width:300px;float:left;">
+	<span style="font-family:arial;title='hello'">
     <b>Menu</b><br>
 <!-- 	<div> -->
-	<span>leaf_on.ply:</span> <input type="checkbox" id="pc2" checked="checked"/></br>
-	<span>leaf_off.ply:</span> <input type="checkbox" id="pc1" checked="checked"/></br>
+	<span>leaf_on:</span> <input type="checkbox" id="pc2" checked="checked"/></br>
+	<span>leaf_off:</span> <input type="checkbox" id="pc1" checked="checked"/></br>
 	<span>attentuation:</span> <input type="checkbox" id="atten"/></br>
 	<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
 	<span>overlay:</span> <input type="checkbox" id="overlay"/></br>
@@ -57,9 +64,12 @@
 	<input type="radio" name="camera" onclick="viewRadioButton(4);"> Map Camera</br>
 	<p>
 		<label for="pSize">Point Size:</label>
-		<input type="text" id="pSize" style="border: 0; font-weight: bold; background-color: #FFD700;" />
+		<input type="text" id="pSize" style="border: 0; font-weight: bold; background-color: #FFFFFF;" />
 		<div id="pointSizeSlider"></div>
 	</p>
+	<span><a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_on.ply">Click to download Leaf On Point  Cloud</a></span></br>
+    <span><a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_off.ply">Click to download Leaf Off Point Cloud</a></span>
+    </span>
 	</div>
    
     <div id="content1" style="background-color:#22222;height:540px;width:540px;float:left;">
@@ -70,23 +80,23 @@
 	<canvas id="canvas2" width="270" height="270"></canvas>
 	</div>
 	
-	<div id="markupInfo" style="background-color:#222222;height:270px;width:225px;float:left;display:block">
+	<div id="markupInfo" style="background-color:#666666;height:270px;width:225px;float:left;display:block">
 	<label for="markRadius">Radius:</label>
-	<input type="text" id="markRadius" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></br>
+	<input type="text" id="markRadius" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br>
 	<label for="markHeight">Height:</label>
-	<input type="text" id="markHeight" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></br>
+	<input type="text" id="markHeight" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br>
 	<label for="markSpecies">Species:</label>
-	<input type="text" id="markSpecies" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></br>
+	<input type="text" id="markSpecies" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br>
 	<label for="markDescr">Description:</label>
-	<textarea id="markDescr" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222;" /></textarea>
+	<textarea id="markDescr" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></textarea>
 	</div>
 	
-	<div id="newMarkupInfo" style="background-color:#222222;height:270px;width:225px;float:left;display:none">
+	<div id="newMarkupInfo" style="background-color:#666666;height:270px;width:225px;float:left;display:none">
 	<form>
 	<label for="newSpecies">Species:</label>
-	<input type="text" id="newSpecies" style="border: 0; color: #FFD700; font-weight: bold; background-color: #FFFFFF;" /></br>
+	<input type="text" id="newSpecies" style="border: 0; color: #000000; font-weight: bold; background-color: #FFFFFF;" /></br>
 	<label for="newDescr">Description:</label>
-	<textarea id="newDescr" style="border: 0; color: #FFD700; font-weight: bold; background-color: #FFFFFF;" /></textarea>
+	<textarea id="newDescr" style="border: 0; color: #000000; font-weight: bold; background-color: #FFFFFF;" /></textarea>
 	<input type="button" value="Submit" onclick="setValues();">
 	</form>
 	</div>
@@ -95,11 +105,11 @@
 	<canvas id="canvas3" width="270" height="270"></canvas>
 	</div>
 	
-	<input type="text" id="onOffMap" style="border: 0; color: #FFD700; font-weight: bold; background-color: #222222; margin: 15px; float: left;" />
+	<input type="text" id="onOffMap" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666; margin: 15px; float: left;" />
 	
-	<div id="footer" style="background-color:#FFA500;clear:both;text-align:center;">  
+	<div id="footer" style="background-color:#949aa1;clear:both;text-align:center;">  
     <a id="ecosynth" href="http://ecosynth.org/">
-    <span>This is a web application for ecosynth.org</span>
+    <span style="font-family:arial">This is a web application for ecosynth.org</span>
     </a>
     </div>
 	
