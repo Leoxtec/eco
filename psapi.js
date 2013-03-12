@@ -1679,9 +1679,19 @@ var PointStream = (function() {
 			ctx.enable(ctx.BLEND);
 			ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE);
 			ctx.useProgram(programCaches[1]);
+			this.pushMatrix();
+			this.translate(0, 0, -52.5);
 			topMatrix = this.peekMatrix();
 			uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
 			vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
+			for(var i = 0; i < markers.length; i++) {
+				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
+				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
+				disableVertexAttribPointer(programCaches[1], "ps_Vertex");
+			}
+			this.popMatrix();
+			topMatrix = this.peekMatrix();
+			uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
 			for(var i = 0; i < markers.length; i++) {
 				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
 				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);

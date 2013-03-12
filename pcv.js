@@ -9,6 +9,7 @@ var orthoZoom = false;
 var viewportArray = [308, 585, 540, -540];
 var results1;
 var results2;
+var controllable = true;
 
 function switchDiv() {
 	var a = document.getElementById('markupInfo');
@@ -26,6 +27,8 @@ function switchDiv() {
 	else {
 		a.style.display = "block";
 	}
+	
+	controllable = !controllable;
 }
 
 function setValues() {
@@ -39,124 +42,136 @@ function changePointSize(val) {
 }
 
 function viewRadioButton(value) {
-	cam.setViewMode(value);
-	viewMode = value;
-	if(viewMode === 4) {
-		ps.useOrthographic();
-	}
-	else {
-		ps.usePerspective();
+	if(controllable) {
+		cam.setViewMode(value);
+		viewMode = value;
+		if(viewMode === 4) {
+			ps.useOrthographic();
+		}
+		else {
+			ps.usePerspective();
+		}
 	}
 }
 
 function zoom(amt) {
-	if(viewMode === 4) {
-		ps.scaleOrthographic(amt * 10);
+	if(controllable) {
+		if(viewMode === 4) {
+			ps.scaleOrthographic(amt * 10);
+		}
+		else {
+			cam.updateRadius(amt);
+		}
 	}
-	else {
-		cam.updateRadius(amt);
-	}
-
 }
 
 function mousePressed() {
-	StartCoords[0] = ps.mouseX;
-	StartCoords[1] = ps.mouseY;
-  
-	isDragging = true;
+	if(controllable) {
+		StartCoords[0] = ps.mouseX;
+		StartCoords[1] = ps.mouseY;
+		isDragging = true;
+	}
 }
 
 function mouseReleased() {
-	isDragging = false;
+	if(controllable) {
+		isDragging = false;
+	}
 }
 
 function keyDown() {
-	switch(ps.key) {
-		case 86:
-		case 118:
-			viewMode = (viewMode + 1) % 5;
-			cam.setViewMode(viewMode);
-			if(viewMode === 4) {
-				ps.useOrthographic();
-			}
-			else {
-				ps.usePerspective();
-			}
-			break;
-		case 87:
-		case 119:
-			cam.setStraightVel(0.05);
-			break;
-		case 83:
-		case 115:
-			cam.setStraightVel(-0.05);
-			break;
-		case 65:
-		case 97:
-			cam.setSideVel(-0.05);
-			break;
-		case 68:
-		case 100:
-			cam.setSideVel(0.05);
-			break;
-		case 88:
-		case 120:
-			cam.setZoomVel(0.05);
-			orthoZoom = true;
-			break;
-		case 90:
-		case 122:
-			cam.setZoomVel(-0.05);
-			orthoZoom = true;
-			break;
-		case 49:
-			if(!placingMarker) {
+	if(controllable) {
+		switch(ps.key) {
+			case 86:
+			case 118:
+				viewMode = (viewMode + 1) % 5;
+				cam.setViewMode(viewMode);
+				if(viewMode === 4) {
+					ps.useOrthographic();
+				}
+				else {
+					ps.usePerspective();
+				}
+				break;
+			case 87:
+			case 119:
+				cam.setStraightVel(0.05);
+				break;
+			case 83:
+			case 115:
+				cam.setStraightVel(-0.05);
+				break;
+			case 65:
+			case 97:
+				cam.setSideVel(-0.05);
+				break;
+			case 68:
+			case 100:
+				cam.setSideVel(0.05);
+				break;
+			case 88:
+			case 120:
+				cam.setZoomVel(0.05);
+				orthoZoom = true;
+				break;
+			case 90:
+			case 122:
+				cam.setZoomVel(-0.05);
+				orthoZoom = true;
+				break;
+			case 49:
+				if(!placingMarker) {
+					StartCoords[0] = ps.mouseX;
+					StartCoords[1] = ps.mouseY;
+					ps.markerBegin = V3.$(StartCoords[0], StartCoords[1], 0);
+					isDragging = true;
+					placingMarker = true;
+				}
+				break;
+			case 50:
+				if(placingMarker) {
+					ps.recordNewMarker(results1, results2);
+					switchDiv();
+					placingMarker = false;
+					isDragging = false;
+				}
+				break;
+			case 51:
+				removingMarker = true;
 				StartCoords[0] = ps.mouseX;
 				StartCoords[1] = ps.mouseY;
-				ps.markerBegin = V3.$(StartCoords[0], StartCoords[1], 0);
-				isDragging = true;
-				placingMarker = true;
-			}
-			break;
-		case 50:
-			if(placingMarker) {
-				switchDiv();
-				ps.recordNewMarker(results1, results2);
-			}
-			break;
-		case 51:
-			removingMarker = true;
-			StartCoords[0] = ps.mouseX;
-			StartCoords[1] = ps.mouseY;
-			break;
+				break;
+		}
 	}
 }
 
 function keyUp() {
-	switch(ps.key) {
-		case 87:
-		case 119:
-		case 83:
-		case 115:
-			cam.setStraightVel(0);
-			break;
-		case 65:
-		case 97:
-		case 68:
-		case 100:
-			cam.setSideVel(0);
-			break;
-		case 88:
-		case 120:
-		case 90:
-		case 122:
-			cam.setZoomVel(0);
-			orthoZoom = false;
-			break;
-		case 49:
-			isDragging = false;
-			placingMarker = false;
-			break;
+	if(controllable) {
+		switch(ps.key) {
+			case 87:
+			case 119:
+			case 83:
+			case 115:
+				cam.setStraightVel(0);
+				break;
+			case 65:
+			case 97:
+			case 68:
+			case 100:
+				cam.setSideVel(0);
+				break;
+			case 88:
+			case 120:
+			case 90:
+			case 122:
+				cam.setZoomVel(0);
+				orthoZoom = false;
+				break;
+			case 49:
+				isDragging = false;
+				placingMarker = false;
+				break;
+		}
 	}
 }
 
