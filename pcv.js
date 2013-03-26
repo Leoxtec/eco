@@ -238,7 +238,16 @@ function render() {
 		var omm = ps.getOM();
 		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
 					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-		ps.displayMarkerInfo(results1);
+		ps.displayMarkerInfoOrtho(results1);
+	}
+	else {
+		results1 = [];
+		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
+					  ps.getPM(), viewportArray, results1);
+		results2 = [];
+		GLU.unProject(ps.mouseX, ps.mouseY, 0.1, ps.peekMatrix(),
+					  ps.getPM(), viewportArray, results2);
+		ps.displayMarkerInfo(results1, results2, cam.pos());
 	}
 	
 	if(viewMode === 4 && placingMarker) {
@@ -263,7 +272,7 @@ function render() {
 		removingMarker = false;
 	}
 	
-	ps.renderOrthoMarkers();
+	ps.renderOrthoMarkers(cam.pos());
 }
 
 function renderAxes() {
