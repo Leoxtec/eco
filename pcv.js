@@ -200,6 +200,24 @@ function render() {
 
     var c = cloud1.getCenter();
 	ps.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
+	
+	if(viewMode === 4) {
+		results1 = [];
+		var sf = 1 / ps.getSF();
+		var omm = ps.getOM();
+		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
+					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+		ps.displayMarkerInfoOrtho(results1);
+	}
+	else {
+		// results1 = [];
+		// GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
+					  // ps.getPM(), viewportArray, results1);
+		// ps.displayMarkerInfo(cam.pos(), results1);
+		ps.clear();
+		ps.displayMarkerInfo(ps.mouseX - 308, 585 - ps.mouseY);
+	}
+	
 	ps.pushMatrix();
 	
 	ps.translate(-c[0], -c[1], -c[2]);
@@ -232,24 +250,6 @@ function render() {
 		}
 	}
 	
-	if(viewMode === 4) {
-		results1 = [];
-		var sf = 1 / ps.getSF();
-		var omm = ps.getOM();
-		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
-					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-		ps.displayMarkerInfoOrtho(results1);
-	}
-	else {
-		results1 = [];
-		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
-					  ps.getPM(), viewportArray, results1);
-		results2 = [];
-		GLU.unProject(ps.mouseX, ps.mouseY, 0.1, ps.peekMatrix(),
-					  ps.getPM(), viewportArray, results2);
-		ps.displayMarkerInfo(results1, results2, cam.pos());
-	}
-	
 	if(viewMode === 4 && placingMarker) {
 		results1 = [];
 		var sf = 1 / ps.getSF();
@@ -272,7 +272,7 @@ function render() {
 		removingMarker = false;
 	}
 	
-	ps.renderOrthoMarkers(cam.pos());
+	ps.renderOrthoMarkers();
 }
 
 function renderAxes() {

@@ -29,8 +29,6 @@ var PointStream = (function() {
         return !e ? this.slice(0) : this.slice(s,e);
       };
     }
-	
-	var markerBSP;
 								 
 	var axesVBO;									   
 	var axesColorsVBO;
@@ -187,7 +185,7 @@ var PointStream = (function() {
       gl_FragColor = frontColor;  \n\
     }';
 	
-	var orthoMarkupVertexShader =
+	var cylinderCapVertexShader =
     "attribute vec3 ps_Vertex;" +
     "attribute vec2 vTexCoord;" +
 	
@@ -202,7 +200,7 @@ var PointStream = (function() {
 	"  v_texCoord = vTexCoord;" +
     "}";
 	
-	var orthoMarkupFragmentShader =
+	var cylinderCapFragmentShader =
     '#ifdef GL_ES                 \n\
     precision highp float;        \n\
     #endif                        \n\
@@ -256,6 +254,57 @@ var PointStream = (function() {
 		fragmentColor = vec4(0.0, 0.0, 1.0, 0.5);      \n\
 		gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);      \n\
 	}';
+	
+	var cylinderPickingVert =
+    "varying vec4 frontColor;" +
+
+    "attribute vec3 ps_Vertex;" +
+    "uniform vec4 ps_Color;" +
+    
+    "uniform mat4 ps_ModelViewMatrix;" +
+    "uniform mat4 ps_ProjectionMatrix;" +
+    
+    "void main(void) {" +
+    "  frontColor = ps_Color;" +
+    "  vec4 ecPos4 = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
+    "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+    "}";
+	
+	var cylinderCapPickingVert =
+    "varying vec4 frontColor;" +
+	"attribute vec2 vTexCoord;" +
+
+    "attribute vec3 ps_Vertex;" +
+    "uniform vec4 ps_Color;" +
+    
+    "uniform mat4 ps_ModelViewMatrix;" +
+    "uniform mat4 ps_ProjectionMatrix;" +
+	
+	"varying vec2 v_texCoord;" + 
+    
+    "void main(void) {" +
+    "  frontColor = ps_Color;" +
+    "  vec4 ecPos4 = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
+    "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+	"  v_texCoord = vTexCoord;" +
+    "}";
+	
+	var cylinderCapPickingFrag =
+    '#ifdef GL_ES                 \n\
+    precision highp float;        \n\
+    #endif                        \n\
+                                  \n\
+	varying vec4 frontColor;      \n\
+	varying vec2 v_texCoord;      \n\
+    void main(void){              \n\
+	  vec2 pos = v_texCoord - vec2(0.5, 0.5);      \n\
+	  float dist_squared = dot(pos, pos);		\n\
+												\n\
+	  if(dist_squared > 0.25) {		\n\
+		discard;								\n\
+	  }											\n\
+      gl_FragColor = frontColor;  	\n\
+    }';
 
     /**
       @private
@@ -1589,7 +1638,6 @@ var PointStream = (function() {
 			}
 			cylinders.push(obj2);
 		}
-		markerBSP.insert(markers.length - 1, center);
 	};
 	
 	this.setLatestMarkerValues = function(spec, descr) {
@@ -1646,11 +1694,6 @@ var PointStream = (function() {
 			markers.splice(closestIndex, 1);
 			cylinders.splice(closestIndex, 1);
 		}
-		
-		markerBSP = new BSP();
-		for(var h = 0; h < markers.length; h++) {
-			markerBSP.insert(h, markers[h].center);
-		}
 	};
 	
 	this.displayMarkerInfoOrtho = function(point) {
@@ -1682,14 +1725,12 @@ var PointStream = (function() {
 		}
 	};
 	
-	this.displayMarkerInfo = function(rayStart, rayEnd, viewpoint) {
-		//BSP based picking
-		// var order = markerBSP.renderOrder(viewpoint);
-		// var i = order.length - 1;
-		// var hit = false;
+	// this.displayMarkerInfo = function(rayStart, rayEnd) {
 		// var dir = V3.sub(rayEnd, rayStart);
 		// var temp = new Float32Array(2);
-		// while(i >= 0 && !hit) {
+		// var tHit = Number.POSITIVE_INFINITY;
+		// var closestIndex = -1;
+		// for(var i = 0; i < markers.length; i++) {
 			// temp[0] = rayStart[0] - markers[i].center[0];
 			// temp[1] = rayStart[1] - markers[i].center[1];
 			// var tempDotP = temp[0] * temp[0] + temp[1] * temp[1];
@@ -1698,21 +1739,20 @@ var PointStream = (function() {
 			// var discrim = tempDirDotP * tempDirDotP - (dirDotP * (tempDotP - (markers[i].radius * markers[i].radius)));
 			// if(discrim >= 0) {
 				// var t = ((-1.0 * tempDirDotP) - Math.sqrt(discrim)) / dirDotP;
-				// if(t > 0) {
+				// if(t > 0 && t < tHit) {
 					// var height = rayStart[2] + (t * dir[2]);
 					// if(height <= markers[i].center[2] && height >= markers[i].center[2] - 52.5) {
-						// hit = true;
+						// closestIndex = i;
+						// tHit = t;
 					// }
 				// }
 			// }
-			// i--;
 		// }
-		// if(hit) {
-			// i++;
-			// $("#markRadius").val(markers[i].radius);
-			// $("#markHeight").val(markers[i].height);
-			// $("#markSpecies").val(markers[i].species);
-			// $("#markDescr").val(markers[i].descr);
+		// if(closestIndex > -1) {
+			// $("#markRadius").val(markers[closestIndex].radius);
+			// $("#markHeight").val(markers[closestIndex].height);
+			// $("#markSpecies").val(markers[closestIndex].species);
+			// $("#markDescr").val(markers[closestIndex].descr);
 		// }
 		// else {
 			// $("#markRadius").val('');
@@ -1720,125 +1760,101 @@ var PointStream = (function() {
 			// $("#markSpecies").val('');
 			// $("#markDescr").val('');
 		// }
-		
-		//linear picking
-		var dir = V3.sub(rayEnd, rayStart);
-		var temp = new Float32Array(2);
-		var tHit = Number.POSITIVE_INFINITY;
-		var closestIndex = -1;
-		for(var i = 0; i < markers.length; i++) {
-			temp[0] = rayStart[0] - markers[i].center[0];
-			temp[1] = rayStart[1] - markers[i].center[1];
-			var tempDotP = temp[0] * temp[0] + temp[1] * temp[1];
-			var dirDotP = dir[0] * dir[0] + dir[1] * dir[1];
-			var tempDirDotP = dir[0] * temp[0] + dir[1] * temp[1];
-			var discrim = tempDirDotP * tempDirDotP - (dirDotP * (tempDotP - (markers[i].radius * markers[i].radius)));
-			if(discrim >= 0) {
-				var t = ((-1.0 * tempDirDotP) - Math.sqrt(discrim)) / dirDotP;
-				if(t > 0 && t < tHit) {
-					var height = rayStart[2] + (t * dir[2]);
-					if(height <= markers[i].center[2] && height >= markers[i].center[2] - 52.5) {
-						closestIndex = i;
-						tHit = t;
-					}
-				}
+	this.displayMarkerInfo = function(x, y) {	
+		if(ctx && markers) {
+			var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
+			ctx.enable(ctx.CULL_FACE);			
+			for(var i = 0; i < markers.length; i++) {
+				color[2] = (i + 1) / 255.0;
+				ctx.useProgram(programCaches[4]);
+				topMatrix = this.peekMatrix();
+				uniformf(programCaches[4], "ps_Color", color);
+				uniformMatrix(programCaches[4], "ps_ModelViewMatrix", false, topMatrix);
+				vertexAttribPointer(programCaches[4], "ps_Vertex", 3, cylinders[i].VBO);
+				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 66);
+				disableVertexAttribPointer(programCaches[4], "ps_Vertex");
+				ctx.useProgram(programCaches[3]);
+				uniformf(programCaches[3], "ps_Color", color);
+				this.pushMatrix();
+				this.translate(markers[i].center[0], markers[i].center[1], markers[i].center[2] - 52.5);
+				this.rotateX(Math.PI);
+				this.translate(-markers[i].center[0], -markers[i].center[1], -markers[i].center[2]);
+				topMatrix = this.peekMatrix();
+				uniformMatrix(programCaches[3], "ps_ModelViewMatrix", false, topMatrix);
+				vertexAttribPointer(programCaches[3], "vTexCoord", 2, markerTexCoords.VBO);
+				vertexAttribPointer(programCaches[3], "ps_Vertex", 3, markers[i].VBO);
+				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
+				disableVertexAttribPointer(programCaches[3], "ps_Vertex");
+				this.popMatrix();
+				topMatrix = this.peekMatrix();
+				uniformMatrix(programCaches[3], "ps_ModelViewMatrix", false, topMatrix);
+				vertexAttribPointer(programCaches[3], "ps_Vertex", 3, markers[i].VBO);
+				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
+				disableVertexAttribPointer(programCaches[3], "ps_Vertex");					
+				disableVertexAttribPointer(programCaches[3], "vTexCoord");
 			}
-		}
-		if(closestIndex > -1) {
-			$("#markRadius").val(markers[closestIndex].radius);
-			$("#markHeight").val(markers[closestIndex].height);
-			$("#markSpecies").val(markers[closestIndex].species);
-			$("#markDescr").val(markers[closestIndex].descr);
-		}
-		else {
-			$("#markRadius").val('');
-			$("#markHeight").val('');
-			$("#markSpecies").val('');
-			$("#markDescr").val('');
+			
+			ctx.disable(ctx.CULL_FACE);
+			ctx.useProgram(currProgram);
+			
+			var arr = new Uint8Array(4);
+			ctx.readPixels(x, y, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, arr);
+			var closestIndex = arr[2] - 1;
+			if(closestIndex > -1) {
+				$("#markRadius").val(markers[closestIndex].radius);
+				$("#markHeight").val(markers[closestIndex].height);
+				$("#markSpecies").val(markers[closestIndex].species);
+				$("#markDescr").val(markers[closestIndex].descr);
+			}
+			else {
+				$("#markRadius").val('');
+				$("#markHeight").val('');
+				$("#markSpecies").val('');
+				$("#markDescr").val('');
+			}
 		}
 	};
 	
-	this.renderOrthoMarkers = function(viewpoint) {
-		if(ctx && markers) {
-			var order = markerBSP.renderOrder(viewpoint);
-		
+	this.renderOrthoMarkers = function() {
+		if(ctx && markers) {		
+			ctx.enable(ctx.CULL_FACE);
+			ctx.depthMask(false);
 			ctx.enable(ctx.BLEND);
 			ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE);
-			// ctx.useProgram(programCaches[1]);
-			// this.pushMatrix();
-			// this.translate(0, 0, -52.5);
-			// topMatrix = this.peekMatrix();
-			// uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
-			// vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
-			// for(var i = 0; i < markers.length; i++) {
-				// vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
-				// ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
-				// disableVertexAttribPointer(programCaches[1], "ps_Vertex");
-			// }
-			// this.popMatrix();
-			// topMatrix = this.peekMatrix();
-			// uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
-			// for(var i = 0; i < markers.length; i++) {
-				// vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
-				// ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
-				// disableVertexAttribPointer(programCaches[1], "ps_Vertex");
-			// }			
-			// disableVertexAttribPointer(programCaches[1], "vTexCoord");
-			// ctx.enable(ctx.CULL_FACE);
-			// ctx.useProgram(programCaches[2]);
-			// uniformMatrix(programCaches[2], "ps_ModelViewMatrix", false, topMatrix);
-			// normalMatrix = M4x4.inverseOrthonormal(topMatrix);
-			// uniformMatrix(programCaches[2], "ps_NormalMatrix", false, M4x4.topLeft3x3(M4x4.transpose(normalMatrix)));
-			// vertexAttribPointer(programCaches[2], "ps_Normal", 3, cylinderNormals.VBO);
-			// for(var i = 0; i < markers.length; i++) {
-				// vertexAttribPointer(programCaches[2], "ps_Vertex", 3, cylinders[i].VBO);
-				// ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 66);
-				// disableVertexAttribPointer(programCaches[2], "ps_Vertex");
-			// }
-			// disableVertexAttribPointer(programCaches[2], "ps_Normal");
-			// ctx.disable(ctx.CULL_FACE);
 			
-			// for(var i = 0; i < markers.length; i++) {
-			for(var i = 0; i < order.length; i++) {
-				ctx.enable(ctx.CULL_FACE);
+			for(var i = 0; i < markers.length; i++) {
 				ctx.useProgram(programCaches[2]);
 				topMatrix = this.peekMatrix();
 				uniformMatrix(programCaches[2], "ps_ModelViewMatrix", false, topMatrix);
 				normalMatrix = M4x4.inverseOrthonormal(topMatrix);
 				uniformMatrix(programCaches[2], "ps_NormalMatrix", false, M4x4.topLeft3x3(M4x4.transpose(normalMatrix)));
 				vertexAttribPointer(programCaches[2], "ps_Normal", 3, cylinderNormals.VBO);
-
-				// vertexAttribPointer(programCaches[2], "ps_Vertex", 3, cylinders[i].VBO);
-				vertexAttribPointer(programCaches[2], "ps_Vertex", 3, cylinders[order[i]].VBO);
+				vertexAttribPointer(programCaches[2], "ps_Vertex", 3, cylinders[i].VBO);
 				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 66);
 				disableVertexAttribPointer(programCaches[2], "ps_Vertex");
-
 				disableVertexAttribPointer(programCaches[2], "ps_Normal");
-				ctx.disable(ctx.CULL_FACE);
 				ctx.useProgram(programCaches[1]);
 				this.pushMatrix();
-				this.translate(0, 0, -52.5);
+				this.translate(markers[i].center[0], markers[i].center[1], markers[i].center[2] - 52.5);
+				this.rotateX(Math.PI);
+				this.translate(-markers[i].center[0], -markers[i].center[1], -markers[i].center[2]);
 				topMatrix = this.peekMatrix();
 				uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
 				vertexAttribPointer(programCaches[1], "vTexCoord", 2, markerTexCoords.VBO);
-
-				// vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
-				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[order[i]].VBO);
+				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
 				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
 				disableVertexAttribPointer(programCaches[1], "ps_Vertex");
-
 				this.popMatrix();
 				topMatrix = this.peekMatrix();
 				uniformMatrix(programCaches[1], "ps_ModelViewMatrix", false, topMatrix);
-
-				// vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
-				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[order[i]].VBO);
+				vertexAttribPointer(programCaches[1], "ps_Vertex", 3, markers[i].VBO);
 				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 4);
-				disableVertexAttribPointer(programCaches[1], "ps_Vertex");
-					
+				disableVertexAttribPointer(programCaches[1], "ps_Vertex");					
 				disableVertexAttribPointer(programCaches[1], "vTexCoord");
 			}
 			
+			ctx.disable(ctx.CULL_FACE);
+			ctx.depthMask(true);
 			ctx.disable(ctx.BLEND);
 			ctx.useProgram(currProgram);
 		}
@@ -2263,8 +2279,10 @@ var PointStream = (function() {
       //defaultProgram = 
 	  currProgram = createProgramObject(ctx, vertexShaderSource, fragmentShaderSource);
 	  programCaches.push(currProgram);	  
-	  programCaches.push(createProgramObject(ctx, orthoMarkupVertexShader, orthoMarkupFragmentShader));
+	  programCaches.push(createProgramObject(ctx, cylinderCapVertexShader, cylinderCapFragmentShader));
 	  programCaches.push(createProgramObject(ctx, cylinderVertexShader, cylinderFragmentShader));
+	  programCaches.push(createProgramObject(ctx, cylinderCapPickingVert, cylinderCapPickingFrag));
+	  programCaches.push(createProgramObject(ctx, cylinderPickingVert, fragmentShaderSource));
 	  for(var i = programCaches.length - 1; i >= 0; i--) {
 		ctx.useProgram(programCaches[i]);
 		uniformMatrix(programCaches[i], "ps_ProjectionMatrix", false, perspectiveMatrix);
@@ -2508,11 +2526,6 @@ var PointStream = (function() {
 			tempNorms[k + 2] = tempNorms[k + 5] = 0;
 		}
 		cylinderNormals = createBufferObject(tempNorms);
-		
-		markerBSP = new BSP();
-		for(var h = 0; h < markers.length; h++) {
-			markerBSP.insert(h, markers[h].center);
-		}
 	};
     
     /**
