@@ -263,11 +263,11 @@ var PointStream = (function() {
     
     "uniform mat4 ps_ModelViewMatrix;" +
     "uniform mat4 ps_ProjectionMatrix;" +
+	"uniform mat4 ps_PickingMatrix;" +
     
     "void main(void) {" +
     "  frontColor = ps_Color;" +
-    "  vec4 ecPos4 = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
-    "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+	"  gl_Position = ps_PickingMatrix * ps_ProjectionMatrix * ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
     "}";
 	
 	var cylinderCapPickingVert =
@@ -279,13 +279,13 @@ var PointStream = (function() {
     
     "uniform mat4 ps_ModelViewMatrix;" +
     "uniform mat4 ps_ProjectionMatrix;" +
+	"uniform mat4 ps_PickingMatrix;" +
 	
 	"varying vec2 v_texCoord;" + 
     
     "void main(void) {" +
     "  frontColor = ps_Color;" +
-    "  vec4 ecPos4 = ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
-    "  gl_Position = ps_ProjectionMatrix * ecPos4;" +
+	"  gl_Position = ps_PickingMatrix * ps_ProjectionMatrix * ps_ModelViewMatrix * vec4(ps_Vertex, 1.0);" +
 	"  v_texCoord = vTexCoord;" +
     "}";
 	
@@ -1725,50 +1725,18 @@ var PointStream = (function() {
 		}
 	};
 	
-	// this.displayMarkerInfo = function(rayStart, rayEnd) {
-		// var dir = V3.sub(rayEnd, rayStart);
-		// var temp = new Float32Array(2);
-		// var tHit = Number.POSITIVE_INFINITY;
-		// var closestIndex = -1;
-		// for(var i = 0; i < markers.length; i++) {
-			// temp[0] = rayStart[0] - markers[i].center[0];
-			// temp[1] = rayStart[1] - markers[i].center[1];
-			// var tempDotP = temp[0] * temp[0] + temp[1] * temp[1];
-			// var dirDotP = dir[0] * dir[0] + dir[1] * dir[1];
-			// var tempDirDotP = dir[0] * temp[0] + dir[1] * temp[1];
-			// var discrim = tempDirDotP * tempDirDotP - (dirDotP * (tempDotP - (markers[i].radius * markers[i].radius)));
-			// if(discrim >= 0) {
-				// var t = ((-1.0 * tempDirDotP) - Math.sqrt(discrim)) / dirDotP;
-				// if(t > 0 && t < tHit) {
-					// var height = rayStart[2] + (t * dir[2]);
-					// if(height <= markers[i].center[2] && height >= markers[i].center[2] - 52.5) {
-						// closestIndex = i;
-						// tHit = t;
-					// }
-				// }
-			// }
-		// }
-		// if(closestIndex > -1) {
-			// $("#markRadius").val(markers[closestIndex].radius);
-			// $("#markHeight").val(markers[closestIndex].height);
-			// $("#markSpecies").val(markers[closestIndex].species);
-			// $("#markDescr").val(markers[closestIndex].descr);
-		// }
-		// else {
-			// $("#markRadius").val('');
-			// $("#markHeight").val('');
-			// $("#markSpecies").val('');
-			// $("#markDescr").val('');
-		// }
 	this.displayMarkerInfo = function(x, y) {	
 		if(ctx && markers) {
+			var pickingTransform = M4x4.mul(M4x4.makeTranslate3(2 * x - width, 2 * y - height, 0), M4x4.makeScale3(-width, -height, 1));
+			ctx.viewport(0, 0, 1, 1);
 			var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
-			ctx.enable(ctx.CULL_FACE);			
+			ctx.enable(ctx.CULL_FACE);
 			for(var i = 0; i < markers.length; i++) {
 				color[2] = (i + 1) / 255.0;
 				ctx.useProgram(programCaches[4]);
 				topMatrix = this.peekMatrix();
 				uniformf(programCaches[4], "ps_Color", color);
+				uniformMatrix(programCaches[4], "ps_PickingMatrix", false, pickingTransform);
 				uniformMatrix(programCaches[4], "ps_ModelViewMatrix", false, topMatrix);
 				vertexAttribPointer(programCaches[4], "ps_Vertex", 3, cylinders[i].VBO);
 				ctx.drawArrays(ctx.TRIANGLE_STRIP, 0, 66);
@@ -1780,6 +1748,7 @@ var PointStream = (function() {
 				this.rotateX(Math.PI);
 				this.translate(-markers[i].center[0], -markers[i].center[1], -markers[i].center[2]);
 				topMatrix = this.peekMatrix();
+				uniformMatrix(programCaches[3], "ps_PickingMatrix", false, pickingTransform);
 				uniformMatrix(programCaches[3], "ps_ModelViewMatrix", false, topMatrix);
 				vertexAttribPointer(programCaches[3], "vTexCoord", 2, markerTexCoords.VBO);
 				vertexAttribPointer(programCaches[3], "ps_Vertex", 3, markers[i].VBO);
@@ -1798,7 +1767,7 @@ var PointStream = (function() {
 			ctx.useProgram(currProgram);
 			
 			var arr = new Uint8Array(4);
-			ctx.readPixels(x, y, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, arr);
+			ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, arr);
 			var closestIndex = arr[2] - 1;
 			if(closestIndex > -1) {
 				$("#markRadius").val(markers[closestIndex].radius);
@@ -1812,6 +1781,7 @@ var PointStream = (function() {
 				$("#markSpecies").val('');
 				$("#markDescr").val('');
 			}
+			ctx.viewport(0, 0, width, height);
 		}
 	};
 	

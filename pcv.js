@@ -210,10 +210,6 @@ function render() {
 		ps.displayMarkerInfoOrtho(results1);
 	}
 	else {
-		// results1 = [];
-		// GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
-					  // ps.getPM(), viewportArray, results1);
-		// ps.displayMarkerInfo(cam.pos(), results1);
 		ps.clear();
 		ps.displayMarkerInfo(ps.mouseX - 308, 585 - ps.mouseY);
 	}
@@ -273,6 +269,8 @@ function render() {
 	}
 	
 	ps.renderOrthoMarkers();
+	
+	$("#frameRate").val(ps.frameRate);
 }
 
 function renderAxes() {
