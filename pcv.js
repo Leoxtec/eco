@@ -201,17 +201,19 @@ function render() {
     var c = cloud1.getCenter();
 	ps.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
 	
-	if(viewMode === 4) {
-		results1 = [];
-		var sf = 1 / ps.getSF();
-		var omm = ps.getOM();
-		GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
-					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-		ps.displayMarkerInfoOrtho(results1);
-	}
-	else {
-		ps.clear();
-		ps.displayMarkerInfo(ps.mouseX - 308, 585 - ps.mouseY);
+	if(document.getElementById('markers').checked) {
+		if(viewMode === 4) {
+			results1 = [];
+			var sf = 1 / ps.getSF();
+			var omm = ps.getOM();
+			GLU.unProject(ps.mouseX, ps.mouseY, 0, ps.peekMatrix(),
+						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+			ps.displayMarkerInfoOrtho(results1);
+		}
+		else {
+			ps.clear();
+			ps.displayMarkerInfo(ps.mouseX - 308, 585 - ps.mouseY);
+		}
 	}
 	
 	ps.pushMatrix();
@@ -237,38 +239,38 @@ function render() {
 		ps.render(cloud2);
 	}
 	ps.popMatrix();
-	if(document.getElementById('scale').checked) {
-		if(document.getElementById('overlay').checked) {
-			ps.renderScaleBar(true);
-		}
-		else {
-			ps.renderScaleBar(false);
-		}
-	}
+	// if(document.getElementById('scale').checked) {
+		// if(document.getElementById('overlay').checked) {
+			// ps.renderScaleBar(true);
+		// }
+		// else {
+			// ps.renderScaleBar(false);
+		// }
+	// }
 	
-	if(viewMode === 4 && placingMarker) {
-		results1 = [];
-		var sf = 1 / ps.getSF();
-		var omm = ps.getOM();
-		GLU.unProject(ps.markerBegin[0], ps.markerBegin[1], ps.markerBegin[2], ps.peekMatrix(),
-					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-		results2 = [];
-		GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
-					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results2);
-		ps.renderNewMarker(results1, results2);
+	if(document.getElementById('markers').checked) {
+		if(viewMode === 4 && placingMarker) {
+			results1 = [];
+			var sf = 1 / ps.getSF();
+			var omm = ps.getOM();
+			GLU.unProject(ps.markerBegin[0], ps.markerBegin[1], ps.markerBegin[2], ps.peekMatrix(),
+						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+			results2 = [];
+			GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
+						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results2);
+			ps.renderNewMarker(results1, results2);
+		}		
+		if(viewMode === 4 && removingMarker) {
+			results1 = [];
+			var sf = 1 / ps.getSF();
+			var omm = ps.getOM();
+			GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
+						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
+			ps.removeMarker(results1);
+			removingMarker = false;
+		}		
+		ps.renderOrthoMarkers();
 	}
-	
-	if(viewMode === 4 && removingMarker) {
-		results1 = [];
-		var sf = 1 / ps.getSF();
-		var omm = ps.getOM();
-		GLU.unProject(StartCoords[0], StartCoords[1], 0, ps.peekMatrix(),
-					  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-		ps.removeMarker(results1);
-		removingMarker = false;
-	}
-	
-	ps.renderOrthoMarkers();
 	
 	$("#frameRate").val(ps.frameRate);
 }
