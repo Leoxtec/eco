@@ -24,6 +24,17 @@
 		});
 	</script>
 	
+	<script>
+	    $(function() {
+			$( "#markerhelp" ).accordion({
+				heightStyle: "content",
+				collapsible: true,
+				active: false
+			});
+	    });
+		
+	</script>
+	
 	<style>
 		#pointSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
 		#pointSizeSlider .ui-slider-range { background: #000000; }
@@ -103,13 +114,19 @@
 	<a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_on.ply" title="Click to download leaf_on point cloud">Leaf On</a></br>
     <a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_off.ply" title="Click to download leaf_off point cloud">Leaf Off</a>
    	
+	</br></br>
+	<div id="markerhelp">
+    <Label for="markerhelp" style="font-size: 10;">Click for Help on Setting and Deleting Markers</Label>
+    <div>
+    <p style="font-size: 10;">To set a marker, first switch to map camera.  Hover the mouse where you want the marker's center.  Then hold the "1" key and move the mouse to adjust the radius.  To cancel, let go of the "1" key.  To finish placing, hit the "2" key and enter the tree info in the upper right of the page.  To delete a marker, switch to Map Camera, hover over the marker to delete and press the "3" key.</p>
+    </div></div>
 	
-	<p>
+	<!--<p>
 		<div style="font-size : 12">
 		<label for="frameRate">Frame Rate:</label>
 		<input type="text" id="frameRate" style="border: 0; font-weight: bold; background-color: #FFFFFF;" />
 		</div>
-	</p>
+	</p>-->
 	
 	</div>
    
