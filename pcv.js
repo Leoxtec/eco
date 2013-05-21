@@ -272,7 +272,7 @@ function render() {
 		ps.renderOrthoMarkers();
 	}
 	
-	$("#frameRate").val(ps.frameRate);
+	//$("#frameRate").val(ps.frameRate);
 }
 
 function renderAxes() {
