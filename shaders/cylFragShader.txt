@@ -1,0 +1,19 @@
+#ifdef GL_ES
+	precision highp float;
+#endif
+
+varying vec3 vTransformedNormal;
+varying vec4 vPosition;
+
+void main(void) {
+	vec3 lightDirection = normalize(-vPosition.xyz);
+	float directionalLightWeighting = dot(normalize(vTransformedNormal), lightDirection);
+	if(directionalLightWeighting < 0.0) {
+		discard;
+	}
+	vec3 lightWeighting = vec3(0.0, 0.0, 0.2) + vec3(0.0, 0.0, 0.8) * directionalLightWeighting;
+
+	vec4 fragmentColor;
+	fragmentColor = vec4(0.0, 0.0, 1.0, 0.5);
+	gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+}
