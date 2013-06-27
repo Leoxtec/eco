@@ -3,125 +3,18 @@
 #endif
 
 varying vec4 frontColor;
-varying vec3 vertexPosition;
-varying float radius;
-varying vec2 zrange;
-
-// varying vec4 ssbb;
-// varying vec4 spherePos;
-// varying float sphereSize;
 
 attribute vec3 aVertexPosition;
 attribute vec4 aVertexColor;
-uniform float aRadius;
-// uniform vec4 iris_Viewport;
-uniform vec4 ps_DepthRange;
 
 uniform mat4 ps_ModelViewMatrix;
 uniform mat4 ps_ProjectionMatrix;
-uniform mat4 ps_ModelViewMatrixInverse;
-uniform mat4 ps_ProjectionMatrixInverse;
-uniform mat4 ps_NormalMatrix;
-uniform mat4 ps_ModelViewProjectionMatrix;
-uniform mat4 ps_ModelViewProjectionMatrix_transpose;
-
-bool sphereBBox(vec3 Po, float r,out vec4 ssbb,out vec2 zrange) {
-	mat4 MVP_i = ps_ModelViewMatrixInverse*ps_ProjectionMatrixInverse;
-
-	float r2 = r*r;
-	mat4 Qi = mat4(-r2); Qi[3][3] = 1.;
-
-	vec3 vn = normalize(ps_ModelViewProjectionMatrix_transpose[3].xyz);
-
-	vec4 z0 = vec4(vn, r-dot(vn,Po))*MVP_i;
-	if (-z0.w >= z0.z) return true; // closest point is past the far plane
-	if (z0.z < 0.0)
-		zrange.x = -1.0;
-	else
-		zrange.x = clamp(-z0.w/z0.z, -1.0,1.0);
-
-	// transform farthest z tangent plane to projection space to find far z
-	vec4 z1 = vec4(vn,-r-dot(vn,Po))*MVP_i;
-	if ( z1.w >= z1.z) return true; // farthest point is behind the near plane
-	zrange.y = clamp(-z1.w/z1.z, -1.0,1.0);
-
-	mat4 Trans = mat4(1);
-	Trans[3].xyz =  Po;
-	mat4 xform = ps_ModelViewProjectionMatrix*Trans;
-	mat4 tran_xform = mat4(1);
-	tran_xform[0][0] = xform[0][0];
-	tran_xform[0][1] = xform[1][0];
-	tran_xform[0][2] = xform[2][0];
-	tran_xform[0][3] = xform[3][0];
-	tran_xform[1][0] = xform[0][1];
-	tran_xform[1][1] = xform[1][1];
-	tran_xform[1][2] = xform[2][1];
-	tran_xform[1][3] = xform[3][1];
-	tran_xform[2][0] = xform[0][2];
-	tran_xform[2][1] = xform[1][2];
-	tran_xform[2][2] = xform[2][2];
-	tran_xform[2][3] = xform[3][2];
-	tran_xform[3][0] = xform[0][3];
-	tran_xform[3][1] = xform[1][3];
-	tran_xform[3][2] = xform[2][3];
-	tran_xform[3][3] = xform[3][3];
-
-	Qi = xform*Qi*tran_xform;
-
-	float a = Qi[3][3];
-	vec2 b = Qi[3].xy;
-	vec2 c = vec2(Qi[0][0],Qi[1][1]);
-	vec2 d = sqrt(b*b-a*c); // discriminant of quadratic equation
-
-	// min and max solutions for x & y
-	ssbb = vec4(b-d, b+d);
-	if (a<0.0) {
-		if (ssbb.x<a) ssbb.x = -a;
-		if (ssbb.y<a) ssbb.y = -a;
-		if (ssbb.z>a) ssbb.z = a;
-		if (ssbb.w>a) ssbb.w = a;
-	}
-	ssbb = clamp(ssbb/a, -1.0,1.0);
-	if(d.x != d.x)
-		ssbb.xz = vec2(-1, 1);
-	if(d.y != d.y)
-		ssbb.yw = vec2(-1, 1);
-	// ssbb = mix(ssbb, vec4(-1,-1,1,1), isnan(d.xyxy)); // clamp if sqrt was NaN
-	return false;
-}
-
-bool sphereSize(vec3 Po, float r,out vec2 zrange,out vec4 spherePos,out float sphereSize) {
-	vec4 ssbb;
-	vec4 iris_Viewport = vec4(0,0,540,540);
-	spherePos = vec4(0,0,-1,0);
-	sphereSize = 0.0;
-
-	if (sphereBBox(Po, r, ssbb, zrange))
-		return true;
-
-	float pxSize = max((ssbb.z-ssbb.x)*iris_Viewport.z, (ssbb.w-ssbb.y)*iris_Viewport.w);
-	vec2 ssSize = pxSize/iris_Viewport.zw;
-
-	vec2 e = 0.5*(ssbb.xy + ssbb.zw - ssSize);
-	if (e.x < -1.) ssbb.x = ssbb.z - ssSize.x;
-	if (e.y < -1.) ssbb.y = ssbb.w - ssSize.y;
-	e = 0.5*(ssbb.xy + ssbb.zw + ssSize);
-	if (e.x > 1.) ssbb.z = ssbb.x + ssSize.x;
-	if (e.y > 1.) ssbb.w = ssbb.y + ssSize.y;
-
-	spherePos = vec4(.5*(ssbb.xy + ssbb.zw), zrange.y, 1.);
-	sphereSize = .5*pxSize;
-	return false;
-}
+uniform float ps_size;
 
 void main(void) {
-	vec4 sphereposition;
-	float shpheresize;
-	vec2 zrange;
-	sphereSize(aVertexPosition, aRadius, zrange, sphereposition, shpheresize);
 	frontColor = aVertexColor;
 	vec4 ecPos4 = ps_ModelViewMatrix * vec4(aVertexPosition, 1.0);
-	float dist = length(ecPos4);
-	gl_PointSize = shpheresize;
+
+	gl_PointSize = ps_size;
 	gl_Position = ps_ProjectionMatrix * ecPos4;
 }

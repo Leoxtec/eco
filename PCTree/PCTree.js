@@ -23,10 +23,6 @@ var PCTree = (function() {
 		var inNodeShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/inNodeVertShader.txt'), basicCtx.getShaderStr('shaders/inNodeFragShader.txt'));
 		basicCtx.ctx.useProgram(inNodeShader);
 		basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
-		var projectionMatrixInverse = [];
-		M4x4.inverseOrthonormal(basicCtx.perspectiveMatrix, projectionMatrixInverse);
-		basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrixInverse", false, projectionMatrixInverse);
-		basicCtx.uniformf(inNodeShader, "ps_DepthRange", [zfar-znear, znear, zfar]);
 
 		var leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basicVertShader.txt'), basicCtx.getShaderStr('shaders/basicFragShader.txt'));
 		basicCtx.ctx.useProgram(leafShader);
@@ -37,9 +33,6 @@ var PCTree = (function() {
 		this.usePerspective = function() {
 			basicCtx.ctx.useProgram(inNodeShader);
 			basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
-			var projectionMatrixInverse = [];
-			M4x4.inverseOrthonormal(basicCtx.perspectiveMatrix, projectionMatrixInverse);
-			basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrixInverse", false, projectionMatrixInverse);
 			basicCtx.ctx.useProgram(leafShader);
 			basicCtx.uniformMatrix(leafShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
 		};
@@ -47,9 +40,6 @@ var PCTree = (function() {
 		this.useOrthographic = function(projectionMatrix) {
 			basicCtx.ctx.useProgram(inNodeShader);
 			basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrix", false, projectionMatrix);
-			var projectionMatrixInverse = [];
-			M4x4.inverseOrthonormal(projectionMatrix, projectionMatrixInverse);
-			basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrixInverse", false, projectionMatrixInverse);
 			basicCtx.ctx.useProgram(leafShader);
 			basicCtx.uniformMatrix(leafShader, "ps_ProjectionMatrix", false, projectionMatrix);
 		};
@@ -155,29 +145,17 @@ var PCTree = (function() {
 			return radius;
 		}
 
-		function render(node) {
+		// function render(node) {
+		function render(node, size) {
 			if(basicCtx) {
 				if(node.numChildren !== 0) {
 					basicCtx.ctx.useProgram(inNodeShader);
 					count += 1;
 					var topMatrix = basicCtx.peekMatrix();
 
-					normalMatrix = M4x4.inverseOrthonormal(topMatrix);
-
 					basicCtx.uniformMatrix(inNodeShader, "ps_ModelViewMatrix", false, topMatrix);
-					var modelViewMatrixInverse = [];
-					M4x4.inverseOrthonormal(topMatrix, modelViewMatrixInverse);
-					basicCtx.uniformMatrix(inNodeShader, "ps_ModelViewMatrixInverse", false, modelViewMatrixInverse);
 
-					var modelViewProjectionMatrix = [];
-					M4x4.mul(basicCtx.perspectiveMatrix, topMatrix, modelViewProjectionMatrix);
-					basicCtx.uniformMatrix(inNodeShader, "ps_ModelViewProjectionMatrix", false, modelViewProjectionMatrix);
-
-					var modelViewProjectionMatrixTran = M4x4.transpose(modelViewProjectionMatrix);
-					basicCtx.uniformMatrix(inNodeShader, "ps_ModelViewProjectionMatrix_transpose", false, modelViewProjectionMatrixTran);
-
-					basicCtx.uniformMatrix(inNodeShader, "ps_NormalMatrix", false, normalMatrix);
-					basicCtx.uniformf(inNodeShader, "aRadius", node.radius);
+					basicCtx.uniformf(inNodeShader, "ps_size", size);
 
 					basicCtx.vertexAttribPointer(inNodeShader, "aVertexPosition", 3, node.VertexPositionBuffer.VBO);
 					basicCtx.vertexAttribPointer(inNodeShader, "aVertexColor", 3, node.VertexColorBuffer.VBO);  
@@ -191,7 +169,6 @@ var PCTree = (function() {
 					basicCtx.ctx.useProgram(leafShader);
 					count += 1;
 					var topMatrix = basicCtx.peekMatrix();
-					basicCtx.normalMatrix = M4x4.inverseOrthonormal(topMatrix);
 					basicCtx.uniformMatrix(leafShader, "ps_ModelViewMatrix", false, topMatrix);
 
 					basicCtx.vertexAttribPointer(leafShader, "aVertexPosition", 3, node.VertexPositionBuffer.VBO);
@@ -209,10 +186,9 @@ var PCTree = (function() {
 		// compute the distance center to plane
 		// 
 		// OBB test //oriented boungding box test cross product of the edges
-		function isvisible(radius, center, viewpoint) { 
-			var pos = [center[0],center[1],center[2],1.0];
+		function isvisible(radius, center) { 
 			var modelViewMatrix = basicCtx.peekMatrix();
-			var temp = V3.mul4x4(modelViewMatrix, pos);
+			var temp = V3.mul4x4(modelViewMatrix, center);
 			//for six clipping plane
 			//compute the distance between the center and each plane  
 			var d = new Array(6);
@@ -232,22 +208,10 @@ var PCTree = (function() {
 		}
 
 		//cubesize: the shortest length of the cube on screen
-		function cubesize(radius, center, viewpoint) {
-			// translate into viewport coordinate
-			var pos = [center[0],center[1],center[2],1.0];
+		function cubesize(radius, center) {
 			var modelViewMatrix = basicCtx.peekMatrix();
-			var temp = V3.mul4x4(modelViewMatrix, pos);
-
-			var x = temp[0];
-			var y = temp[1];
-			var z = temp[2];
-			var distance = Math.sqrt(x*x + y*y + z*z);
-
-			var h = 540;
-			var objsize = radius/distance;   //resolution canvas.style.hight, projective degree.
-			var pixelsize = t30*(2/h);   
-			var size = objsize/pixelsize;
-			return size;
+			var temp = V3.mul4x4(modelViewMatrix, center);
+			return (radius * basicCtx.height) / (-temp[2] * t30);
 		}
 
 		//Create tree
@@ -269,10 +233,11 @@ var PCTree = (function() {
 			if(node.status == COMPLETE) {
 				var center = node.center;
 				var radius = node.radius;   
-				if(isvisible(radius, center, viewpoint)) {
-					if(cubesize(radius,center,viewpoint) < 25 || node.numChildren == 0) {
+				if(isvisible(radius, center)) {
+					var size = cubesize(radius,center);
+					if(size < 50 || node.numChildren == 0) {	
 						//draw a node
-						render(node); 
+						render(node, size); 
 					}
 					else {
 						var allchildrenishere = 1;   //flag
@@ -288,7 +253,7 @@ var PCTree = (function() {
 							}
 						}
 						else {
-							render(node);
+							render(node, size);
 							if(count<500 && request < 500) {
 								//To do
 								//request for all the children here, set a flag, only request once

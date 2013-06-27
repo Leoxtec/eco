@@ -2,51 +2,6 @@
 	precision highp float;
 #endif
 
-// float sphereDraw(vec4 fragCoord, vec3 Po, float r, vec2 zrange, out vec4 Fe, out vec3 Ne, out float face) {
-// 	// avoid NVIDIA compiler bug with gl_ModelViewProjectionMatrixInverse
-// 	mat4 MVP_i = gl_ModelViewMatrixInverse*gl_ProjectionMatrixInverse;
-
-// 	// Ap = point along ray at front of sphere
-// 	// Bp = point along ray at back of sphere
-// 	vec2 vs = iris_Viewport.zw, vc = iris_Viewport.xy + .5*vs;
-// 	vec4 Ap = vec4((fragCoord.xy-vc)*2./vs, zrange.x, 1.);
-// 	vec4 Bp = vec4(Ap.xy, zrange.y, 1.);
-// 	vec4 Ao = MVP_i*Ap, Bo = MVP_i*Bp;  // A,B in object space
-
-// 	// quadric matrix
-// 	float r2 = r*r;
-// 	mat4 Q = mat4(1.,0.,0.,-Po.x,
-// 	0.,1.,0.,-Po.y,
-// 	0.,0.,1.,-Po.z,
-// 	-Po, dot(Po,Po)-r2);
-
-// 	///// test sphere
-// 	// plug ((1-t)*A + t*B) into quadric & solve for t
-// 	float AA = dot(Ao,Q*Ao), AB = dot(Ao,Q*Bo), BB = dot(Bo,Q*Bo);
-// 	float a = AA-2*AB+BB, b=AB-AA, c=AA;
-// 	float d = sqrt(b*b - c*a);        // NaN OK, will fail hit test
-
-// 	// check both hits
-// 	// want intersections with t = (-b +/- d)/a >= 0
-// 	//   or +/-d >= b
-// 	// for hit, just store +/-d and do (-b + hit)/a later
-// 	float hit=1./0.; face=1;  // start with hit at infinity
-// 	if (b< .999*d && -d<hit) {hit=-d; face= 1;}
-// 	if (b<-.999*d &&  d<hit) {hit= d; face=-1;}
-
-// 	// where did we hit?
-// 	vec4 Fo = mix(Ao,Bo, (hit-b)/a);
-// 	Fe = gl_ModelViewMatrix * Fo;
-// 	Ne = normalize(gl_NormalMatrix * face*(Q*Fo).xyz);
-
-// 	// project back to screen space to find fragment depth
-// 	float fmn = gl_DepthRange.diff, fpn = gl_DepthRange.far+gl_DepthRange.near;
-// 	vec4 Fp = gl_ModelViewProjectionMatrix*Fo;
-// 	float depth = .5*fmn*Fp.z/Fp.w + .5*fpn;
-// 	if (isnan(depth)) depth = 1./0.;  // replace NaN with infinity
-// 	return depth;
-// }
-
 varying vec4 frontColor;
 
 void main(void) {
@@ -55,5 +10,6 @@ void main(void) {
 	if(dist_squared > 0.25) {
 		discard;
 	}
-	gl_FragColor = frontColor;
+	
+	gl_FragColor = vec4(frontColor.rgb * sqrt(0.5 - dist_squared) * 2.0, frontColor.a);
 }
