@@ -1,4 +1,4 @@
-var pc, ax, map; //, cloud1, cloud2, cloud3, cloud4;
+var pc, ax, map;
 var cam = new Camera({});
 var isDragging = false;
 var placingMarker = false;
@@ -199,7 +199,6 @@ function render() {
 		}
 	}
 
-    // var c = cloud1.getCenter();
     var c = cloudtree.getCenter();
 	pc.basicCtx.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
 	
@@ -234,12 +233,6 @@ function render() {
 	}
 
 	pc.basicCtx.clear();
-	// if(document.getElementById('pc1').checked) {
-	// 	pc.render(cloud1);
-	// }
-	// if(document.getElementById('pc2').checked) {
-	// 	pc.render(cloud2);
-	// }
 	pc.tree.resetCounters();
 	pc.tree.recurseTree(cloudtree, cam.pos());
 	pc.basicCtx.popMatrix();
@@ -278,72 +271,52 @@ function render() {
 }
 
 function renderAxes() {
-	ax.basicCtx.clear();
+	ax.getBasicCTX().clear();
 	switch(viewMode) {
 		case 0:
-			ax.basicCtx.multMatrix(M4x4.makeLookAt(V3.scale(cam.getTemp(), 3), V3.$(0, 0, 0), cam.up()));
-			ax.render2(cam.getPan() + Math.PI / 2, cam.getTilt() - Math.PI / 2);
+			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.scale(cam.getTemp(), 3), V3.$(0, 0, 0), cam.up()));
+			ax.render(cam.getPan() + Math.PI / 2, cam.getTilt() - Math.PI / 2);
 			break;
 		case 1:
 		case 2:
-			ax.basicCtx.multMatrix(M4x4.makeLookAt(V3.scale(cam.getDir(), -3), V3.$(0, 0, 0), cam.up()));
-			ax.render2(cam.getPan() - Math.PI / 2, -cam.getTilt() + Math.PI / 2);
+			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.scale(cam.getDir(), -3), V3.$(0, 0, 0), cam.up()));
+			ax.render(cam.getPan() - Math.PI / 2, -cam.getTilt() + Math.PI / 2);
 			break;
 		case 3:
 		case 4:
-			ax.basicCtx.multMatrix(M4x4.makeLookAt(V3.$(0, 0, 3), V3.$(0, 0, 0), cam.up()));
-			ax.render2(0, -Math.PI / 2);
+			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.$(0, 0, 3), V3.$(0, 0, 0), cam.up()));
+			ax.render(0, -Math.PI / 2);
 			break;
 	}	
 }
 
 function renderMap() {
-	map.clear();
-	map.multMatrix(M4x4.makeLookAt(V3.$(0, 0, 80), V3.$(0, 0, 0), V3.$(0, 1, 0)));
-	map.pushMatrix();
-	var c = cloud3.getCenter();
-	map.translate(-c[0], -c[1], -c[2]);
-	if(document.getElementById('pc1').checked) {
-		map.render(cloud3);
-	}
-	if(document.getElementById('pc2').checked) {
-		map.render(cloud4);
-	}
-	map.popMatrix();
+	map.getBasicCTX().clear();
 	switch(viewMode) {
 		case 0:
-			map.render3(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + Math.PI / 2);
+			map.render(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + Math.PI / 2);
 			break;
 		case 1:
 		case 2:
-			map.render3(cam.getPoint(), cam.getPan() - Math.PI / 2);
+			map.render(cam.getPoint(), cam.getPan() - Math.PI / 2);
 			break;
 		case 3:
 		case 4:
-			map.render3(cam.getPoint(), 0.0);
+			map.render(cam.getPoint(), 0.0);
 			break;
 	}
 }
 
 function start() {
-	// map = new PointStream();
-	// map.setup(document.getElementById('canvas3'));
-	// map.initializeMap();
-	// map.background([0, 0, 0, 0.5]);
-	// map.onRender = renderMap;
-	
-	// cloud3 = map.load("clouds/leaf_off.ply");
-	// cloud4 = map.load("clouds/leaf_on.ply");
-
-	//var img = new Image();
+	map = new Map(document.getElementById('canvas3'));
+	map.initializeMap();
+	map.getBasicCTX().onRender = renderMap;
 
 	ax = new Axes(document.getElementById('canvas2'));
 	ax.initializeAxes();
-	ax.basicCtx.background([0, 0, 0, 0.5]);
-	ax.basicCtx.onRender = renderAxes;
+	ax.getBasicCTX().onRender = renderAxes;
 
 	pc = new PointCloud(document.getElementById('canvas'));
-	pc.basicCtx.background([0, 0, 0, 0.5]);
 	pc.markers.initializeMarkers();
 	pc.basicCtx.onRender = render;
 	//pc.initializeScaleBar();
@@ -354,7 +327,4 @@ function start() {
 	pc.onKeyUp = keyUp;
 
 	cloudtree = pc.tree.root('r');
-  
-	// cloud1 = pc.load("clouds/leaf_off.ply");
-	// cloud2 = pc.load("clouds/leaf_on.ply");
 }

@@ -30,7 +30,7 @@ var BasicCTX = (function() {
 		const VERSION  = "0.75";
 
 		// default rendering states
-		this.bk = [1, 1, 1, 1];
+		this.bk = [0, 0, 0, 0];
 
 		// browser detection to handle differences such as mouse scrolling
 		var browser     = -1;
@@ -186,8 +186,9 @@ var BasicCTX = (function() {
 				// length is simply for convenience
 				var obj = {
 					length: arr.length,
-					VBO: VBO,
-					array: arr
+					VBO: VBO
+					// VBO: VBO,
+					// array: arr
 				}
 				return obj;
 			}
@@ -476,12 +477,6 @@ var BasicCTX = (function() {
 		*/
 		this.multMatrix = function(mat) {
 			this.loadMatrix(M4x4.mul(this.peekMatrix(), mat));
-		};
-
-		/**
-		*/
-		this.getContext = function() {
-			return this.ctx;
 		};
 
 		this.getSF = function() {

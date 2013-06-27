@@ -145,7 +145,6 @@ var PCTree = (function() {
 			return radius;
 		}
 
-		// function render(node) {
 		function render(node, size) {
 			if(basicCtx) {
 				if(node.numChildren !== 0) {

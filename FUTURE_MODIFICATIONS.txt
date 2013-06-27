@@ -1,19 +1,14 @@
-Once the "oct"-tree is in place, certain features will break and will need to be refactored.
+Changes/optimizations to existing code:
 
-I.  The mini-map will no longer work. 
-	SUGGESTION:  Make a png of the map view during preprocessing of the "oct"-tree and render as a simple texture.
-				 This will probably also require reworking some of the code that controls the position of the arrow
-				 that indicates user position.
-				 	
+I.		Update control scheme, particularly for placing markers.
+
+II.		Optimize marker generation.  Currently defining each marker as a seperate object.  Can instead define one marker 
+		and use scaling and transformation for visible markers.  Although there is a tradeoff: current version uses more
+		memory, suggested version will take more time.
 	
-Other changes/optimizations to existing code:
+III.	Update letters on directional axes.  Currently using more triangles than necessary, though the reduction won't be much.
 
-I.	  Update control scheme, particularly for placing markers.
+IV.		Fix the window framing so that web page elements scale and/or don't change relative position.
 
-II.   Optimize marker generation.  Currently defining each marker as a seperate object.  Can instead define one marker 
-	  and use scaling and transformation for visible markers.  Although there is a tradeoff: current version uses more
-	  memory, suggested version will take more time.
-	
-III.  Update letters on directional axes.  Currently using more triangles than necessary, though the reduction won't be much.
-
-IV.   Fix the window framing so that web page elements scale and/or don't change relative position.
+V.		Texture PNG currently stored in client directory (javascript needs it that way to load it).  Need to figure out how to store and load
+		to/from the database.
