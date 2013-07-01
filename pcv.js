@@ -11,6 +11,7 @@ var results1;
 var results2;
 var controllable = true;
 var cloudtree;
+var lastTime;
 
 function switchDiv() {
 	var a = document.getElementById('markupInfo');
@@ -176,7 +177,7 @@ function keyUp() {
 	}
 }
 
-function render() {
+function renderPC() {
 	if(isDragging) {	  
 		// how much was the cursor moved compared to last time
 		// this function was called?
@@ -268,6 +269,12 @@ function render() {
 		}		
 		pc.markers.renderOrthoMarkers();
 	}
+
+	var now = (new Date()).getTime();
+	if(now - lastTime > 2000) {
+		pc.tree.pruneTree(cloudtree, now);
+		lastTime = now;
+	}
 }
 
 function renderAxes() {
@@ -318,7 +325,7 @@ function start() {
 
 	pc = new PointCloud(document.getElementById('canvas'));
 	pc.markers.initializeMarkers();
-	pc.basicCtx.onRender = render;
+	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;
 	pc.onMousePressed = mousePressed;
@@ -327,4 +334,5 @@ function start() {
 	pc.onKeyUp = keyUp;
 
 	cloudtree = pc.tree.root('r');
+	lastTime = (new Date()).getTime();
 }

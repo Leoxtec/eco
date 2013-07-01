@@ -114,7 +114,7 @@ var Map = (function() {
 				basicCtx.ctx.generateMipmap(basicCtx.ctx.TEXTURE_2D);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 			}
-			mapImage.src = "preprocess/leaf_off.png";
+			mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/leaf_off.png";
 
 			var texCoords = new Float32Array([1.0, 0.0,
 											  1.0, 1.0,

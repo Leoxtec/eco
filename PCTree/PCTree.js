@@ -83,6 +83,9 @@ var PCTree = (function() {
 				temp1 = Tree;
 				for(var i = 1; i<arr.length; i++) {
 					var index = arr[i];
+					if(!temp1.Children[index]) {
+						return null;
+					}
 					temp2 = temp1.Children[index];
 					temp1 = temp2;
 				}
@@ -100,15 +103,18 @@ var PCTree = (function() {
 			var path = getParserKey(parser);
 			var pc = getNodefromTree(path);
 
-			pc.status = STREAMING;
+			if(pc) {
+				pc.status = STREAMING;
 
-			pc.VertexPositionBuffer = basicCtx.createBufferObject(attributes["ps_Vertex"]);
-			pc.VertexColorBuffer = basicCtx.createBufferObject(attributes["ps_Color"]);
-			pc.BB = attributes["ps_BBox"];       
-			pc.numChildren = attributes["ps_numchildren"];       
-			var arr = pc.BB;   
-			pc.center = getCenter(arr);
-			pc.radius = getRadius(arr);
+				pc.VertexPositionBuffer = basicCtx.createBufferObject(attributes["ps_Vertex"]);
+				pc.VertexColorBuffer = basicCtx.createBufferObject(attributes["ps_Color"]);
+				pc.BB = attributes["ps_BBox"];       
+				pc.numChildren = attributes["ps_numchildren"];       
+				var arr = pc.BB;   
+				pc.center = getCenter(arr);
+				pc.radius = getRadius(arr);
+				pc.lastRendered = (new Date()).getTime();
+			}
 		}
 
 		/**
@@ -121,7 +127,9 @@ var PCTree = (function() {
 		function loadedCallback(parser) {
 			var path = getParserKey(parser);
 			var pc = getNodefromTree(path);
-			pc.status = COMPLETE;
+			if(pc) {
+				pc.status = COMPLETE;
+			}
 		}
 
 		/**
@@ -233,6 +241,7 @@ var PCTree = (function() {
 				var center = node.center;
 				var radius = node.radius;   
 				if(isvisible(radius, center)) {
+					node.lastRendered = (new Date()).getTime();
 					var size = cubesize(radius,center);
 					if(size < 50 || node.numChildren == 0) {	
 						//draw a node
@@ -241,7 +250,7 @@ var PCTree = (function() {
 					else {
 						var allchildrenishere = 1;   //flag
 						for(k=0; k < node.numChildren; k++) {
-							if(typeof node.Children[k] == "undefined" || node.Children[k].status != 3) {
+							if(typeof node.Children[k] == "undefined" || node.Children[k].status != COMPLETE) {
 								allchildrenishere = 0;
 								break;
 							}
@@ -271,6 +280,21 @@ var PCTree = (function() {
 			}
 		};
 
+		this.pruneTree = function(node, time) {
+			if(node.status == COMPLETE) {
+				for(var k=0; k < node.numChildren; k++) {
+					if(typeof node.Children[k] != "undefined") {
+						if(time - node.Children[k].lastRendered > 2000) {
+							node.Children[k] = undefined;
+						}
+						else {
+							this.pruneTree(node.Children[k], time);
+						}
+					}
+				}
+			}
+		};
+
 		/**
 			Begins downloading and parsing a point cloud object.
 
@@ -278,39 +302,40 @@ var PCTree = (function() {
 
 			@returns {} A point cloud object.
 		*/
-		function load( parentnode, path) {  
-		var parser = new JSONParser({ start: startCallback,	parse: parseCallback, end: loadedCallback});
-		var node = {
-			VertexPositionBuffer: {},
-			VertexColorBuffer: {},
-			BB: [],
-			status: -1,
-			getStatus: function() {
-				return this.status;
-			},        
-			center: [0, 0, 0],    
-			getCenter: function() {
-				return this.center;
-			},
-			radius: 1,      //compute radius by function getRadius(BBox);
-			numChildren: 0,
-			Children: {},
-			path: path
-		};
+		function load( parentnode, path) { 
+			var parser = new JSONParser({ start: startCallback,	parse: parseCallback, end: loadedCallback});
+			var node = {
+				VertexPositionBuffer: {},
+				VertexColorBuffer: {},
+				BB: [],
+				status: -1,
+				getStatus: function() {
+					return this.status;
+				},        
+				center: [0, 0, 0],    
+				getCenter: function() {
+					return this.center;
+				},
+				radius: 1,      //compute radius by function getRadius(BBox);
+				numChildren: 0,
+				Children: {},
+				path: path,
+				lastRendered: 0
+			};
 
-		// map the new parser and node to the parsers and Tree.
-		parsers[path] = parser;
-		var n = path.split("/");
-		var index = n[n.length - 1];
-		index = index.toString();
-		if(parentnode == null) {
-			Tree = node;
-		}
-		else {
-			parentnode.Children[index] = node;
-		}    
-		parser.load(path);
-		return node;
+			// map the new parser and node to the parsers and Tree.
+			parsers[path] = parser;
+			var n = path.split("/");
+			var index = n[n.length - 1];
+			index = index.toString();
+			if(parentnode == null) {
+				Tree = node;
+			}
+			else {
+				parentnode.Children[index] = node;
+			}    
+			parser.load(path);
+			return node;
 		}
 	}// constructor
 

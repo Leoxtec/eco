@@ -187,8 +187,6 @@ var BasicCTX = (function() {
 				var obj = {
 					length: arr.length,
 					VBO: VBO
-					// VBO: VBO,
-					// array: arr
 				}
 				return obj;
 			}
