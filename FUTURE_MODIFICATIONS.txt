@@ -5,10 +5,53 @@ I.		Update control scheme, particularly for placing markers.
 II.		Optimize marker generation.  Currently defining each marker as a seperate object.  Can instead define one marker 
 		and use scaling and transformation for visible markers.  Although there is a tradeoff: current version uses more
 		memory, suggested version will take more time.
-	
-III.	Update letters on directional axes.  Currently using more triangles than necessary, though the reduction won't be much.
 
-IV.		Fix the window framing so that web page elements scale and/or don't change relative position.
+III.	Fix the window framing so that web page elements scale and/or don't change relative position.
 
-V.		Texture PNG currently stored in client directory (javascript needs it that way to load it).  Need to figure out how to store and load
-		to/from the database.
+
+IV. 	Optimizations
+
+		Current:
+		__________________________________________________________________
+		Eliminated overhead code from basicCtx -> cached attribute and uniform locations instead of constantly querying for them. (a lot of time)
+
+		reduced calls for setting modelview matrix and any other uniforms/attributes.
+
+		reduced memory overhead for VBO's.
+
+		moved initialization of tree, markers, axes and map from a function to the constructor (w/ removal of temp vars) to reduce footprint.
+
+		removed memory leak on GPU side for tree pruning and marker deletion.
+
+		changed picking transform to use less time and memory.
+
+		removed normal matrix (which calculated the transpose inverse) and set up the shader to use the regular modelview matrix with the normals having homogeneous coordinate w = 0.
+
+		removed normalization of normals (they are close enough together).
+
+		changed axes to use texture sprite instead of modeled letters.
+
+		the bottleneck is the webGL readpixels() function.  Replaced with cpu side raycasting.
+
+		________________________________________________________________________________________
+		possible
+		________________________________________________________________________________________
+		test tradeoffs for: storing each marker's values vs storing one marker and transforming
+
+		cut down on number of sides for the cylinders (overall and/or use billboarding)
+
+		check out the other matrix class (may be better implemented)
+
+		rework matrix stack
+
+		try using one canvas with viewporting
+
+		look for other special cases
+
+		?? try rendering to a lower resolution and upscaling the canvas with CSS
+
+		?? combine parser into tree code
+
+		combine picking and rendering markers into one shader (single pass)
+
+		use context directly instead of using member access via basicCtx

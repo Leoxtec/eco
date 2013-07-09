@@ -73,7 +73,7 @@ while(!feof($file)) {
 	if(!feof($file)) {
 		$tempPoint = strToPoint($tempStr);
 		$tempPoint[0] = (int)(($tempPoint[0] - $min[0]) * $scale[0]);
-		$tempPoint[1] = 512 - (int)(($tempPoint[1] - $min[1]) * $scale[1]);
+		$tempPoint[1] = (int)(($tempPoint[1] - $min[1]) * $scale[1]);
 		if($tempPoint[2] > $depth[$tempPoint[0]][$tempPoint[1]]) {
 			$depth[$tempPoint[0]][$tempPoint[1]] = $tempPoint[2];
 			$color = imagecolorallocatealpha($img, $tempPoint[3], $tempPoint[4], $tempPoint[5], 0);

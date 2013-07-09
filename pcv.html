@@ -51,6 +51,20 @@
 										  max: 10, 
 										  range: "min", 
 										  value: 1, 
+										  slide: function(event, ui) {
+													$("#pSize").val(ui.value);
+													changePointSize(ui.value);
+												 }
+										});
+		$("#pSize").val($("#pointSizeSlider").slider("value"));
+		});
+	</script>
+	<script>
+		$(function() {
+			$("#pointSizeSlider").slider({min: 1, 
+										  max: 10, 
+										  range: "min", 
+										  value: 1, 
 										  slide: function( event, ui ) {
 													$("#pSize").val(ui.value);
 													changePointSize(ui.value);
@@ -66,17 +80,13 @@
     <h1 style="margin-bottom:0;color:#FFFFFF;font:arial">Ecosynth browser</h1>
     </div>
    
-    <div id="menu" style="background-color:#FFFFFF;height:540px;width:300px;float:left;">
+    <div id="menu" style="background-color:#FFFFFF;height:540px;width:225px;float:left;">
 	<span style="font-family:arial;title='hello'">
     <b>Menu</b><br>
 	<div id="checkbox" style="font-size: 10;">
-	<input type="checkbox" id="pc2" name="checkbox" checked="checked">
-		<Label for="pc2" title="Toggle the leaf_on point cloud.">Leaf On</Label>
-	<input type="checkbox" id="pc1" name="checkbox" checked="checked">
-		<Label for="pc1" title="Toggle the leaf_off point cloud.">Leaf Off</Label>
 	<input type="checkbox" id="markers" name="checkbox" checked="checked">
 		<Label for="markers" title="Toggle the markers.">Show Markers</Label>
-	<input type="checkbox" id="atten" name="checkbox">
+	<input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
 		<Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label>
 	</div>
 	<!--<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
@@ -113,10 +123,9 @@
 		<div id="pointSizeSlider"></div>
 		</div>
 	</p></br>
-	<a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_on.ply" title="Click to download leaf_on point cloud">Leaf On</a></br>
-    <a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_off.ply" title="Click to download leaf_off point cloud">Leaf Off</a>
+	<a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_on.ply" title="Click to download point cloud">get point cloud</a></br>
    	
-	</br></br>
+	</br><!-- </br> -->
 	<div id="markerhelp">
     <Label for="markerhelp" style="font-size: 10;">Click for Help on Setting and Deleting Markers</Label>
     <div>
@@ -160,7 +169,7 @@
 	<canvas id="canvas3" width="270" height="270"></canvas>
 	</div>
 	
-	<input type="text" id="onOffMap" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666; margin: 15px; float: left;" />
+	<input type="text" id="onOffMap" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666; margin: 15px; float: left;"/>
 	
 	<div id="footer" style="background-color:#949aa1;clear:both;text-align:center;">  
     <a id="ecosynth" href="http://ecosynth.org/">

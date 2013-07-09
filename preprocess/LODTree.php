@@ -108,6 +108,10 @@ function strToPoint($str) {
 		$point[$i] = (float)$point[$i];
 		$point[$i + 3] = (int)$point[$i + 3];
 	}
+	// if(count($point) > 6) {
+	// 	unset($point[6]);
+	// 	unset($point[7]);
+	// }
 	return $point;
 }
 
@@ -132,7 +136,8 @@ if(strcmp(end(explode('.', $_FILES["file"]["name"])), 'ply') != 0) {
 $link = mysql_connect('localhost', 'root', 'jessica') or die(mysql_error());
 $db = mysql_select_db('markers', $link) or die(mysql_error());
 
-mysql_query("CREATE TABLE " . $_POST['table'] . "(path VARCHAR(100) NOT NULL,PRIMARY KEY(path),data VARCHAR(" . (116 + 48 * $_POST['density']) . "))") or die(mysql_error());
+// mysql_query("CREATE TABLE " . $_POST['table'] . "(path VARCHAR(100) NOT NULL,PRIMARY KEY(path),data VARCHAR(" . (116 + 48 * $_POST['density']) . "))") or die(mysql_error());
+mysql_query("CREATE TABLE " . $_POST['table'] . "(path VARCHAR(100) NOT NULL,PRIMARY KEY(path),data MEDIUMTEXT)") or die(mysql_error());
 
 $min; $max;
 $file = fopen($_FILES["file"]["tmp_name"],"r");

@@ -1,5 +1,3 @@
-varying vec4 frontColor;
-
 attribute vec3 aVertexPosition;
 attribute vec4 aVertexColor;
 
@@ -7,6 +5,8 @@ uniform mat4 ps_ModelViewMatrix;
 uniform mat4 ps_ProjectionMatrix;
 uniform float ps_PointSize;
 uniform vec3 ps_Attenuation;
+
+varying vec4 frontColor;
 
 void main(void) {
 	frontColor = aVertexColor;

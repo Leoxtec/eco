@@ -6,7 +6,7 @@ var removingMarker = false;
 var StartCoords = [0, 0];
 var viewMode = 0;
 var orthoZoom = false;
-var viewportArray = [308, 585, 540, -540];
+var viewportArray = [233, 585, 540, -540];
 var results1;
 var results2;
 var controllable = true;
@@ -43,10 +43,19 @@ function changePointSize(val) {
 	pc.tree.pointSize(val);
 }
 
-function viewRadioButton(value) {
+function toggleAttenuation() {
+	if(document.getElementById('atten').checked) {
+		pc.tree.attenuation(0.01, 0.0, 0.003);
+	}
+	else {
+		pc.tree.attenuation(1.0, 0.0, 0.0);
+	}
+}
+
+function viewRadioButton(val) {
 	if(controllable) {
-		cam.setViewMode(value);
-		viewMode = value;
+		cam.setViewMode(val);
+		viewMode = val;
 		if(viewMode === 4) {
 			pc.useOrthographic();
 		}
@@ -213,8 +222,10 @@ function renderPC() {
 			pc.markers.displayMarkerInfoOrtho(results1);
 		}
 		else {
-			pc.basicCtx.clear();
-			pc.markers.displayMarkerInfo(pc.mouseX - 308, 585 - pc.mouseY);
+			results1 = [];
+			GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(), pc.basicCtx.getPM(), viewportArray, results1);
+			pc.markers.displayMarkerInfo2(cam.pos(), results1);
+			// pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
 		}
 	}
 
@@ -226,16 +237,16 @@ function renderPC() {
 		pc.scaleOrthographic(cam.timeElapsed() * cam.zoomVelocity() * 5);
 	}
 
-	if(document.getElementById('atten').checked) {
-		pc.tree.attenuation(0.01, 0.0, 0.003);
-	}
-	else {
-		pc.tree.attenuation(1.0, 0.0, 0.0);
-	}
+	// if(document.getElementById('atten').checked) {
+	// 	pc.tree.attenuation(0.01, 0.0, 0.003);
+	// }
+	// else {
+	// 	pc.tree.attenuation(1.0, 0.0, 0.0);
+	// }
 
 	pc.basicCtx.clear();
 	pc.tree.resetCounters();
-	pc.tree.recurseTree(cloudtree, cam.pos());
+	pc.tree.renderTree(cam.pos());
 	pc.basicCtx.popMatrix();
 	// if(document.getElementById('scale').checked) {
 		// if(document.getElementById('overlay').checked) {
@@ -316,15 +327,12 @@ function renderMap() {
 
 function start() {
 	map = new Map(document.getElementById('canvas3'));
-	map.initializeMap();
 	map.getBasicCTX().onRender = renderMap;
 
 	ax = new Axes(document.getElementById('canvas2'));
-	ax.initializeAxes();
 	ax.getBasicCTX().onRender = renderAxes;
 
 	pc = new PointCloud(document.getElementById('canvas'));
-	pc.markers.initializeMarkers();
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;

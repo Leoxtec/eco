@@ -13,6 +13,11 @@ var PCTree = (function() {
 		var Tree = null;
 		var parsers = {};
 
+		var inNodeShader;
+		var leafShader;
+
+		var inNodeVarLocs = [];
+		var leafVarLocs = [];
 
 		// file status of point clouds
 		const FILE_NOT_FOUND = -1;
@@ -20,38 +25,49 @@ var PCTree = (function() {
 		const STREAMING = 2;
 		const COMPLETE = 3;
 
-		var inNodeShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/inNodeVertShader.txt'), basicCtx.getShaderStr('shaders/inNodeFragShader.txt'));
+		inNodeShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/inNodeVertShader.c'), basicCtx.getShaderStr('shaders/inNodeFragShader.c'));
 		basicCtx.ctx.useProgram(inNodeShader);
-		basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
+		inNodeVarLocs.push(basicCtx.ctx.getAttribLocation(inNodeShader, "aVertexPosition"));
+		inNodeVarLocs.push(basicCtx.ctx.getAttribLocation(inNodeShader, "aVertexColor"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "ps_ModelViewMatrix"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "ps_ProjectionMatrix"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "ps_size"));
+		basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
 
-		var leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basicVertShader.txt'), basicCtx.getShaderStr('shaders/basicFragShader.txt'));
+		leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
 		basicCtx.ctx.useProgram(leafShader);
-		basicCtx.uniformMatrix(leafShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
-		basicCtx.uniformf(leafShader, "ps_PointSize", 1);
-		basicCtx.uniformf(leafShader, "ps_Attenuation", [1.0, 0.0, 0.0]);
+		leafVarLocs.push(basicCtx.ctx.getAttribLocation(leafShader, "aVertexPosition"));
+		leafVarLocs.push(basicCtx.ctx.getAttribLocation(leafShader, "aVertexColor"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_ModelViewMatrix"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_ProjectionMatrix"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_PointSize"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_Attenuation"));
+		basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
+		basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
+		basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
 
 		this.usePerspective = function() {
 			basicCtx.ctx.useProgram(inNodeShader);
-			basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
+			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
 			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.uniformMatrix(leafShader, "ps_ProjectionMatrix", false, basicCtx.perspectiveMatrix);
+			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
 			basicCtx.ctx.useProgram(inNodeShader);
-			basicCtx.uniformMatrix(inNodeShader, "ps_ProjectionMatrix", false, projectionMatrix);
+			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, projectionMatrix);
 			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.uniformMatrix(leafShader, "ps_ProjectionMatrix", false, projectionMatrix);
+			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, projectionMatrix);
 		};
 
 		this.pointSize = function(size) {
 			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.uniformf(leafShader, "ps_PointSize", size);
+			basicCtx.ctx.uniform1f(leafVarLocs[4], size);
 		};
 
 		this.attenuation = function(constant, linear, quadratic) {
 			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.uniformf(leafShader, "ps_Attenuation", [constant, linear, quadratic]);
+			basicCtx.ctx.uniform3fv(leafVarLocs[5], [constant, linear, quadratic]);
 		};
 
 		this.resetCounters = function() {
@@ -106,10 +122,23 @@ var PCTree = (function() {
 			if(pc) {
 				pc.status = STREAMING;
 
-				pc.VertexPositionBuffer = basicCtx.createBufferObject(attributes["ps_Vertex"]);
-				pc.VertexColorBuffer = basicCtx.createBufferObject(attributes["ps_Color"]);
+				pc.numChildren = attributes["ps_numchildren"];
+				if(pc.numChildren !== 0) {
+					pc.VertexPositionBuffer = basicCtx.ctx.createBuffer();
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, pc.VertexPositionBuffer);
+					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, attributes["ps_Vertex"], basicCtx.ctx.STATIC_DRAW);
+				}
+				else {
+					var VBO = basicCtx.ctx.createBuffer();
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, VBO);
+					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, attributes["ps_Vertex"], basicCtx.ctx.STATIC_DRAW);
+					pc.VertexPositionBuffer = {length: attributes["ps_Vertex"].length, VBO: VBO}
+				}
+				pc.VertexColorBuffer = basicCtx.ctx.createBuffer();
+				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, pc.VertexColorBuffer);
+				basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, attributes["ps_Color"], basicCtx.ctx.STATIC_DRAW);
+
 				pc.BB = attributes["ps_BBox"];       
-				pc.numChildren = attributes["ps_numchildren"];       
 				var arr = pc.BB;   
 				pc.center = getCenter(arr);
 				pc.radius = getRadius(arr);
@@ -157,35 +186,22 @@ var PCTree = (function() {
 			if(basicCtx) {
 				if(node.numChildren !== 0) {
 					basicCtx.ctx.useProgram(inNodeShader);
-					count += 1;
-					var topMatrix = basicCtx.peekMatrix();
-
-					basicCtx.uniformMatrix(inNodeShader, "ps_ModelViewMatrix", false, topMatrix);
-
-					basicCtx.uniformf(inNodeShader, "ps_size", size);
-
-					basicCtx.vertexAttribPointer(inNodeShader, "aVertexPosition", 3, node.VertexPositionBuffer.VBO);
-					basicCtx.vertexAttribPointer(inNodeShader, "aVertexColor", 3, node.VertexColorBuffer.VBO);  
-
-					basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, node.VertexPositionBuffer.length/3);
-
-					basicCtx.disableVertexAttribPointer(inNodeShader, "aVertexPosition");
-					basicCtx.disableVertexAttribPointer(inNodeShader, "aVertexColor");
+					basicCtx.ctx.uniform1f(inNodeVarLocs[4], size);
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer);
+					basicCtx.ctx.vertexAttribPointer(inNodeVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexColorBuffer);
+					basicCtx.ctx.vertexAttribPointer(inNodeVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, 1);
 				}
 				else {    //ISLEAF   
 					basicCtx.ctx.useProgram(leafShader);
-					count += 1;
-					var topMatrix = basicCtx.peekMatrix();
-					basicCtx.uniformMatrix(leafShader, "ps_ModelViewMatrix", false, topMatrix);
-
-					basicCtx.vertexAttribPointer(leafShader, "aVertexPosition", 3, node.VertexPositionBuffer.VBO);
-					basicCtx.vertexAttribPointer(leafShader, "aVertexColor", 3, node.VertexColorBuffer.VBO); 
-
-					basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, node.VertexPositionBuffer.length/3);
-
-					basicCtx.disableVertexAttribPointer(leafShader, "aVertexPosition");
-					basicCtx.disableVertexAttribPointer(leafShader, "aVertexColor");
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
+					basicCtx.ctx.vertexAttribPointer(leafVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexColorBuffer);
+					basicCtx.ctx.vertexAttribPointer(leafVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, node.VertexPositionBuffer.length / 3);
 				}
+				count += 1;
 			}
 		}
 
@@ -234,7 +250,24 @@ var PCTree = (function() {
 		/////////////////////////////////////////////////////
 
 		//Todo
-		//Edit: start with level 3 and set a limit number of nodes rendering per frame 
+		//Edit: start with level 3 and set a limit number of nodes rendering per frame
+
+		this.renderTree = function(viewpoint) {
+			basicCtx.ctx.useProgram(inNodeShader);
+			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[2], false, basicCtx.peekMatrix());
+			basicCtx.ctx.enableVertexAttribArray(inNodeVarLocs[0]);
+			basicCtx.ctx.enableVertexAttribArray(inNodeVarLocs[1]);
+			basicCtx.ctx.useProgram(leafShader);
+			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, basicCtx.peekMatrix());
+			basicCtx.ctx.enableVertexAttribArray(leafVarLocs[0]);
+			basicCtx.ctx.enableVertexAttribArray(leafVarLocs[1]);
+			this.recurseTree(Tree, viewpoint);
+			basicCtx.ctx.disableVertexAttribArray(inNodeVarLocs[0]);
+			basicCtx.ctx.disableVertexAttribArray(inNodeVarLocs[1]);
+			basicCtx.ctx.disableVertexAttribArray(leafVarLocs[0]);
+			basicCtx.ctx.disableVertexAttribArray(leafVarLocs[1]);
+		};
+
 		this.recurseTree = function(node, viewpoint) {
 			var k=0;
 			if(node.status == COMPLETE) {
@@ -243,7 +276,7 @@ var PCTree = (function() {
 				if(isvisible(radius, center)) {
 					node.lastRendered = (new Date()).getTime();
 					var size = cubesize(radius,center);
-					if(size < 50 || node.numChildren == 0) {	
+					if(size < 25 || node.numChildren == 0) {
 						//draw a node
 						render(node, size); 
 					}
@@ -282,16 +315,34 @@ var PCTree = (function() {
 
 		this.pruneTree = function(node, time) {
 			if(node.status == COMPLETE) {
-				for(var k=0; k < node.numChildren; k++) {
-					if(typeof node.Children[k] != "undefined") {
-						if(time - node.Children[k].lastRendered > 2000) {
-							node.Children[k] = undefined;
+				for(var i = 0; i < node.numChildren; i++) {
+					if(typeof node.Children[i] != "undefined") {
+						if(time - node.Children[i].lastRendered > 2000) {
+							this.pruneBranch(node.Children[i]);
+							node.Children[i] = undefined;
 						}
 						else {
-							this.pruneTree(node.Children[k], time);
+							this.pruneTree(node.Children[i], time);
 						}
 					}
 				}
+			}
+		};
+
+		this.pruneBranch = function(node) {
+			if(node.status == COMPLETE) {
+				if(node.numChildren !== 0) {
+					basicCtx.ctx.deleteBuffer(node.VertexPositionBuffer);
+					for(var i = 0; i < node.numChildren; i++) {
+						if(typeof node.Children[i] != "undefined") {
+							this.pruneBranch(node.Children[i]);
+						}
+					}
+				}
+				else {
+					basicCtx.ctx.deleteBuffer(node.VertexPositionBuffer.VBO);
+				}
+				basicCtx.ctx.deleteBuffer(node.VertexColorBuffer);
 			}
 		};
 

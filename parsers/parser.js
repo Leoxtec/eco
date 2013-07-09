@@ -65,8 +65,6 @@ var JSONParser = (function() {
 				var num = obj.Point.length/6;   
 				verts = new Float32Array(num * 3);
 				cols = new Float32Array(num * 3);
-			
-				var level = obj.Level;
 				var numOfCh = obj.numChildren;
 				var boundingbox = obj.BB;
 
