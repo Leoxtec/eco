@@ -8,10 +8,9 @@ var PCTree = (function() {
 		var s30 = Math.sin(Math.PI / 6.0);
 		var t30 = Math.tan(Math.PI / 6.0);
 		var znear = 0.1;
-		var zfar = 1000;
+		var zfar = -1000.0;
 
 		var Tree = null;
-		var parsers = {};
 
 		var inNodeShader;
 		var leafShader;
@@ -19,29 +18,26 @@ var PCTree = (function() {
 		var inNodeVarLocs = [];
 		var leafVarLocs = [];
 
-		// file status of point clouds
-		const FILE_NOT_FOUND = -1;
 		const STARTED = 1;
-		const STREAMING = 2;
-		const COMPLETE = 3;
+		const COMPLETE = 2;
 
 		inNodeShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/inNodeVertShader.c'), basicCtx.getShaderStr('shaders/inNodeFragShader.c'));
 		basicCtx.ctx.useProgram(inNodeShader);
 		inNodeVarLocs.push(basicCtx.ctx.getAttribLocation(inNodeShader, "aVertexPosition"));
 		inNodeVarLocs.push(basicCtx.ctx.getAttribLocation(inNodeShader, "aVertexColor"));
-		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "ps_ModelViewMatrix"));
-		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "ps_ProjectionMatrix"));
-		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "ps_size"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uModelViewMatrix"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uProjectionMatrix"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uSize"));
 		basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
 
 		leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
 		basicCtx.ctx.useProgram(leafShader);
 		leafVarLocs.push(basicCtx.ctx.getAttribLocation(leafShader, "aVertexPosition"));
 		leafVarLocs.push(basicCtx.ctx.getAttribLocation(leafShader, "aVertexColor"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_ModelViewMatrix"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_ProjectionMatrix"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_PointSize"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "ps_Attenuation"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uModelViewMatrix"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uProjectionMatrix"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uPointSize"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uAttenuation"));
 		basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
 		basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
 		basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
@@ -75,111 +71,8 @@ var PCTree = (function() {
 			request = 0;
 		};
 
-		/**
-			@private
-
-			@param {} parser
-		*/
-		function getParserKey(parser) {
-			for(var key in parsers) {
-				if(parsers[key] === parser) {
-					break;
-				}
-			}
-			return key;
-		}
-
-		function getNodefromTree(path) {
-			var arr = path.split("/");
-			var temp1, temp2;
-			if(path == Tree.path) {
-				return Tree;
-			}
-			else {
-				temp1 = Tree;
-				for(var i = 1; i<arr.length; i++) {
-					var index = arr[i];
-					if(!temp1.Children[index]) {
-						return null;
-					}
-					temp2 = temp1.Children[index];
-					temp1 = temp2;
-				}
-			}
-			return temp1;
-		}
-
-		function startCallback(parser) {
-			var path = getParserKey(parser);
-			var pc = getNodefromTree(path);
-			pc.status = STARTED;
-		}
-
-		function parseCallback(parser, attributes) {
-			var path = getParserKey(parser);
-			var pc = getNodefromTree(path);
-
-			if(pc) {
-				pc.status = STREAMING;
-
-				pc.numChildren = attributes["ps_numchildren"];
-				if(pc.numChildren !== 0) {
-					pc.VertexPositionBuffer = basicCtx.ctx.createBuffer();
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, pc.VertexPositionBuffer);
-					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, attributes["ps_Vertex"], basicCtx.ctx.STATIC_DRAW);
-				}
-				else {
-					var VBO = basicCtx.ctx.createBuffer();
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, VBO);
-					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, attributes["ps_Vertex"], basicCtx.ctx.STATIC_DRAW);
-					pc.VertexPositionBuffer = {length: attributes["ps_Vertex"].length, VBO: VBO}
-				}
-				pc.VertexColorBuffer = basicCtx.ctx.createBuffer();
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, pc.VertexColorBuffer);
-				basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, attributes["ps_Color"], basicCtx.ctx.STATIC_DRAW);
-
-				pc.BB = attributes["ps_BBox"];       
-				var arr = pc.BB;   
-				pc.center = getCenter(arr);
-				pc.radius = getRadius(arr);
-				pc.lastRendered = (new Date()).getTime();
-			}
-		}
-
-		/**
-			@private
-
-			The parser will call this when the file is done being downloaded.
-
-			@param {Object} parser
-		*/
-		function loadedCallback(parser) {
-			var path = getParserKey(parser);
-			var pc = getNodefromTree(path);
-			if(pc) {
-				pc.status = COMPLETE;
-			}
-		}
-
-		/**
-			@private
-		*/
-		function getCenter(arr) {
-			var objCenter = [0, 0, 0];
-			objCenter[0] = (arr[0]-arr[3])/2 + arr[3];
-			objCenter[1] = (arr[1]-arr[4])/2 + arr[4];
-			objCenter[2] = (arr[2]-arr[5])/2 + arr[5];
-			return objCenter;
-		}
-    
-		function getRadius(arr) {
-			var r = [0, 0, 0];
-			r[0] = arr[0]-arr[3];
-			r[1] = arr[1]-arr[4];
-			r[2] = arr[2]-arr[5];
-			var radius;
-			radius =  Math.sqrt(r[0]*r[0]+r[1]*r[1]+r[2]*r[2])/2;
-			return radius;
+		this.getCenter = function() {
+			return Tree.center;
 		}
 
 		function render(node, size) {
@@ -210,38 +103,25 @@ var PCTree = (function() {
 		// 
 		// OBB test //oriented boungding box test cross product of the edges
 		function isvisible(radius, center) { 
-			var modelViewMatrix = basicCtx.peekMatrix();
-			var temp = V3.mul4x4(modelViewMatrix, center);
 			//for six clipping plane
-			//compute the distance between the center and each plane  
+			//compute the distance between the center and each plane
+			var a = center[0] * c30;
+			var b = center[1] * c30;
+			var c = center[2] * s30;
 			var d = new Array(6);
-			d[0] = -temp[2] * s30 - temp[0] * c30;
-			d[1] = -temp[2] * s30 + temp[0] * c30;
-			d[2] = -temp[2] * s30 + temp[1] * c30;
-			d[3] = -temp[2] * s30 - temp[1] * c30;
-			d[4] = -znear - temp[2];
-			d[5] = zfar + temp[2];
-
-			for(var i=0; i<6; i++) {
-				if(d[i] < -radius) {
+			d[0] = c + a;
+			d[1] = c - a;
+			d[2] = c - b;
+			d[3] = c + b;
+			d[4] = znear + center[2];
+			d[5] = zfar - center[2];
+			for(var i = 0; i < 6; i++) {
+				if(d[i] > radius) {
 					return false;
 				}
 			}
 			return true;
 		}
-
-		//cubesize: the shortest length of the cube on screen
-		function cubesize(radius, center) {
-			var modelViewMatrix = basicCtx.peekMatrix();
-			var temp = V3.mul4x4(modelViewMatrix, center);
-			return (radius * basicCtx.height) / (-temp[2] * t30);
-		}
-
-		//Create tree
-		this.root = function(parserpath) {
-			Tree = load( Tree, parserpath);
-			return Tree;
-		} 
 
 		/////////////////////////////////////////////////////
 		//  recurse the tree from given node, 
@@ -269,13 +149,12 @@ var PCTree = (function() {
 		};
 
 		this.recurseTree = function(node, viewpoint) {
-			var k=0;
+			var k = 0;
 			if(node.status == COMPLETE) {
-				var center = node.center;
-				var radius = node.radius;   
-				if(isvisible(radius, center)) {
+				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
+				if(isvisible(node.radius, centerVS)) {
 					node.lastRendered = (new Date()).getTime();
-					var size = cubesize(radius,center);
+					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
 					if(size < 25 || node.numChildren == 0) {
 						//draw a node
 						render(node, size); 
@@ -302,7 +181,7 @@ var PCTree = (function() {
 									if(typeof node.Children[k] != "undefined" && node.Children[k].status)
 										continue;
 									else {
-										load(node, node.path + "/" + k);
+										load(node, k);
 										request++;
 									}
 								}
@@ -346,47 +225,83 @@ var PCTree = (function() {
 			}
 		};
 
-		/**
-			Begins downloading and parsing a point cloud object.
+		function parseCallback() {
+			if(this.readyState == 4 && this.status == 200) {
+				var obj = JSON.parse(this.responseText);
+				var verts = new Float32Array(obj.Point.length / 2);
+				var cols = new Float32Array(verts.length);
 
-			@param {String} path Path to the resource.
+				for(var i = 0, j = 0; i < obj.Point.length; i += 6, j += 3) {
+					verts[j] 	 = obj.Point[i];
+					verts[j + 1] = obj.Point[i + 1];
+					verts[j + 2] = obj.Point[i + 2];
+					cols[j] 	= obj.Point[i + 3] / 255;
+					cols[j + 1] = obj.Point[i + 4] / 255;
+					cols[j + 2] = obj.Point[i + 5] / 255;
+				}
 
-			@returns {} A point cloud object.
-		*/
-		function load( parentnode, path) { 
-			var parser = new JSONParser({ start: startCallback,	parse: parseCallback, end: loadedCallback});
+				if(obj.numChildren !== 0) {
+					this.node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexPositionBuffer);
+					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
+				}
+				else {
+					var VBO = basicCtx.ctx.createBuffer();
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, VBO);
+					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
+					this.node.VertexPositionBuffer = {length: verts.length, VBO: VBO}
+				}
+				this.node.VertexColorBuffer = basicCtx.ctx.createBuffer();
+				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexColorBuffer);
+				basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, cols, basicCtx.ctx.STATIC_DRAW);
+
+				this.node.numChildren = obj.numChildren;
+				this.node.BB = obj.BB;
+
+				var temp = [this.node.BB[0] - this.node.BB[3], this.node.BB[1] - this.node.BB[4], this.node.BB[2] - this.node.BB[5]];
+				this.node.center[0] = (temp[0]) / 2 + this.node.BB[3];
+				this.node.center[1] = (temp[1]) / 2 + this.node.BB[4];
+				this.node.center[2] = (temp[2]) / 2 + this.node.BB[5];
+				this.node.radius =  Math.sqrt(temp[0] * temp[0] + temp[1] * temp[1] + temp[2] * temp[2]) / 2;
+				this.node.lastRendered = (new Date()).getTime();
+				this.node.status = COMPLETE;
+				this.node.xmlhttp = null;
+			}
+		}
+
+		function load(parentnode, index) {
 			var node = {
 				VertexPositionBuffer: {},
 				VertexColorBuffer: {},
 				BB: [],
-				status: -1,
-				getStatus: function() {
-					return this.status;
-				},        
-				center: [0, 0, 0],    
-				getCenter: function() {
-					return this.center;
-				},
-				radius: 1,      //compute radius by function getRadius(BBox);
+				status: STARTED, 
+				center: [0, 0, 0],
+				radius: 1,
 				numChildren: 0,
 				Children: {},
-				path: path,
-				lastRendered: 0
+				path: null,
+				lastRendered: 0,
+				xmlhttp: new XMLHttpRequest()
 			};
 
-			// map the new parser and node to the parsers and Tree.
-			parsers[path] = parser;
-			var n = path.split("/");
-			var index = n[n.length - 1];
-			index = index.toString();
 			if(parentnode == null) {
+				node.path = index;
 				Tree = node;
 			}
 			else {
+				node.path = parentnode.path + "/" + index;
 				parentnode.Children[index] = node;
-			}    
-			parser.load(path);
-			return node;
+			}
+
+			node.xmlhttp.node = node;
+			node.xmlhttp.onload = parseCallback;
+			node.xmlhttp.open("GET", "action.php?a=getnode&path="+node.path, true);
+			node.xmlhttp.send();
+		}
+
+		this.root = function(path) {
+			load(null, path);
+			return Tree;
 		}
 	}// constructor
 

@@ -1,12 +1,12 @@
 attribute vec3 aVertexPosition;
-attribute vec2 vTexCoord;
+attribute vec2 aTexCoord;
 
-uniform mat4 ps_ModelViewMatrix;
-uniform mat4 ps_ProjectionMatrix;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
 
-varying vec2 v_texCoord;
+varying vec2 vTexCoord;
 
 void main(void) {
-	gl_Position = ps_ProjectionMatrix * ps_ModelViewMatrix * vec4(aVertexPosition, 1.0);
-	v_texCoord = vTexCoord;
+	gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
+	vTexCoord = aTexCoord;
 }

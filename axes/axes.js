@@ -19,8 +19,8 @@ var Axes = (function() {
 		basicCtx.ctx.useProgram(axesShader);
 		axesVarLocs.push(basicCtx.ctx.getAttribLocation(axesShader, "aVertexPosition"));
 		axesVarLocs.push(basicCtx.ctx.getAttribLocation(axesShader, "aVertexColor"));
-		axesVarLocs.push(basicCtx.ctx.getUniformLocation(axesShader, "ps_ModelViewMatrix"));
-		axesVarLocs.push(basicCtx.ctx.getUniformLocation(axesShader, "ps_ProjectionMatrix"));
+		axesVarLocs.push(basicCtx.ctx.getUniformLocation(axesShader, "uModelViewMatrix"));
+		axesVarLocs.push(basicCtx.ctx.getUniformLocation(axesShader, "uProjectionMatrix"));
 		basicCtx.ctx.uniformMatrix4fv(axesVarLocs[3], false, basicCtx.perspectiveMatrix);
 		basicCtx.ctx.enableVertexAttribArray(axesVarLocs[0]);
 		basicCtx.ctx.enableVertexAttribArray(axesVarLocs[1]);
@@ -45,10 +45,10 @@ var Axes = (function() {
 		letterShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/axesLetterVertShader.c'), basicCtx.getShaderStr('shaders/axesLetterFragShader.c'));
 		basicCtx.ctx.useProgram(letterShader);
 		letterVarLocs.push(basicCtx.ctx.getAttribLocation(letterShader, "aVertexPosition"));
-		letterVarLocs.push(basicCtx.ctx.getAttribLocation(letterShader, "letterIndex"));
-		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "ps_ModelViewMatrix"));
-		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "ps_ProjectionMatrix"));
-		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "sizeFactor"));
+		letterVarLocs.push(basicCtx.ctx.getAttribLocation(letterShader, "aLetterIndex"));
+		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uModelViewMatrix"));
+		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uProjectionMatrix"));
+		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uSizeFactor"));
 		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uSampler"));
 		basicCtx.ctx.uniformMatrix4fv(letterVarLocs[3], false, basicCtx.perspectiveMatrix);
 		basicCtx.ctx.uniform1f(letterVarLocs[4], (basicCtx.height * (7.0 / 105.0)) / Math.tan(Math.PI / 6.0));
@@ -69,7 +69,6 @@ var Axes = (function() {
 			basicCtx.ctx.pixelStorei(basicCtx.ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
 			basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, letterImage);
 			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.LINEAR);
-			basicCtx.ctx.generateMipmap(basicCtx.ctx.TEXTURE_2D);
 			basicCtx.ctx.useProgram(letterShader);
 			basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
 			basicCtx.ctx.uniform1i(letterVarLocs[5], letterTexture);
@@ -85,7 +84,7 @@ var Axes = (function() {
 			return basicCtx;
 		};
 
-		this.render = function(pan, tilt) {
+		this.render = function() {
 			if(basicCtx) {
 				var topMatrix = basicCtx.peekMatrix();
 				basicCtx.ctx.useProgram(axesShader);

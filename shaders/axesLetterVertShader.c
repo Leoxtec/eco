@@ -1,15 +1,15 @@
 attribute vec3 aVertexPosition;
-attribute float letterIndex;
+attribute float aLetterIndex;
 
-uniform mat4 ps_ModelViewMatrix;
-uniform mat4 ps_ProjectionMatrix;
-uniform float sizeFactor;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
+uniform float uSizeFactor;
 
-varying float li;
+varying float vLetterIndex;
 
 void main(void) {
-	li = letterIndex;
-	vec4 ecPos4 = ps_ModelViewMatrix * vec4(aVertexPosition, 1.0);
-	gl_PointSize = sizeFactor / -ecPos4.z;
-	gl_Position = ps_ProjectionMatrix * ecPos4;
+	vLetterIndex = aLetterIndex;
+	vec4 ecPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
+	gl_PointSize = uSizeFactor / -ecPos4.z;
+	gl_Position = uProjectionMatrix * ecPos4;
 }

@@ -26,8 +26,8 @@ var Map = (function() {
 		basicCtx.ctx.useProgram(arrowShader);
 		arrowVarLocs.push(basicCtx.ctx.getAttribLocation(arrowShader, "aVertexPosition"));
 		arrowVarLocs.push(basicCtx.ctx.getAttribLocation(arrowShader, "aVertexColor"));
-		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "ps_ModelViewMatrix"));
-		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "ps_ProjectionMatrix"));
+		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "uModelViewMatrix"));
+		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "uProjectionMatrix"));
 		basicCtx.ctx.uniformMatrix4fv(arrowVarLocs[3], false, M4x4.scale3(1 / 600, 1 / 600, 1, basicCtx.orthographicMatrix));
 		basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[0]);
 		basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[1]);
@@ -55,9 +55,9 @@ var Map = (function() {
 		mapShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cylCapVertShader.c'), basicCtx.getShaderStr('shaders/mapFragShader.c'));
 		basicCtx.ctx.useProgram(mapShader);
 		mapVarLocs.push(basicCtx.ctx.getAttribLocation(mapShader, "aVertexPosition"));
-		mapVarLocs.push(basicCtx.ctx.getAttribLocation(mapShader, "vTexCoord"));
-		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "ps_ModelViewMatrix"));
-		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "ps_ProjectionMatrix"));
+		mapVarLocs.push(basicCtx.ctx.getAttribLocation(mapShader, "aTexCoord"));
+		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "uModelViewMatrix"));
+		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "uProjectionMatrix"));
 		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "uSampler"));
 		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[2], false, viewMatrix);
 		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[3], false, M4x4.scale3(1 / 600, 1 / 600, 1, basicCtx.orthographicMatrix));
@@ -82,7 +82,6 @@ var Map = (function() {
 			basicCtx.ctx.pixelStorei(basicCtx.ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
 			basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, mapImage);
 			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
-			basicCtx.ctx.generateMipmap(basicCtx.ctx.TEXTURE_2D);
 			basicCtx.ctx.useProgram(mapShader);
 			basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
 			basicCtx.ctx.uniform1i(mapVarLocs[4], mapTexture);
@@ -96,14 +95,14 @@ var Map = (function() {
 		};
 
 		this.render = function(pos, pan) {
-			var arrowPos = V3.clone(pos);
-			var offTheMap = false;
 			if(basicCtx.ctx) {
+				var arrowPos = V3.clone(pos);
+				var offTheMap = false;
 				if(arrowPos[0] < basicCtx.xmin) {
 					arrowPos[0] = basicCtx.xmin;
 					offTheMap = true;
 				}
-				if(arrowPos[0] > basicCtx.xmax) {
+				else if(arrowPos[0] > basicCtx.xmax) {
 					arrowPos[0] = basicCtx.xmax;
 					offTheMap = true;
 				}
@@ -111,7 +110,7 @@ var Map = (function() {
 					arrowPos[1] = basicCtx.ymin;
 					offTheMap = true;
 				}
-				if(arrowPos[1] > basicCtx.ymax) {
+				else if(arrowPos[1] > basicCtx.ymax) {
 					arrowPos[1] = basicCtx.ymax;
 					offTheMap = true;
 				}

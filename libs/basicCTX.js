@@ -225,7 +225,7 @@ var BasicCTX = (function() {
 				} catch(e) {}
 			}
 			if(!this.ctx) {
-				this.println("Your browser does not support WebGL.");
+				window.console.log("Your browser does not support WebGL.");
 			}
 			// parseInt hack used for Chrome/Chromium
 			this.ctx.viewport(0, 0, parseInt(pWidth), parseInt(pHeight));
@@ -247,8 +247,7 @@ var BasicCTX = (function() {
 			@param {Number} sz
 		*/
 		this.scale = function(sx, sy, sz) {
-			var smat = (!sy && !sz) ? M4x4.scale1(sx, M4x4.I) : M4x4.scale3(sx, sy, sz, M4x4.I);
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), smat));
+			matrixStack[matrixStack.length - 1] = M4x4.scale3(sx, sy, sz, matrixStack[matrixStack.length - 1]);
 		};
 
 		/**
@@ -259,8 +258,7 @@ var BasicCTX = (function() {
 			@param {Number} tz
 		*/
 		this.translate = function(tx, ty, tz) {
-			var trans = M4x4.translate3(tx, ty, tz, M4x4.I);
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), trans));
+			matrixStack[matrixStack.length - 1] = M4x4.translate3(tx, ty, tz, matrixStack[matrixStack.length - 1]);
 		};
 
 		/**
@@ -270,8 +268,7 @@ var BasicCTX = (function() {
 			@param {Number} radians
 		*/
 		this.rotateX = function(radians) {
-			var rotMat = M4x4.rotate(radians, V3.$(1,0,0), M4x4.I);
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
+			matrixStack[matrixStack.length - 1] = M4x4.rotate(radians, V3.$(1,0,0), matrixStack[matrixStack.length - 1]);
 		};
 
 		/**
@@ -281,8 +278,7 @@ var BasicCTX = (function() {
 			@param {Number} radians
 		*/
 		this.rotateY = function(radians) {
-			var rotMat = M4x4.rotate(radians, V3.$(0,1,0), M4x4.I);
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
+			matrixStack[matrixStack.length - 1] = M4x4.rotate(radians, V3.$(0,1,0), matrixStack[matrixStack.length - 1]);
 		};
 
 		/**
@@ -292,15 +288,13 @@ var BasicCTX = (function() {
 			@param {Number} radians
 		*/
 		this.rotateZ = function(radians) {
-			var rotMat = M4x4.rotate(radians, V3.$(0,0,1), M4x4.I);
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
+			matrixStack[matrixStack.length - 1] = M4x4.rotate(radians, V3.$(0,0,1), matrixStack[matrixStack.length - 1]);
 		};
 
 		/**
 		*/
 		this.rotate = function(radians, a) {
-			var rotMat = M4x4.rotate(radians, a, M4x4.I);
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
+			matrixStack[matrixStack.length - 1] = M4x4.rotate(radians, a, matrixStack[matrixStack.length - 1]);
 		};
 
 		/*********************************************/
@@ -311,7 +305,7 @@ var BasicCTX = (function() {
 			Pushes on a copy of the matrix at the top of the matrix stack.
 		*/
 		this.pushMatrix = function() {
-			matrixStack.push(this.peekMatrix());
+			matrixStack.push(M4x4.clone(this.peekMatrix()));
 		};
 
 		/**
@@ -327,7 +321,7 @@ var BasicCTX = (function() {
 			@returns {Float32Array}
 		*/
 		this.peekMatrix = function() {
-			return M4x4.clone(matrixStack[matrixStack.length - 1]);
+			return matrixStack[matrixStack.length - 1];
 		};
 
 		/**
@@ -342,7 +336,7 @@ var BasicCTX = (function() {
 		/**
 		*/
 		this.multMatrix = function(mat) {
-			this.loadMatrix(M4x4.mul(this.peekMatrix(), mat));
+			matrixStack[matrixStack.length - 1] = M4x4.mul(matrixStack[matrixStack.length - 1], mat);
 		};
 
 		this.getSF = function() {

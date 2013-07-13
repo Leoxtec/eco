@@ -1,10 +1,10 @@
-varying lowp vec4 frontColor;
-varying highp vec2 v_texCoord;
+varying lowp vec4 vFrontColor;
+varying highp vec2 vTexCoord;
 
 void main(void){
-	highp vec2 pos = v_texCoord - vec2(0.5, 0.5);
+	highp vec2 pos = vTexCoord - vec2(0.5, 0.5);
 	if(dot(pos, pos) > 0.25) {
 		discard;
 	}
-	gl_FragColor = frontColor;
+	gl_FragColor = vFrontColor;
 }

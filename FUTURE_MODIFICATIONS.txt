@@ -2,11 +2,7 @@ Changes/optimizations to existing code:
 
 I.		Update control scheme, particularly for placing markers.
 
-II.		Optimize marker generation.  Currently defining each marker as a seperate object.  Can instead define one marker 
-		and use scaling and transformation for visible markers.  Although there is a tradeoff: current version uses more
-		memory, suggested version will take more time.
-
-III.	Fix the window framing so that web page elements scale and/or don't change relative position.
+II.		Fix the window framing so that web page elements scale and/or don't change relative position.
 
 
 IV. 	Optimizations
@@ -33,25 +29,22 @@ IV. 	Optimizations
 
 		the bottleneck is the webGL readpixels() function.  Replaced with cpu side raycasting.
 
+		reworked matrix stack
+
+		combined parser into tree code
+
+		misc little things
+
+		cut down on cylinder polygon count
+
+		changed markers to scale and translate one cylinder instead of storing individual cylinders
+
 		________________________________________________________________________________________
 		possible
 		________________________________________________________________________________________
-		test tradeoffs for: storing each marker's values vs storing one marker and transforming
-
-		cut down on number of sides for the cylinders (overall and/or use billboarding)
 
 		check out the other matrix class (may be better implemented)
 
-		rework matrix stack
-
 		try using one canvas with viewporting
 
-		look for other special cases
-
-		?? try rendering to a lower resolution and upscaling the canvas with CSS
-
-		?? combine parser into tree code
-
-		combine picking and rendering markers into one shader (single pass)
-
-		use context directly instead of using member access via basicCtx
+		minify JS

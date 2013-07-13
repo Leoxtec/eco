@@ -1,5 +1,5 @@
-varying highp vec4 frontColor;
+varying highp vec4 vFrontColor;
 
 void main(void) {
-	gl_FragColor = frontColor;
+	gl_FragColor = vFrontColor;
 }

@@ -12,6 +12,7 @@ var results2;
 var controllable = true;
 var cloudtree;
 var lastTime;
+var PIover2 = Math.PI / 2;
 
 function switchDiv() {
 	var a = document.getElementById('markupInfo');
@@ -209,7 +210,7 @@ function renderPC() {
 		}
 	}
 
-    var c = cloudtree.getCenter();
+    var c = pc.tree.getCenter();
 	pc.basicCtx.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
 	
 	if(document.getElementById('markers').checked) {
@@ -222,10 +223,10 @@ function renderPC() {
 			pc.markers.displayMarkerInfoOrtho(results1);
 		}
 		else {
-			results1 = [];
-			GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(), pc.basicCtx.getPM(), viewportArray, results1);
-			pc.markers.displayMarkerInfo2(cam.pos(), results1);
-			// pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
+			// results1 = [];
+			// GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(), pc.basicCtx.getPM(), viewportArray, results1);
+			// pc.markers.displayMarkerInfo(cam.pos(), results1);
+			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
 		}
 	}
 
@@ -293,30 +294,28 @@ function renderAxes() {
 	switch(viewMode) {
 		case 0:
 			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.scale(cam.getTemp(), 3), V3.$(0, 0, 0), cam.up()));
-			ax.render(cam.getPan() + Math.PI / 2, cam.getTilt() - Math.PI / 2);
 			break;
 		case 1:
 		case 2:
 			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.scale(cam.getDir(), -3), V3.$(0, 0, 0), cam.up()));
-			ax.render(cam.getPan() - Math.PI / 2, -cam.getTilt() + Math.PI / 2);
 			break;
 		case 3:
 		case 4:
 			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.$(0, 0, 3), V3.$(0, 0, 0), cam.up()));
-			ax.render(0, -Math.PI / 2);
 			break;
-	}	
+	}
+	ax.render();
 }
 
 function renderMap() {
 	map.getBasicCTX().clear();
 	switch(viewMode) {
 		case 0:
-			map.render(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + Math.PI / 2);
+			map.render(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + PIover2);
 			break;
 		case 1:
 		case 2:
-			map.render(cam.getPoint(), cam.getPan() - Math.PI / 2);
+			map.render(cam.getPoint(), cam.getPan() - PIover2);
 			break;
 		case 3:
 		case 4:
