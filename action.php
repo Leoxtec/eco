@@ -18,6 +18,9 @@ switch($key) {
 	case 'getnode':
 		getnode();
 		break;
+	case 'getMapSize':
+		getMapSize();
+		break;
 }
 
 function findHeight($cyl) {
@@ -111,4 +114,9 @@ function start() {
 function getnode() {
 	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM bothleavestext WHERE path = '%s'", mysql_real_escape_string($_GET['path']))));
 	echo $result['data'];
+}
+
+function getMapSize() {
+	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT size FROM orthosize WHERE name = '%s'", mysql_real_escape_string($_GET['name']))));
+	echo $result['size'];
 }

@@ -68,7 +68,7 @@ var Axes = (function() {
 			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, letterTexture);
 			basicCtx.ctx.pixelStorei(basicCtx.ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
 			basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, letterImage);
-			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.LINEAR);
+			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
 			basicCtx.ctx.useProgram(letterShader);
 			basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
 			basicCtx.ctx.uniform1i(letterVarLocs[5], letterTexture);

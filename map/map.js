@@ -16,11 +16,19 @@ var Map = (function() {
 		var mapVarLocs = [];
 		var arrowVarLocs = [];
 
-		basicCtx.scaleFactor = 600;
-		basicCtx.xmin = basicCtx.xmin * basicCtx.scaleFactor + 4;
-		basicCtx.xmax = basicCtx.xmax * basicCtx.scaleFactor - 4;
-		basicCtx.ymin = basicCtx.ymin * basicCtx.scaleFactor + 4;
-		basicCtx.ymax = basicCtx.ymax * basicCtx.scaleFactor - 4;
+		var xmlhttpForOrthoSize = new XMLHttpRequest();
+		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=both_leaves", false);
+		// xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=a_BCI_2013_06_11_m2_filtered_ply", false);
+		// xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII", false);
+		xmlhttpForOrthoSize.send();
+		orthoSize = JSON.parse(xmlhttpForOrthoSize.responseText);
+		arrowAspect = orthoSize / 31.25;
+
+		var ymax = orthoSize - 4 * arrowAspect;
+		var ymin = -ymax;
+		var xmin = ymin;
+		var xmax = ymax;
+		orthographicMatrix = M4x4.makeOrtho(-orthoSize, orthoSize, -orthoSize, orthoSize, 0.1, 1000);
 
 		arrowShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basicVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
 		basicCtx.ctx.useProgram(arrowShader);
@@ -28,20 +36,20 @@ var Map = (function() {
 		arrowVarLocs.push(basicCtx.ctx.getAttribLocation(arrowShader, "aVertexColor"));
 		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "uModelViewMatrix"));
 		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "uProjectionMatrix"));
-		basicCtx.ctx.uniformMatrix4fv(arrowVarLocs[3], false, M4x4.scale3(1 / 600, 1 / 600, 1, basicCtx.orthographicMatrix));
+		basicCtx.ctx.uniformMatrix4fv(arrowVarLocs[3], false, orthographicMatrix);
 		basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[0]);
 		basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[1]);
 		arrowVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowVBO);
-		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([-0.5, -6.0, 50.0,
-																			  0.5, -6.0, 50.0,
-																			  0.5, -2.0, 50.0,
-																			 -0.5, -6.0, 50.0,
-																			  0.5, -2.0, 50.0,
-																			 -0.5, -2.0, 50.0,
-																			  0.0,  0.0, 50.0,
-																			 -1.5, -2.0, 50.0,
-																			  1.5, -2.0, 50.0]), basicCtx.ctx.STATIC_DRAW);
+		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([-0.5 * arrowAspect, -6.0 * arrowAspect, 50.0,
+																			  0.5 * arrowAspect, -6.0 * arrowAspect, 50.0,
+																			  0.5 * arrowAspect, -2.0 * arrowAspect, 50.0,
+																			 -0.5 * arrowAspect, -6.0 * arrowAspect, 50.0,
+																			  0.5 * arrowAspect, -2.0 * arrowAspect, 50.0,
+																			 -0.5 * arrowAspect, -2.0 * arrowAspect, 50.0,
+																			  0.0 * arrowAspect,  0.0 * arrowAspect, 50.0,
+																			 -1.5 * arrowAspect, -2.0 * arrowAspect, 50.0,
+																			  1.5 * arrowAspect, -2.0 * arrowAspect, 50.0]), basicCtx.ctx.STATIC_DRAW);
 		temp = new Float32Array(27);
 		for(var i = 0; i < 27; i = i + 3) {
 			temp[i] = temp[i + 2] = 1.0;
@@ -50,7 +58,6 @@ var Map = (function() {
 		arrowColorVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowColorVBO);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, temp, basicCtx.ctx.STATIC_DRAW);
-		delete temp;
 
 		mapShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cylCapVertShader.c'), basicCtx.getShaderStr('shaders/mapFragShader.c'));
 		basicCtx.ctx.useProgram(mapShader);
@@ -60,7 +67,7 @@ var Map = (function() {
 		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "uProjectionMatrix"));
 		mapVarLocs.push(basicCtx.ctx.getUniformLocation(mapShader, "uSampler"));
 		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[2], false, viewMatrix);
-		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[3], false, M4x4.scale3(1 / 600, 1 / 600, 1, basicCtx.orthographicMatrix));
+		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[3], false, orthographicMatrix);
 
 
 		mapTexCoords = basicCtx.ctx.createBuffer();
@@ -71,10 +78,10 @@ var Map = (function() {
 																			 0.0, 1.0]), basicCtx.ctx.STATIC_DRAW);
 		mapVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapVBO);
-		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([ 33.333333, -33.333333, 0.0,
-																			  33.333333,  33.333333, 0.0,
-																			 -33.333333, -33.333333, 0.0,
-																			 -33.333333,  33.333333, 0.0]), basicCtx.ctx.STATIC_DRAW);
+		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([ orthoSize, -orthoSize, 0.0,
+																			  orthoSize,  orthoSize, 0.0,
+																			 -orthoSize, -orthoSize, 0.0,
+																			 -orthoSize,  orthoSize, 0.0]), basicCtx.ctx.STATIC_DRAW);
 		mapTexture = basicCtx.ctx.createTexture();
 		mapImage = new Image();
 		mapImage.onload = function() {
@@ -89,6 +96,14 @@ var Map = (function() {
 			delete this;
 		}
 		mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/both_leaves.png";
+		// mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/a_BCI_2013_06_11_m2_filtered_ply.png";
+		// mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII.png";
+
+		delete orthographicMatrix;
+		delete orthoSize;
+		delete xmlhttpForOrthoSize;
+		delete arrowAspect;
+		delete temp;
 
 		this.getBasicCTX = function() {
 			return basicCtx;
@@ -98,22 +113,23 @@ var Map = (function() {
 			if(basicCtx.ctx) {
 				var arrowPos = V3.clone(pos);
 				var offTheMap = false;
-				if(arrowPos[0] < basicCtx.xmin) {
-					arrowPos[0] = basicCtx.xmin;
+				if(arrowPos[0] < xmin) {
+					arrowPos[0] = xmin;
 					offTheMap = true;
 				}
-				else if(arrowPos[0] > basicCtx.xmax) {
-					arrowPos[0] = basicCtx.xmax;
+				else if(arrowPos[0] > xmax) {
+					arrowPos[0] = xmax;
 					offTheMap = true;
 				}
-				if(arrowPos[1] < basicCtx.ymin) {
-					arrowPos[1] = basicCtx.ymin;
+				if(arrowPos[1] < ymin) {
+					arrowPos[1] = ymin;
 					offTheMap = true;
 				}
-				else if(arrowPos[1] > basicCtx.ymax) {
-					arrowPos[1] = basicCtx.ymax;
+				else if(arrowPos[1] > ymax) {
+					arrowPos[1] = ymax;
 					offTheMap = true;
 				}
+
 
 				basicCtx.ctx.useProgram(mapShader);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapVBO);

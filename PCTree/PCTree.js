@@ -156,35 +156,18 @@ var PCTree = (function() {
 					node.lastRendered = (new Date()).getTime();
 					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
 					if(size < 25 || node.numChildren == 0) {
-						//draw a node
 						render(node, size); 
 					}
 					else {
-						var allchildrenishere = 1;   //flag
 						for(k=0; k < node.numChildren; k++) {
-							if(typeof node.Children[k] == "undefined" || node.Children[k].status != COMPLETE) {
-								allchildrenishere = 0;
-								break;
-							}
-						}
-						if(allchildrenishere) {
-							for( k=0; k < node.numChildren; k++) {
-								this.recurseTree(node.Children[k], viewpoint);
-							}
-						}
-						else {
-							render(node, size);
-							if(count<500 && request < 500) {
-								//To do
-								//request for all the children here, set a flag, only request once
-								for( k=0; k < node.numChildren; k++) {
-									if(typeof node.Children[k] != "undefined" && node.Children[k].status)
-										continue;
-									else {
-										load(node, k);
-										request++;
-									}
+							if(typeof node.Children[k] == "undefined") {
+								if(count < 500 && request < 500) {
+									load(node, k);
+									request++;
 								}
+							}
+							else if(node.Children[k].status == COMPLETE){
+								this.recurseTree(node.Children[k], viewpoint);
 							}
 						}
 					}

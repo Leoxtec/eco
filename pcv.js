@@ -238,13 +238,6 @@ function renderPC() {
 		pc.scaleOrthographic(cam.timeElapsed() * cam.zoomVelocity() * 5);
 	}
 
-	// if(document.getElementById('atten').checked) {
-	// 	pc.tree.attenuation(0.01, 0.0, 0.003);
-	// }
-	// else {
-	// 	pc.tree.attenuation(1.0, 0.0, 0.0);
-	// }
-
 	pc.basicCtx.clear();
 	pc.tree.resetCounters();
 	pc.tree.renderTree(cam.pos());
