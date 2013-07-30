@@ -37,7 +37,7 @@ function findHeight($cyl) {
 }
 
 function findHeightRecursive($cyl, $path) {
-	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM bothleavestext WHERE path = '%s'", $path)));
+	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM b250_15000 WHERE path = '%s'", $path)));
 	$data = json_decode($query['data']);
 	if(intersect($cyl, $data->BB)) {
 		$highest = -INF;
@@ -112,7 +112,7 @@ function start() {
 }
 
 function getnode() {
-	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM bothleavestext WHERE path = '%s'", mysql_real_escape_string($_GET['path']))));
+	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM b250_15000 WHERE path = '%s'", mysql_real_escape_string($_GET['path']))));
 	echo $result['data'];
 }
 

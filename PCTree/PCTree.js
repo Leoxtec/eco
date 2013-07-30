@@ -2,13 +2,11 @@ var PCTree = (function() {
 	function PCTree(bctx) {
 		var basicCtx = bctx;
 
-		var count = 0;    
-		var request = 1;
 		var c30 = Math.cos(Math.PI / 6.0);
 		var s30 = Math.sin(Math.PI / 6.0);
 		var t30 = Math.tan(Math.PI / 6.0);
 		var znear = 0.1;
-		var zfar = -1000.0;
+		var zfar = -5000.0;
 
 		var Tree = null;
 
@@ -66,18 +64,14 @@ var PCTree = (function() {
 			basicCtx.ctx.uniform3fv(leafVarLocs[5], [constant, linear, quadratic]);
 		};
 
-		this.resetCounters = function() {
-			count = 0;
-			request = 0;
-		};
-
 		this.getCenter = function() {
 			return Tree.center;
 		}
 
 		function render(node, size) {
 			if(basicCtx) {
-				if(node.numChildren !== 0) {
+				// if(node.numChildren !== 0) {
+				if(!node.Isleaf) {
 					basicCtx.ctx.useProgram(inNodeShader);
 					basicCtx.ctx.uniform1f(inNodeVarLocs[4], size);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer);
@@ -94,7 +88,6 @@ var PCTree = (function() {
 					basicCtx.ctx.vertexAttribPointer(leafVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
 					basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, node.VertexPositionBuffer.length / 3);
 				}
-				count += 1;
 			}
 		}
 
@@ -149,22 +142,18 @@ var PCTree = (function() {
 		};
 
 		this.recurseTree = function(node, viewpoint) {
-			var k = 0;
 			if(node.status == COMPLETE) {
 				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
 				if(isvisible(node.radius, centerVS)) {
-					node.lastRendered = (new Date()).getTime();
+					// node.lastRendered = (new Date()).getTime();
 					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
-					if(size < 25 || node.numChildren == 0) {
+					if(size < 25 || node.Isleaf) {
 						render(node, size); 
 					}
 					else {
-						for(k=0; k < node.numChildren; k++) {
+						for(var k = 0; k < 8; k++) {
 							if(typeof node.Children[k] == "undefined") {
-								if(count < 500 && request < 500) {
-									load(node, k);
-									request++;
-								}
+								load(node, k);
 							}
 							else if(node.Children[k].status == COMPLETE){
 								this.recurseTree(node.Children[k], viewpoint);
@@ -175,38 +164,38 @@ var PCTree = (function() {
 			}
 		};
 
-		this.pruneTree = function(node, time) {
-			if(node.status == COMPLETE) {
-				for(var i = 0; i < node.numChildren; i++) {
-					if(typeof node.Children[i] != "undefined") {
-						if(time - node.Children[i].lastRendered > 2000) {
-							this.pruneBranch(node.Children[i]);
-							node.Children[i] = undefined;
-						}
-						else {
-							this.pruneTree(node.Children[i], time);
-						}
-					}
-				}
-			}
-		};
+		// this.pruneTree = function(node, time) {
+		// 	if(node.status == COMPLETE) {
+		// 		for(var i = 0; i < node.numChildren; i++) {
+		// 			if(typeof node.Children[i] != "undefined") {
+		// 				if(time - node.Children[i].lastRendered > 2000) {
+		// 					this.pruneBranch(node.Children[i]);
+		// 					node.Children[i] = undefined;
+		// 				}
+		// 				else {
+		// 					this.pruneTree(node.Children[i], time);
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// };
 
-		this.pruneBranch = function(node) {
-			if(node.status == COMPLETE) {
-				if(node.numChildren !== 0) {
-					basicCtx.ctx.deleteBuffer(node.VertexPositionBuffer);
-					for(var i = 0; i < node.numChildren; i++) {
-						if(typeof node.Children[i] != "undefined") {
-							this.pruneBranch(node.Children[i]);
-						}
-					}
-				}
-				else {
-					basicCtx.ctx.deleteBuffer(node.VertexPositionBuffer.VBO);
-				}
-				basicCtx.ctx.deleteBuffer(node.VertexColorBuffer);
-			}
-		};
+		// this.pruneBranch = function(node) {
+		// 	if(node.status == COMPLETE) {
+		// 		if(node.numChildren !== 0) {
+		// 			basicCtx.ctx.deleteBuffer(node.VertexPositionBuffer);
+		// 			for(var i = 0; i < node.numChildren; i++) {
+		// 				if(typeof node.Children[i] != "undefined") {
+		// 					this.pruneBranch(node.Children[i]);
+		// 				}
+		// 			}
+		// 		}
+		// 		else {
+		// 			basicCtx.ctx.deleteBuffer(node.VertexPositionBuffer.VBO);
+		// 		}
+		// 		basicCtx.ctx.deleteBuffer(node.VertexColorBuffer);
+		// 	}
+		// };
 
 		function parseCallback() {
 			if(this.readyState == 4 && this.status == 200) {
@@ -223,7 +212,7 @@ var PCTree = (function() {
 					cols[j + 2] = obj.Point[i + 5] / 255;
 				}
 
-				if(obj.numChildren !== 0) {
+				if(!obj.Isleaf) {
 					this.node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexPositionBuffer);
 					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
@@ -238,7 +227,7 @@ var PCTree = (function() {
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexColorBuffer);
 				basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, cols, basicCtx.ctx.STATIC_DRAW);
 
-				this.node.numChildren = obj.numChildren;
+				this.node.Isleaf = obj.Isleaf;
 				this.node.BB = obj.BB;
 
 				var temp = [this.node.BB[0] - this.node.BB[3], this.node.BB[1] - this.node.BB[4], this.node.BB[2] - this.node.BB[5]];
@@ -246,7 +235,7 @@ var PCTree = (function() {
 				this.node.center[1] = (temp[1]) / 2 + this.node.BB[4];
 				this.node.center[2] = (temp[2]) / 2 + this.node.BB[5];
 				this.node.radius =  Math.sqrt(temp[0] * temp[0] + temp[1] * temp[1] + temp[2] * temp[2]) / 2;
-				this.node.lastRendered = (new Date()).getTime();
+				// this.node.lastRendered = (new Date()).getTime();
 				this.node.status = COMPLETE;
 				this.node.xmlhttp = null;
 			}
@@ -260,10 +249,10 @@ var PCTree = (function() {
 				status: STARTED, 
 				center: [0, 0, 0],
 				radius: 1,
-				numChildren: 0,
+				Isleaf: 0,
 				Children: {},
 				path: null,
-				lastRendered: 0,
+				// lastRendered: 0,
 				xmlhttp: new XMLHttpRequest()
 			};
 

@@ -23,7 +23,7 @@ var BasicCTX = (function() {
 
 		this.t30 = Math.tan(Math.PI / 6.0);
 		this.znear = 0.1;
-		this.zfar = 1000;
+		this.zfar = 5000;
 
 		var usersRender = function() {};
 
@@ -124,7 +124,18 @@ var BasicCTX = (function() {
 			Sets variables to default values.
 		*/
 		this.runDefault = function() {
-			var aspect = this.width/this.height;
+			var aspect = this.width / this.height;
+			this.ymax = this.znear * this.t30;
+			this.ymin = -this.ymax;
+			this.xmin = this.ymin * aspect;
+			this.xmax = this.ymax * aspect;
+			this.perspectiveMatrix = M4x4.makeFrustum(this.xmin, this.xmax, this.ymin, this.ymax, this.znear, this.zfar);
+			this.orthographicMatrix = M4x4.makeOrtho(this.xmin, this.xmax, this.ymin, this.ymax, this.znear, this.zfar);
+			this.normalMatrix = M4x4.I;
+		};
+
+		this.setDefaults = function(w, h) {
+			var aspect = w / h;
 			this.ymax = this.znear * this.t30;
 			this.ymin = -this.ymax;
 			this.xmin = this.ymin * aspect;

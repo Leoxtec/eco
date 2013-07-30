@@ -1,13 +1,15 @@
 var PointCloud = (function() {
-
-	/**
-		@private
-	*/
 	function PointCloud(cvsElement) {
 		this.basicCtx = new BasicCTX();
 		this.basicCtx.setup(cvsElement);
+
+		this.basicCtx.setDefaults(540, 540);
+
 		this.tree = new PCTree(this.basicCtx);
 		this.markers = new Markers(this.basicCtx);
+
+		this.map = new Map(this.basicCtx);
+		this.axes = new Axes(this.basicCtx);
 
 		// enable extensions
 		// var ext = (
@@ -28,8 +30,8 @@ var PointCloud = (function() {
 		};
 
 		this.useOrthographic = function() {
-			this.basicCtx.scaleFactor = 600;
-			var projectionMatrix = M4x4.scale3(1 / 600, 1 / 600, 1, this.basicCtx.orthographicMatrix);
+			this.basicCtx.scaleFactor = 3400;
+			var projectionMatrix = M4x4.scale3(1 / 3400, 1 / 3400, 1, this.basicCtx.orthographicMatrix);
 			this.tree.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
 		};
@@ -39,8 +41,8 @@ var PointCloud = (function() {
 			if(this.basicCtx.scaleFactor < 100) {
 				this.basicCtx.scaleFactor = 100;
 			}
-			else if(this.basicCtx.scaleFactor > 1000) {
-				this.basicCtx.scaleFactor = 1000;
+			else if(this.basicCtx.scaleFactor > 10000) {
+				this.basicCtx.scaleFactor = 10000;
 			}
 			var projectionMatrix = M4x4.scale3(1 / this.basicCtx.scaleFactor, 1 / this.basicCtx.scaleFactor, 1, this.basicCtx.orthographicMatrix);
 			this.tree.useOrthographic(projectionMatrix);

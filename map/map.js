@@ -1,8 +1,6 @@
 var Map = (function() {
-
-	function Map(cvsElement) {
-		var basicCtx = new BasicCTX();
-		basicCtx.setup(cvsElement);
+	function Map(bctx) {
+		var basicCtx = bctx;
 
 		var arrowVBO;
 		var arrowColorVBO;
@@ -17,9 +15,7 @@ var Map = (function() {
 		var arrowVarLocs = [];
 
 		var xmlhttpForOrthoSize = new XMLHttpRequest();
-		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=both_leaves", false);
-		// xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=a_BCI_2013_06_11_m2_filtered_ply", false);
-		// xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII", false);
+		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII", false);
 		xmlhttpForOrthoSize.send();
 		orthoSize = JSON.parse(xmlhttpForOrthoSize.responseText);
 		arrowAspect = orthoSize / 31.25;
@@ -37,8 +33,6 @@ var Map = (function() {
 		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "uModelViewMatrix"));
 		arrowVarLocs.push(basicCtx.ctx.getUniformLocation(arrowShader, "uProjectionMatrix"));
 		basicCtx.ctx.uniformMatrix4fv(arrowVarLocs[3], false, orthographicMatrix);
-		basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[0]);
-		basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[1]);
 		arrowVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowVBO);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([-0.5 * arrowAspect, -6.0 * arrowAspect, 50.0,
@@ -69,7 +63,6 @@ var Map = (function() {
 		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[2], false, viewMatrix);
 		basicCtx.ctx.uniformMatrix4fv(mapVarLocs[3], false, orthographicMatrix);
 
-
 		mapTexCoords = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapTexCoords);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([1.0, 0.0,
@@ -87,17 +80,13 @@ var Map = (function() {
 		mapImage.onload = function() {
 			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, mapTexture);
 			basicCtx.ctx.pixelStorei(basicCtx.ctx.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+			basicCtx.ctx.pixelStorei(basicCtx.ctx.UNPACK_FLIP_Y_WEBGL, false);
 			basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, mapImage);
 			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
-			basicCtx.ctx.useProgram(mapShader);
-			basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
-			basicCtx.ctx.uniform1i(mapVarLocs[4], mapTexture);
-			delete mapTexture;
+			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 			delete this;
 		}
-		mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/both_leaves.png";
-		// mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/a_BCI_2013_06_11_m2_filtered_ply.png";
-		// mapImage.src = "http://localhost/repos/kensdevelopment/preprocess/2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII.png";
+		mapImage.src = "preprocess/2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII.png";
 
 		delete orthographicMatrix;
 		delete orthoSize;
@@ -129,26 +118,39 @@ var Map = (function() {
 					arrowPos[1] = ymax;
 					offTheMap = true;
 				}
-
+				basicCtx.ctx.viewport(540, 0, 270, 270);
 
 				basicCtx.ctx.useProgram(mapShader);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapVBO);
 				basicCtx.ctx.vertexAttribPointer(mapVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+				basicCtx.ctx.enableVertexAttribArray(mapVarLocs[0]);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapTexCoords);
 				basicCtx.ctx.vertexAttribPointer(mapVarLocs[1], 2, basicCtx.ctx.FLOAT, false, 0, 0);
+				basicCtx.ctx.enableVertexAttribArray(mapVarLocs[1]);
+				basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
+				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, mapTexture);
+				basicCtx.ctx.uniform1i(mapVarLocs[4], mapTexture);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
+				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+				basicCtx.ctx.disableVertexAttribArray(mapVarLocs[0]);
+				basicCtx.ctx.disableVertexAttribArray(mapVarLocs[1]);
 
 				basicCtx.ctx.useProgram(arrowShader);
+				basicCtx.pushMatrix();
 				basicCtx.multMatrix(viewMatrix);
 				basicCtx.translate(arrowPos[0], arrowPos[1], 0.0);
 				basicCtx.rotateZ(pan);
 				basicCtx.ctx.uniformMatrix4fv(arrowVarLocs[2], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowVBO);
 				basicCtx.ctx.vertexAttribPointer(arrowVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+				basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[0]);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowColorVBO);
 				basicCtx.ctx.vertexAttribPointer(arrowVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+				basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[1]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLES, 0, 9);
-				
+				basicCtx.ctx.disableVertexAttribArray(arrowVarLocs[0]);
+				basicCtx.ctx.disableVertexAttribArray(arrowVarLocs[1]);
+				basicCtx.popMatrix();
 				if(offTheMap) {
 					$("#onOffMap").val('Off the map');
 				}

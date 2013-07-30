@@ -11,7 +11,7 @@ var results1;
 var results2;
 var controllable = true;
 var cloudtree;
-var lastTime;
+// var lastTime;
 var PIover2 = Math.PI / 2;
 
 function switchDiv() {
@@ -210,7 +210,10 @@ function renderPC() {
 		}
 	}
 
-    var c = pc.tree.getCenter();
+	pc.basicCtx.ctx.viewport(0, 0, 540, 540);
+
+	var c = pc.tree.getCenter();
+	pc.basicCtx.pushMatrix();
 	pc.basicCtx.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
 	
 	if(document.getElementById('markers').checked) {
@@ -223,15 +226,14 @@ function renderPC() {
 			pc.markers.displayMarkerInfoOrtho(results1);
 		}
 		else {
-			// results1 = [];
-			// GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(), pc.basicCtx.getPM(), viewportArray, results1);
-			// pc.markers.displayMarkerInfo(cam.pos(), results1);
-			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
+			results1 = [];
+			GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(), pc.basicCtx.getPM(), viewportArray, results1);
+			pc.markers.displayMarkerInfo(cam.pos(), results1);
+			// pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
 		}
 	}
 
 	pc.basicCtx.pushMatrix();
-	
 	pc.basicCtx.translate(-c[0], -c[1], -c[2]);
 	
 	if(viewMode === 4 && orthoZoom) {
@@ -239,7 +241,6 @@ function renderPC() {
 	}
 
 	pc.basicCtx.clear();
-	pc.tree.resetCounters();
 	pc.tree.renderTree(cam.pos());
 	pc.basicCtx.popMatrix();
 	// if(document.getElementById('scale').checked) {
@@ -275,55 +276,37 @@ function renderPC() {
 		pc.markers.renderOrthoMarkers();
 	}
 
-	var now = (new Date()).getTime();
-	if(now - lastTime > 2000) {
-		pc.tree.pruneTree(cloudtree, now);
-		lastTime = now;
-	}
-}
+	pc.basicCtx.popMatrix();
 
-function renderAxes() {
-	ax.getBasicCTX().clear();
+	// var now = (new Date()).getTime();
+	// if(now - lastTime > 2000) {
+	// 	pc.tree.pruneTree(cloudtree, now);
+	// 	lastTime = now;
+	// }
+
 	switch(viewMode) {
 		case 0:
-			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.scale(cam.getTemp(), 3), V3.$(0, 0, 0), cam.up()));
+			pc.map.render(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + PIover2);
+			pc.basicCtx.multMatrix(M4x4.makeLookAt(V3.scale(cam.getTemp(), 3), V3.$(0, 0, 0), cam.up()));
+			pc.axes.render();
 			break;
 		case 1:
 		case 2:
-			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.scale(cam.getDir(), -3), V3.$(0, 0, 0), cam.up()));
+			pc.map.render(cam.getPoint(), cam.getPan() - PIover2);
+			pc.basicCtx.multMatrix(M4x4.makeLookAt(V3.scale(cam.getDir(), -3), V3.$(0, 0, 0), cam.up()));
+			pc.axes.render();
 			break;
 		case 3:
 		case 4:
-			ax.getBasicCTX().multMatrix(M4x4.makeLookAt(V3.$(0, 0, 3), V3.$(0, 0, 0), cam.up()));
+			pc.map.render(cam.getPoint(), 0.0);
+			pc.basicCtx.multMatrix(M4x4.makeLookAt(V3.$(0, 0, 3), V3.$(0, 0, 0), cam.up()));
+			pc.axes.render();
 			break;
 	}
-	ax.render();
-}
 
-function renderMap() {
-	map.getBasicCTX().clear();
-	switch(viewMode) {
-		case 0:
-			map.render(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + PIover2);
-			break;
-		case 1:
-		case 2:
-			map.render(cam.getPoint(), cam.getPan() - PIover2);
-			break;
-		case 3:
-		case 4:
-			map.render(cam.getPoint(), 0.0);
-			break;
-	}
 }
 
 function start() {
-	map = new Map(document.getElementById('canvas3'));
-	map.getBasicCTX().onRender = renderMap;
-
-	ax = new Axes(document.getElementById('canvas2'));
-	ax.getBasicCTX().onRender = renderAxes;
-
 	pc = new PointCloud(document.getElementById('canvas'));
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
@@ -334,5 +317,5 @@ function start() {
 	pc.onKeyUp = keyUp;
 
 	cloudtree = pc.tree.root('r');
-	lastTime = (new Date()).getTime();
+	// lastTime = (new Date()).getTime();
 }
