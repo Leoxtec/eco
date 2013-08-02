@@ -3,6 +3,7 @@ var Camera = (function(){
 		var self = this;
 		var nearR = config.closest || 10;
 		var farR = config.farthest || 860;
+		// var farR = config.farthest || 160;
 		var radius = farR / 2;
 		if(config.distance && config.distance <= farR && config.distance >= nearR) {
 		  radius = config.distance;
@@ -131,12 +132,6 @@ var Camera = (function(){
 		
 		this.updateRadius = function(deltaR) {
 			radius += deltaR;
-			// if(radius > farR) {
-			// 	radius = farR;
-			// }
-			// else if(radius < nearR) {
-			// 	radius = nearR;
-			// }
 			if(radius < nearR) {
 				radius = nearR;
 			}

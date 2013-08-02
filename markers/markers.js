@@ -7,12 +7,12 @@ var Markers = (function() {
 		var markerBegin;
 		var markers = [];
 		var cylinderNormals;
-		// var pickingFBO;
+		var pickingFBO;
 
 		var cylCapShader;
 		var cylShader;
-		// var pickCapShader;
-		// var pickShader;
+		var pickCapShader;
+		var pickShader;
 
 		var cylCapVarLocs = [];
 		var cylVarLocs = [];
@@ -35,24 +35,24 @@ var Markers = (function() {
 		cylVarLocs.push(basicCtx.ctx.getUniformLocation(cylShader, "uProjectionMatrix"));
 		basicCtx.ctx.uniformMatrix4fv(cylVarLocs[3], false, basicCtx.perspectiveMatrix);
 
-		// pickCapShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pickCapVertShader.c'), basicCtx.getShaderStr('shaders/pickCapFragShader.c'));
-		// basicCtx.ctx.useProgram(pickCapShader);
-		// pickCapVarLocs.push(basicCtx.ctx.getAttribLocation(pickCapShader, "aVertexPosition"));
-		// pickCapVarLocs.push(basicCtx.ctx.getAttribLocation(pickCapShader, "aTexCoord"));
-		// pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uModelViewMatrix"));
-		// pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uProjectionMatrix"));
-		// pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uPickingMatrix"));
-		// pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uColor"));
-		// basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[3], false, basicCtx.perspectiveMatrix);
+		pickCapShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pickCapVertShader.c'), basicCtx.getShaderStr('shaders/pickCapFragShader.c'));
+		basicCtx.ctx.useProgram(pickCapShader);
+		pickCapVarLocs.push(basicCtx.ctx.getAttribLocation(pickCapShader, "aVertexPosition"));
+		pickCapVarLocs.push(basicCtx.ctx.getAttribLocation(pickCapShader, "aTexCoord"));
+		pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uModelViewMatrix"));
+		pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uProjectionMatrix"));
+		pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uPickingMatrix"));
+		pickCapVarLocs.push(basicCtx.ctx.getUniformLocation(pickCapShader, "uColor"));
+		basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[3], false, basicCtx.perspectiveMatrix);
 
-		// pickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pickVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
-		// basicCtx.ctx.useProgram(pickShader);
-		// pickVarLocs.push(basicCtx.ctx.getAttribLocation(pickShader, "aVertexPosition"));
-		// pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uModelViewMatrix"));
-		// pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uProjectionMatrix"));
-		// pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uPickingMatrix"));
-		// pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uColor"));
-		// basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, basicCtx.perspectiveMatrix);
+		pickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pickVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
+		basicCtx.ctx.useProgram(pickShader);
+		pickVarLocs.push(basicCtx.ctx.getAttribLocation(pickShader, "aVertexPosition"));
+		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uModelViewMatrix"));
+		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uProjectionMatrix"));
+		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uPickingMatrix"));
+		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uColor"));
+		basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, basicCtx.perspectiveMatrix);
 
 		markerTexCoords = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markerTexCoords);
@@ -117,37 +117,37 @@ var Markers = (function() {
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, cylinderNormals);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempNorms, basicCtx.ctx.STATIC_DRAW);
 
-		// pickingFBO = basicCtx.ctx.createFramebuffer();
-		// basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
-		// pickingTexture = basicCtx.ctx.createTexture();
-		// basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, pickingTexture);
-		// basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
-		// renderBuffer = basicCtx.ctx.createRenderbuffer();
-		// basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, renderBuffer);
-		// basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 1, 1);
-		// basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, pickingTexture, 0);
-		// basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.DEPTH_ATTACHMENT, basicCtx.ctx.RENDERBUFFER, renderBuffer);
-		// basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
-		// basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, null);
-		// basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
-		// basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+		pickingFBO = basicCtx.ctx.createFramebuffer();
+		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
+		pickingTexture = basicCtx.ctx.createTexture();
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, pickingTexture);
+		basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
+		renderBuffer = basicCtx.ctx.createRenderbuffer();
+		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, renderBuffer);
+		basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 1, 1);
+		basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, pickingTexture, 0);
+		basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.DEPTH_ATTACHMENT, basicCtx.ctx.RENDERBUFFER, renderBuffer);
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, null);
+		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 
 		delete vertexCylTemp;
 		delete rads;
 		delete i;
 		delete tempNorms;
-		// delete renderBuffer;
-		// delete pickingTexture;
+		delete renderBuffer;
+		delete pickingTexture;
 
 	    this.usePerspective = function() {
 			basicCtx.ctx.useProgram(cylCapShader);
 			basicCtx.ctx.uniformMatrix4fv(cylCapVarLocs[3], false, basicCtx.perspectiveMatrix);
 			basicCtx.ctx.useProgram(cylShader);
 			basicCtx.ctx.uniformMatrix4fv(cylVarLocs[3], false, basicCtx.perspectiveMatrix);
-			// basicCtx.ctx.useProgram(pickCapShader);
-			// basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[3], false, basicCtx.perspectiveMatrix);
-			// basicCtx.ctx.useProgram(pickShader);
-			// basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, basicCtx.perspectiveMatrix);
+			basicCtx.ctx.useProgram(pickCapShader);
+			basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[3], false, basicCtx.perspectiveMatrix);
+			basicCtx.ctx.useProgram(pickShader);
+			basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
@@ -155,10 +155,10 @@ var Markers = (function() {
 			basicCtx.ctx.uniformMatrix4fv(cylCapVarLocs[3], false, projectionMatrix);
 			basicCtx.ctx.useProgram(cylShader);
 			basicCtx.ctx.uniformMatrix4fv(cylVarLocs[3], false, projectionMatrix);
-			// basicCtx.ctx.useProgram(pickCapShader);
-			// basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[3], false, projectionMatrix);
-			// basicCtx.ctx.useProgram(pickShader);
-			// basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, projectionMatrix);
+			basicCtx.ctx.useProgram(pickCapShader);
+			basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[3], false, projectionMatrix);
+			basicCtx.ctx.useProgram(pickShader);
+			basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, projectionMatrix);
 		};
 
 		this.renderNewMarker = function(center, edgePoint) {
@@ -266,125 +266,72 @@ var Markers = (function() {
 			}
 		};
 
+		this.displayMarkerInfo = function(x, y) {
+			if(basicCtx.ctx && markers) {
+				var pickingTransform = new Float32Array([		-540, 			 0, 0, 0,
+														 			 0, 	   -540, 0, 0,
+														 			 0, 			 0, 1, 0,
+														 2 * x - 540, 2 * y - 540, 0, 1]);
+				var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
+				basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
+				basicCtx.ctx.enable(basicCtx.ctx.CULL_FACE);
 
-		this.displayMarkerInfo = function(rayStart, rayEnd) {
-			var dir = V3.sub(rayEnd, rayStart);
-			var temp = new Float32Array(2);
-			var tHit = Number.POSITIVE_INFINITY;
-			var closestIndex = -1;
-			for(var i = 0; i < markers.length; i++) {
-				temp[0] = markers[i].center[0] - rayStart[0];
-				temp[1] = markers[i].center[1] - rayStart[1];
-				var tempDotP = temp[0] * temp[0] + temp[1] * temp[1];
-				var dirDotP = dir[0] * dir[0] + dir[1] * dir[1];
-				var tempDirDotP = dir[0] * temp[0] + dir[1] * temp[1];
-				var discrim = tempDirDotP * tempDirDotP - (dirDotP * (tempDotP - (markers[i].radius * markers[i].radius)));
-				if(discrim >= 0) {
-					discrim = Math.sqrt(discrim);
-					var t = (tempDirDotP - discrim) / dirDotP;
-					var height = rayStart[2] + t * dir[2];
-					if(height <= markers[i].center[2] && height >= markers[i].center[2] - 52.5) {
-						if(t > 0 && t < tHit) {
-							closestIndex = i;
-							tHit = t;
-						}
-					}
-					else {
-						t = (tempDirDotP + discrim) / dirDotP;
-						height = rayStart[2] + t * dir[2];
-						if(height <= markers[i].center[2] && height >= markers[i].center[2] - 52.5) {
-							if(t > 0 && t < tHit) {
-								closestIndex = i;
-								tHit = t;
-							}
-						}
-					}
+
+				basicCtx.ctx.useProgram(pickShader);
+				basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, pickingTransform);
+				basicCtx.ctx.useProgram(pickCapShader);
+				basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[4], false, pickingTransform);
+				for(var i = 0; i < markers.length; i++) {
+					color[2] = (i + 1) / 255.0;
+					basicCtx.pushMatrix();
+					basicCtx.ctx.useProgram(pickShader);
+					basicCtx.ctx.uniform4fv(pickVarLocs[4], color);
+					basicCtx.translate(markers[i].center[0], markers[i].center[1], 0.0);
+					basicCtx.scale(markers[i].radius, markers[i].radius, 1.0);
+					basicCtx.ctx.uniformMatrix4fv(pickVarLocs[1], false, basicCtx.peekMatrix());
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, cylVBO);
+					basicCtx.ctx.vertexAttribPointer(pickVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.enableVertexAttribArray(pickVarLocs[0]);
+					basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 42);
+					basicCtx.ctx.disableVertexAttribArray(pickVarLocs[0]);
+					basicCtx.ctx.useProgram(pickCapShader);
+					basicCtx.ctx.uniform4fv(pickCapVarLocs[5], color);
+					basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[2], false, basicCtx.peekMatrix());
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, topCapVBO);
+					basicCtx.ctx.vertexAttribPointer(pickCapVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.enableVertexAttribArray(pickCapVarLocs[0]);
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markerTexCoords);
+					basicCtx.ctx.vertexAttribPointer(pickCapVarLocs[1], 2, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.enableVertexAttribArray(pickCapVarLocs[1]);
+					basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, bottomCapVBO);
+					basicCtx.ctx.vertexAttribPointer(pickCapVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+					basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
+					basicCtx.ctx.disableVertexAttribArray(pickCapVarLocs[0]);
+					basicCtx.ctx.disableVertexAttribArray(pickCapVarLocs[1]);
+					basicCtx.popMatrix();
 				}
-			}
-			if(closestIndex > -1) {
+				basicCtx.ctx.disable(basicCtx.ctx.CULL_FACE);
+
+				var arr = new Uint8Array(4);
+				basicCtx.ctx.readPixels(0, 0, 1, 1, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, arr);
+				var closestIndex = arr[2] - 1;
+				if(closestIndex > -1) {
 					$("#markRadius").val(markers[closestIndex].radius);
 					$("#markHeight").val(markers[closestIndex].height);
 					$("#markSpecies").val(markers[closestIndex].species);
 					$("#markDescr").val(markers[closestIndex].descr);
+				}
+				else {
+					$("#markRadius").val('');
+					$("#markHeight").val('');
+					$("#markSpecies").val('');
+					$("#markDescr").val('');
+				}
+				basicCtx.clear();
+				basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
 			}
-			else {
-				$("#markRadius").val('');
-				$("#markHeight").val('');
-				$("#markSpecies").val('');
-				$("#markDescr").val('');
-			}	
 		};
-
-		// this.displayMarkerInfo = function(x, y) {
-		// 	if(basicCtx.ctx && markers) {
-		// 		// var pickingTransform = new Float32Array([		-width, 			 0, 0, 0,
-		// 		// 										 			 0, 	   -height, 0, 0,
-		// 		// 										 			 0, 			 0, 1, 0,
-		// 		// 										 2 * x - width, 2 * y - height, 0, 1]);
-		// 		var pickingTransform = new Float32Array([		-540, 			 0, 0, 0,
-		// 												 			 0, 	   -540, 0, 0,
-		// 												 			 0, 			 0, 1, 0,
-		// 												 2 * x - 540, 2 * y - 540, 0, 1]);
-		// 		var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
-		// 		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
-		// 		basicCtx.ctx.enable(basicCtx.ctx.CULL_FACE);
-
-
-		// 		basicCtx.ctx.useProgram(pickShader);
-		// 		basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, pickingTransform);
-		// 		basicCtx.ctx.useProgram(pickCapShader);
-		// 		basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[4], false, pickingTransform);
-		// 		for(var i = 0; i < markers.length; i++) {
-		// 			color[2] = (i + 1) / 255.0;
-		// 			basicCtx.pushMatrix();
-		// 			basicCtx.ctx.useProgram(pickShader);
-		// 			basicCtx.ctx.uniform4fv(pickVarLocs[4], color);
-		// 			basicCtx.translate(markers[i].center[0], markers[i].center[1], 0.0);
-		// 			basicCtx.scale(markers[i].radius, markers[i].radius, 1.0);
-		// 			basicCtx.ctx.uniformMatrix4fv(pickVarLocs[1], false, basicCtx.peekMatrix());
-		// 			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, cylVBO);
-		// 			basicCtx.ctx.vertexAttribPointer(pickVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-		// 			basicCtx.ctx.enableVertexAttribArray(pickVarLocs[0]);
-		// 			basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 42);
-		// 			basicCtx.ctx.disableVertexAttribArray(pickVarLocs[0]);
-		// 			basicCtx.ctx.useProgram(pickCapShader);
-		// 			basicCtx.ctx.uniform4fv(pickCapVarLocs[5], color);
-		// 			basicCtx.ctx.uniformMatrix4fv(pickCapVarLocs[2], false, basicCtx.peekMatrix());
-		// 			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, topCapVBO);
-		// 			basicCtx.ctx.vertexAttribPointer(pickCapVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-		// 			basicCtx.ctx.enableVertexAttribArray(pickCapVarLocs[0]);
-		// 			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markerTexCoords);
-		// 			basicCtx.ctx.vertexAttribPointer(pickCapVarLocs[1], 2, basicCtx.ctx.FLOAT, false, 0, 0);
-		// 			basicCtx.ctx.enableVertexAttribArray(pickCapVarLocs[1]);
-		// 			basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
-		// 			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, bottomCapVBO);
-		// 			basicCtx.ctx.vertexAttribPointer(pickCapVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-		// 			basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
-		// 			basicCtx.ctx.disableVertexAttribArray(pickCapVarLocs[0]);
-		// 			basicCtx.ctx.disableVertexAttribArray(pickCapVarLocs[1]);
-		// 			basicCtx.popMatrix();
-		// 		}
-		// 		basicCtx.ctx.disable(basicCtx.ctx.CULL_FACE);
-
-		// 		var arr = new Uint8Array(4);
-		// 		basicCtx.ctx.readPixels(0, 0, 1, 1, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, arr);
-		// 		var closestIndex = arr[2] - 1;
-		// 		if(closestIndex > -1) {
-		// 			$("#markRadius").val(markers[closestIndex].radius);
-		// 			$("#markHeight").val(markers[closestIndex].height);
-		// 			$("#markSpecies").val(markers[closestIndex].species);
-		// 			$("#markDescr").val(markers[closestIndex].descr);
-		// 		}
-		// 		else {
-		// 			$("#markRadius").val('');
-		// 			$("#markHeight").val('');
-		// 			$("#markSpecies").val('');
-		// 			$("#markDescr").val('');
-		// 		}
-		// 		basicCtx.clear();
-		// 		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
-		// 	}
-		// };
 
 		this.renderOrthoMarkers = function() {
 			if(basicCtx.ctx && markers) {

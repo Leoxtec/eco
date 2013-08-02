@@ -13,6 +13,7 @@ var controllable = true;
 var cloudtree;
 // var lastTime;
 var PIover2 = Math.PI / 2;
+var pick = false;
 
 function switchDiv() {
 	var a = document.getElementById('markupInfo');
@@ -60,9 +61,6 @@ function viewRadioButton(val) {
 		if(viewMode === 4) {
 			pc.useOrthographic();
 		}
-		else {
-			pc.usePerspective();
-		}
 	}
 }
 
@@ -96,14 +94,7 @@ function keyDown() {
 		switch(pc.key) {
 			case 86:
 			case 118:
-				viewMode = (viewMode + 1) % 5;
-				cam.setViewMode(viewMode);
-				if(viewMode === 4) {
-					pc.useOrthographic();
-				}
-				else {
-					pc.usePerspective();
-				}
+				pick = true;
 				break;
 			case 87:
 			case 119:
@@ -142,7 +133,7 @@ function keyDown() {
 				break;
 			case 50:
 				if(placingMarker) {
-					pc.markers.recordNewMarker(results1, results2);
+					pc.markers.recordNewMarker(results2, results1);
 					switchDiv();
 					placingMarker = false;
 					isDragging = false;
@@ -160,6 +151,14 @@ function keyDown() {
 function keyUp() {
 	if(controllable) {
 		switch(pc.key) {
+			case 86:
+			case 118:
+				pick = false;
+				$("#markRadius").val('');
+				$("#markHeight").val('');
+				$("#markSpecies").val('');
+				$("#markDescr").val('');
+				break;
 			case 87:
 			case 119:
 			case 83:
@@ -211,37 +210,22 @@ function renderPC() {
 	}
 
 	pc.basicCtx.ctx.viewport(0, 0, 540, 540);
-
 	var c = pc.tree.getCenter();
+	var camPos = cam.pos();
 	pc.basicCtx.pushMatrix();
-	pc.basicCtx.multMatrix(M4x4.makeLookAt(cam.pos(), cam.at(), cam.up()));
-	
-	if(document.getElementById('markers').checked) {
-		if(viewMode === 4) {
-			results1 = [];
-			var sf = 1 / pc.basicCtx.getSF();
-			var omm = pc.basicCtx.getOM();
-			GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(),
-						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-			pc.markers.displayMarkerInfoOrtho(results1);
-		}
-		else {
-			results1 = [];
-			GLU.unProject(pc.mouseX, pc.mouseY, 0, pc.basicCtx.peekMatrix(), pc.basicCtx.getPM(), viewportArray, results1);
-			pc.markers.displayMarkerInfo(cam.pos(), results1);
-			// pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
-		}
-	}
-
+	pc.basicCtx.multMatrix(M4x4.makeLookAt(camPos, cam.at(), cam.up()));
 	pc.basicCtx.pushMatrix();
 	pc.basicCtx.translate(-c[0], -c[1], -c[2]);
 	
-	if(viewMode === 4 && orthoZoom) {
-		pc.scaleOrthographic(cam.timeElapsed() * cam.zoomVelocity() * 5);
+	if(viewMode !== 4) {
+		pc.usePerspective();
+	}
+	else if(orthoZoom) {
+		pc.scaleOrthographic(cam.timeElapsed() * cam.zoomVelocity() * 0.26);
 	}
 
 	pc.basicCtx.clear();
-	pc.tree.renderTree(cam.pos());
+	pc.tree.renderTree(camPos);
 	pc.basicCtx.popMatrix();
 	// if(document.getElementById('scale').checked) {
 		// if(document.getElementById('overlay').checked) {
@@ -253,29 +237,28 @@ function renderPC() {
 	// }
 	
 	if(document.getElementById('markers').checked) {
-		if(viewMode === 4 && placingMarker) {
+		if(viewMode === 4) {
 			results1 = [];
-			var sf = 1 / pc.basicCtx.getSF();
-			var omm = pc.basicCtx.getOM();
-			GLU.unProject(pc.markers.markerBegin[0], pc.markers.markerBegin[1], pc.markers.markerBegin[2], pc.basicCtx.peekMatrix(),
-						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-			results2 = [];
-			GLU.unProject(StartCoords[0], StartCoords[1], 0, pc.basicCtx.peekMatrix(),
-						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results2);
-			pc.markers.renderNewMarker(results1, results2);
-		}		
-		if(viewMode === 4 && removingMarker) {
-			results1 = [];
-			var sf = 1 / pc.basicCtx.getSF();
-			var omm = pc.basicCtx.getOM();
-			GLU.unProject(StartCoords[0], StartCoords[1], 0, pc.basicCtx.peekMatrix(),
-						  M4x4.scale3(sf, sf, 1, omm), viewportArray, results1);
-			pc.markers.removeMarker(results1);
-			removingMarker = false;
-		}		
+			var sf = pc.basicCtx.getSF();
+			results1[0] = (((pc.mouseX - viewportArray[0]) / viewportArray[2]) * 2 - 1) * sf + camPos[0];
+			results1[1] = (((pc.mouseY - viewportArray[1]) / viewportArray[3]) * 2 - 1) * sf + camPos[1];
+			pc.markers.displayMarkerInfoOrtho(results1);
+			if(placingMarker) {
+				results2 = [];
+				results2[0] = (((pc.markers.markerBegin[0] - viewportArray[0]) / viewportArray[2]) * 2 - 1) * sf + camPos[0];
+				results2[1] = (((pc.markers.markerBegin[1] - viewportArray[1]) / viewportArray[3]) * 2 - 1) * sf + camPos[1];
+				pc.markers.renderNewMarker(results2, results1);
+			}
+			if(removingMarker) {
+				pc.markers.removeMarker(results1);
+				removingMarker = false;
+			}
+		}
+		else if(pick) {
+			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
+		}
 		pc.markers.renderOrthoMarkers();
 	}
-
 	pc.basicCtx.popMatrix();
 
 	// var now = (new Date()).getTime();
@@ -308,6 +291,7 @@ function renderPC() {
 
 function start() {
 	pc = new PointCloud(document.getElementById('canvas'));
+	cloudtree = pc.tree.root('r');
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;
@@ -315,7 +299,5 @@ function start() {
 	pc.onMouseReleased = mouseReleased;
 	pc.onKeyDown = keyDown;
 	pc.onKeyUp = keyUp;
-
-	cloudtree = pc.tree.root('r');
 	// lastTime = (new Date()).getTime();
 }

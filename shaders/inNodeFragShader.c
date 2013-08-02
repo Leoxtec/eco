@@ -6,5 +6,5 @@ void main(void) {
 	if(dist_squared > 0.25) {
 		discard;
 	}
-	gl_FragColor = vec4(vFrontColor.rgb * sqrt(0.5 - dist_squared) * 2.0, vFrontColor.a);
+	gl_FragColor = vec4(vFrontColor.rgb * sqrt(0.25 - dist_squared) * 2.0, vFrontColor.a);
 }

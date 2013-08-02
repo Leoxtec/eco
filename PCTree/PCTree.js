@@ -6,7 +6,7 @@ var PCTree = (function() {
 		var s30 = Math.sin(Math.PI / 6.0);
 		var t30 = Math.tan(Math.PI / 6.0);
 		var znear = 0.1;
-		var zfar = -5000.0;
+		var zfar = -1000.0;
 
 		var Tree = null;
 
@@ -40,7 +40,9 @@ var PCTree = (function() {
 		basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
 		basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
 
-		this.usePerspective = function() {
+		this.usePerspective = function(n, f) {
+			znear = n;
+			zfar = -f;
 			basicCtx.ctx.useProgram(inNodeShader);
 			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
 			basicCtx.ctx.useProgram(leafShader);
@@ -66,6 +68,10 @@ var PCTree = (function() {
 
 		this.getCenter = function() {
 			return Tree.center;
+		}
+
+		this.getRadius = function() {
+			return Tree.radius;
 		}
 
 		function render(node, size) {
@@ -148,9 +154,11 @@ var PCTree = (function() {
 					// node.lastRendered = (new Date()).getTime();
 					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
 					if(size < 25 || node.Isleaf) {
+					// if(size < 25 || node.numChildren === 0) {
 						render(node, size); 
 					}
 					else {
+						// for(var k = 0; k < node.numChildren; k++) {
 						for(var k = 0; k < 8; k++) {
 							if(typeof node.Children[k] == "undefined") {
 								load(node, k);
@@ -213,6 +221,7 @@ var PCTree = (function() {
 				}
 
 				if(!obj.Isleaf) {
+				// if(obj.numChildren !== 0) {
 					this.node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexPositionBuffer);
 					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
@@ -228,6 +237,7 @@ var PCTree = (function() {
 				basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, cols, basicCtx.ctx.STATIC_DRAW);
 
 				this.node.Isleaf = obj.Isleaf;
+				// this.node.numChildren = obj.numChildren;
 				this.node.BB = obj.BB;
 
 				var temp = [this.node.BB[0] - this.node.BB[3], this.node.BB[1] - this.node.BB[4], this.node.BB[2] - this.node.BB[5]];
@@ -250,6 +260,7 @@ var PCTree = (function() {
 				center: [0, 0, 0],
 				radius: 1,
 				Isleaf: 0,
+				// numChildren: 0,
 				Children: {},
 				path: null,
 				// lastRendered: 0,
