@@ -45,6 +45,14 @@ function changePointSize(val) {
 	pc.tree.pointSize(val);
 }
 
+function changeGridSize(val) {
+	pc.tree.gridSize(val);
+}
+
+function changeGridPos(val) {
+	return pc.tree.gridPos(val);
+}
+
 function toggleAttenuation() {
 	if(document.getElementById('atten').checked) {
 		pc.tree.attenuation(0.01, 0.0, 0.003);
@@ -60,6 +68,10 @@ function viewRadioButton(val) {
 		viewMode = val;
 		if(viewMode === 4) {
 			pc.useOrthographic();
+			pc.tree.setCheckOrtho(true);
+		}
+		else {
+			pc.tree.setCheckOrtho(false);
 		}
 	}
 }
@@ -114,12 +126,12 @@ function keyDown() {
 				break;
 			case 88:
 			case 120:
-				cam.setZoomVel(0.05);
+				cam.setZoomVel(0.1);
 				orthoZoom = true;
 				break;
 			case 90:
 			case 122:
-				cam.setZoomVel(-0.05);
+				cam.setZoomVel(-0.1);
 				orthoZoom = true;
 				break;
 			case 49:
