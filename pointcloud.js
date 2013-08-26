@@ -6,10 +6,15 @@ var PointCloud = (function() {
 		this.basicCtx.setDefaults(540, 540);
 
 		this.tree = new PCTree(this.basicCtx);
+		this.tree2 = new PCTree(this.basicCtx);
 		this.markers = new Markers(this.basicCtx);
 
 		this.map = new Map(this.basicCtx);
 		this.axes = new Axes(this.basicCtx);
+
+		this.grid = new Grid(this.basicCtx);
+
+		this.users = new Users(this.basicCtx);
 
 		// enable extensions
 		// var ext = (
@@ -35,17 +40,21 @@ var PointCloud = (function() {
 			this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
 
 			this.tree.usePerspective(near, far);
+			this.tree2.usePerspective(near, far);
 			this.markers.usePerspective();
+			this.grid.usePerspective(near, far);
 		};
 
 		this.useOrthographic = function() {
-			// this.basicCtx.scaleFactor = 196;
-			// var projectionMatrix = M4x4.scale3(1 / 196, 1 / 196, 1, this.basicCtx.orthographicMatrix);
-			this.basicCtx.scaleFactor = 31.25;
-			var temp = 1.0 / 31.25;
-			var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
+			this.basicCtx.scaleFactor = 196;
+			var projectionMatrix = M4x4.scale3(1 / 196, 1 / 196, 1, this.basicCtx.orthographicMatrix);
+			// this.basicCtx.scaleFactor = 31.25;
+			// var temp = 1.0 / 31.25;
+			// var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
 			this.tree.useOrthographic(projectionMatrix);
+			this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
+			this.grid.useOrthographic(projectionMatrix);
 		};
 
 		this.scaleOrthographic = function(deltaS) {
@@ -53,16 +62,18 @@ var PointCloud = (function() {
 			if(this.basicCtx.scaleFactor < 5) {
 				this.basicCtx.scaleFactor = 5;
 			}
-			// else if(this.basicCtx.scaleFactor > 600) {
-			// 	this.basicCtx.scaleFactor = 600;
-			// }
-			else if(this.basicCtx.scaleFactor > 60) {
-				this.basicCtx.scaleFactor = 60;
+			else if(this.basicCtx.scaleFactor > 600) {
+				this.basicCtx.scaleFactor = 600;
 			}
+			// else if(this.basicCtx.scaleFactor > 60) {
+			// 	this.basicCtx.scaleFactor = 60;
+			// }
 			var temp = 1.0 / this.basicCtx.scaleFactor;
 			var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
 			this.tree.useOrthographic(projectionMatrix);
+			this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
+			this.grid.useOrthographic(projectionMatrix);
 		};
 
 		var __empty_func = function() {};

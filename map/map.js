@@ -16,7 +16,7 @@ var Map = (function() {
 
 		xmlhttpForOrthoSize = new XMLHttpRequest();
 		// xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII", false);
-		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=both_leaves", false);
+		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=reduced_map", false);
 		xmlhttpForOrthoSize.send();
 		orthoSize = JSON.parse(xmlhttpForOrthoSize.responseText);
 		arrowAspect = orthoSize / 31.25;
@@ -88,7 +88,7 @@ var Map = (function() {
 			delete this;
 		}
 		// mapImage.src = "preprocess/2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII.png";
-		mapImage.src = "preprocess/both_leaves.png";
+		mapImage.src = "preprocess/reduced_map.png";
 
 		delete orthographicMatrix;
 		delete orthoSize;

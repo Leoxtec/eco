@@ -43,22 +43,25 @@ function setValues() {
 
 function changePointSize(val) {
 	pc.tree.pointSize(val);
+	pc.tree2.pointSize(val);
 }
 
 function changeGridSize(val) {
-	pc.tree.gridSize(val);
+	pc.grid.gridSize(val);
 }
 
 function changeGridPos(val) {
-	return pc.tree.gridPos(val);
+	return pc.grid.gridPos(val);
 }
 
 function toggleAttenuation() {
 	if(document.getElementById('atten').checked) {
 		pc.tree.attenuation(0.01, 0.0, 0.003);
+		pc.tree2.attenuation(0.01, 0.0, 0.003);
 	}
 	else {
 		pc.tree.attenuation(1.0, 0.0, 0.0);
+		pc.tree2.attenuation(1.0, 0.0, 0.0);
 	}
 }
 
@@ -69,9 +72,11 @@ function viewRadioButton(val) {
 		if(viewMode === 4) {
 			pc.useOrthographic();
 			pc.tree.setCheckOrtho(true);
+			pc.tree2.setCheckOrtho(true);
 		}
 		else {
 			pc.tree.setCheckOrtho(false);
+			pc.tree2.setCheckOrtho(false);
 		}
 	}
 }
@@ -237,7 +242,15 @@ function renderPC() {
 	}
 
 	pc.basicCtx.clear();
-	pc.tree.renderTree(camPos);
+	if(document.getElementById('pc1').checked) {
+		pc.tree.renderTree(camPos);
+	}
+	// if(document.getElementById('pc2').checked) {
+	// 	pc.tree2.renderTree(camPos);
+	// }
+	if(document.getElementById('grid').checked) {
+		pc.grid.render();
+	}
 	pc.basicCtx.popMatrix();
 	// if(document.getElementById('scale').checked) {
 		// if(document.getElementById('overlay').checked) {
@@ -247,6 +260,7 @@ function renderPC() {
 			// pc.renderScaleBar(false);
 		// }
 	// }
+	pc.users.render();
 	
 	if(document.getElementById('markers').checked) {
 		if(viewMode === 4) {
@@ -276,6 +290,7 @@ function renderPC() {
 	// var now = (new Date()).getTime();
 	// if(now - lastTime > 2000) {
 	// 	pc.tree.pruneTree(cloudtree, now);
+	//  pc.tree2.pruneTree(cloudtree, now);
 	// 	lastTime = now;
 	// }
 
@@ -303,7 +318,8 @@ function renderPC() {
 
 function start() {
 	pc = new PointCloud(document.getElementById('canvas'));
-	cloudtree = pc.tree.root('r');
+	cloudtree = pc.tree.root('r', 'reduced_leaf_off');
+	// pc.tree2.root('r', 'reduced_leaf_on');
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;

@@ -12,6 +12,8 @@
 	<script src="libs/camera.js"></script>
 	<script src="libs/basicCTX.js"></script>
 	<script src="PCTree/PCTree.js"></script>
+	<script src="users/users.js"></script>
+	<script src="grid/grid.js"></script>
 	<script src="markers/markers.js"></script>
 	<script src="axes/axes.js"></script>
 	<script src="map/map.js"></script>
@@ -27,16 +29,6 @@
 			$("#checkbox").buttonsetv();
 		});
 	</script>
-	
-	<!--<script>
-		$(function() {
-			$( "#markerhelp" ).accordion({
-				heightStyle: "content",
-				collapsible: true,
-				active: false
-			});
-		});
-	</script>-->
 	
 	<style>
 		#pointSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
@@ -76,7 +68,7 @@
 		});
 	</script>
 	<style>
-		#gridPositionSlider{float: left; clear: left; height: 130px; width: 10px; margin-left: 15px; margin-bottom: 10px;}
+		#gridPositionSlider{float: left; clear: left; height: 72px; width: 10px; margin-left: 15px; margin-bottom: 10px;}
 		#gridPositionSlider .ui-slider-range { background: #000000; }
 		#gridPositionSlider .ui-slider-handle { width: 1.1em;}
 	</style>
@@ -104,10 +96,16 @@
 	<span style="font-family:arial;title='hello'">
 	<b>Menu</b><br>
 	<div id="checkbox" style="font-size: 10;">
-	<input type="checkbox" id="markers" name="checkbox" checked="checked">
-		<Label for="markers" title="Toggle the markers.">Show Markers</Label>
-	<input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
-		<Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label>
+		<input type="checkbox" id="pc2" name="checkbox" checked="checked">
+			<Label for="pc2" title="Toggle the leaf_on point cloud.">Leaf On</Label>
+		<input type="checkbox" id="pc1" name="checkbox" checked="checked">
+			<Label for="pc1" title="Toggle the leaf_off point cloud.">Leaf Off</Label>
+		<input type="checkbox" id="grid" name="checkbox" checked="checked">
+			<Label for="grid" title="Toggle the grid.">Grid</Label>
+		<input type="checkbox" id="markers" name="checkbox" checked="checked">
+			<Label for="markers" title="Toggle the markers.">Markers</Label>
+		<input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
+			<Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label>
 	</div>
 	<!--<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
 	<span>overlay:</span> <input type="checkbox" id="overlay"/></br>-->
@@ -143,13 +141,6 @@
 		<div id="pointSizeSlider"></div>
 		</div>
 	</p></br>
-		
-
-	<!-- <div id="markerhelp">
-	<Label for="markerhelp" style="font-size: 10;">Click for Help on Setting and Deleting Markers</Label>
-	<div>
-	<p style="font-size: 10;">To set a marker, first switch to map camera.  Hover the mouse where you want the marker's center.  Then hold the "1" key and move the mouse to adjust the radius.  To cancel, let go of the "1" key.  To finish placing, hit the "2" key and enter the tree info in the upper right of the page.  To delete a marker, switch to Map Camera, hover over the marker to delete and press the "3" key.</p>
-	</div></div> -->
 
 	<div><button id="markerhelp">
 	<Label for="markerhelp" title="To view a marker's statistics, hold the 'v' key while hovering over a marker.  To set a marker, first switch to map camera.  Hover the mouse where you want the marker's center.  Then hold the '1' key and move the mouse to adjust the radius.  To cancel, let go of the '1' key.  To finish placing, hit the '2' key and enter the tree info in the upper right of the page.  To delete a marker, switch to Map Camera, hover over the marker to delete and press the '3' key." style="font-size: 12;">Hover for Help on Markers</Label>

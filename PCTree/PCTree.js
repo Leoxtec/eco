@@ -10,22 +10,15 @@ var PCTree = (function() {
 
 		var Tree = null;
 
-		var gridVBO;
-		var gridCount = [];
-		var grid = 0;
-		var gridZPos;
-		var gridZOffset = 0.0;
-		var gridZinc;
-
 		var inNodeShader;
 		var leafShader;
-		var gridShader;
 
 		var inNodeVarLocs = [];
 		var leafVarLocs = [];
-		var gridVarLocs = [];
 
 		var checkOrtho = false;
+
+		var table;
 
 		const STARTED = 1;
 		const COMPLETE = 2;
@@ -49,12 +42,6 @@ var PCTree = (function() {
 		basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
 		basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
 
-		gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/gridVertShader.c'), basicCtx.getShaderStr('shaders/gridFragShader.c'));
-		basicCtx.ctx.useProgram(gridShader);
-		gridVarLocs.push(basicCtx.ctx.getAttribLocation(gridShader, "aVertexPosition"));
-		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uModelViewMatrix"));
-		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uProjectionMatrix"));
-
 		this.usePerspective = function(n, f) {
 			znear = n;
 			zfar = -f;
@@ -62,8 +49,6 @@ var PCTree = (function() {
 			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
 			basicCtx.ctx.useProgram(leafShader);
 			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
@@ -71,8 +56,6 @@ var PCTree = (function() {
 			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, projectionMatrix);
 			basicCtx.ctx.useProgram(leafShader);
 			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, projectionMatrix);
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, projectionMatrix);
 		};
 
 		this.pointSize = function(size) {
@@ -97,19 +80,9 @@ var PCTree = (function() {
 			checkOrtho = t;
 		}
 
-		this.gridSize = function(g) {
-			grid = g;
-		}
-
-		this.gridPos = function(p) {
-			gridZOffset = p * gridZinc;
-			return gridZPos + gridZOffset;
-		}
-
 		function render(node, size) {
 			if(basicCtx) {
-				if(node.numChildren !== 0) {
-				// if(!node.Isleaf) {
+				if(!node.Isleaf) {
 					basicCtx.ctx.useProgram(inNodeShader);
 					basicCtx.ctx.uniform1f(inNodeVarLocs[4], size);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer);
@@ -142,6 +115,8 @@ var PCTree = (function() {
 				d[1] = -center[0] - basicCtx.scaleFactor;
 				d[2] = center[1] - basicCtx.scaleFactor;
 				d[3] = -center[1] - basicCtx.scaleFactor;
+				d[4] = 0.1 + center[2];
+				d[5] = -1000.0 - center[2];
 			}
 			else {
 				var a = center[0] * c30;
@@ -151,9 +126,9 @@ var PCTree = (function() {
 				d[1] = c - a;
 				d[2] = c - b;
 				d[3] = c + b;
+				d[4] = znear + center[2];
+				d[5] = zfar - center[2];
 			}
-			d[4] = znear + center[2];
-			d[5] = zfar - center[2];
 			for(var i = 0; i < 6; i++) {
 				if(d[i] > radius) {
 					return false;
@@ -185,17 +160,6 @@ var PCTree = (function() {
 			basicCtx.ctx.disableVertexAttribArray(inNodeVarLocs[1]);
 			basicCtx.ctx.disableVertexAttribArray(leafVarLocs[0]);
 			basicCtx.ctx.disableVertexAttribArray(leafVarLocs[1]);
-
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.pushMatrix();
-			basicCtx.translate(0.0, 0.0, gridZOffset);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
-			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
-			basicCtx.ctx.vertexAttribPointer(gridVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-			basicCtx.ctx.enableVertexAttribArray(gridVarLocs[0]);
-			basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, gridCount[grid]);
-			basicCtx.ctx.disableVertexAttribArray(gridVarLocs[0]);
-			basicCtx.popMatrix();
 		};
 
 		this.recurseTree = function(node, viewpoint) {
@@ -204,13 +168,11 @@ var PCTree = (function() {
 				if(isvisible(node.radius, centerVS)) {
 					// node.lastRendered = (new Date()).getTime();
 					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
-					// if(size < 25 || node.Isleaf) {
-					if(size < 25 || node.numChildren === 0) {
+					if(size < 25 || node.Isleaf) {
 						render(node, size); 
 					}
 					else {
-						for(var k = 0; k < node.numChildren; k++) {
-						// for(var k = 0; k < 8; k++) {
+						for(var k = 0; k < 8; k++) {
 							if(typeof node.Children[k] == "undefined") {
 								load(node, k);
 							}
@@ -256,50 +218,6 @@ var PCTree = (function() {
 		// 	}
 		// };
 
-		function generateGrid(center, radius) {
-			var exponent = 1;
-			while(Math.floor(radius / Math.pow(10.0, exponent)) > 0) {
-				exponent++;
-			}
-			exponent--;
-			var factor = Math.pow(10.0, exponent);
-			var tempRadius = Math.ceil(radius / factor) * factor;
-			var tempArray = new Float32Array((tempRadius * 8 + 4) * 3);
-			var i;
-			for(i = 0; i < (tempRadius / factor * 8 + 4) * 3; i += 12) {
-				tempArray[i] = center[0] - tempRadius;
-				tempArray[i + 3] = center[0] + tempRadius;
-				tempArray[i + 1] = tempArray[i + 4] = center[1] + i / 12.0 * factor - tempRadius;
-				tempArray[i + 6] = tempArray[i + 9] = center[0] + i / 12.0 * factor - tempRadius;
-				tempArray[i + 7] = center[1] - tempRadius;
-				tempArray[i + 10] = center[1] + tempRadius;
-				tempArray[i + 2] = tempArray[i + 5] = tempArray[i + 8] = tempArray[i + 11] = center[2];
-			}
-			gridCount.push(i / 3);
-			$("#gridSizeSlider").slider("option", "max", exponent);
-			$("#gridSizeSlider").slider("option", "value", exponent);
-			$("#gSize").val(factor + " meter(s)");
-			while(exponent >= 1) {
-				for(var j = 0; j < 2 * tempRadius / factor; j++) {
-					for(var k = 1; k < 10; i += 12, k++) {
-						tempArray[i] = center[0] - tempRadius;
-						tempArray[i + 3] = center[0] + tempRadius;
-						tempArray[i + 1] = tempArray[i + 4] = center[1] + (k * 0.1 + j) * factor - tempRadius;
-						tempArray[i + 6] = tempArray[i + 9] = center[0] + (k * 0.1 + j) * factor - tempRadius;
-						tempArray[i + 7] = center[1] - tempRadius;
-						tempArray[i + 10] = center[1] + tempRadius;
-						tempArray[i + 2] = tempArray[i + 5] = tempArray[i + 8] = tempArray[i + 11] = center[2];
-					}
-				}
-				gridCount.push(i / 3);
-				exponent--;
-				factor *= 0.1;
-			}
-			gridVBO = basicCtx.ctx.createBuffer();
-			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
-			basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempArray, basicCtx.ctx.STATIC_DRAW);
-		}
-
 		function parseCallback() {
 			if(this.readyState == 4 && this.status == 200) {
 				var obj = JSON.parse(this.responseText);
@@ -315,8 +233,7 @@ var PCTree = (function() {
 					cols[j + 2] = obj.Point[i + 5] / 255;
 				}
 
-				// if(!obj.Isleaf) {
-				if(obj.numChildren !== 0) {
+				if(!obj.Isleaf) {
 					this.node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexPositionBuffer);
 					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
@@ -331,31 +248,14 @@ var PCTree = (function() {
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexColorBuffer);
 				basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, cols, basicCtx.ctx.STATIC_DRAW);
 
-				// this.node.Isleaf = obj.Isleaf;
-				this.node.numChildren = obj.numChildren;
+				this.node.Isleaf = obj.Isleaf;
 				this.node.BB = obj.BB;
 
-				var temp = [this.node.BB[0] - this.node.BB[3], this.node.BB[1] - this.node.BB[4], this.node.BB[2] - this.node.BB[5]];
-				this.node.center[0] = temp[0] * 0.5 + this.node.BB[3];
-				this.node.center[1] = temp[1] * 0.5 + this.node.BB[4];
-				this.node.center[2] = temp[2] * 0.5 + this.node.BB[5];
-				// var temp = [this.node.BB[3] - this.node.BB[0], this.node.BB[4] - this.node.BB[1], this.node.BB[5] - this.node.BB[2]];
-				// this.node.center[0] = temp[0] * 0.5 + this.node.BB[0];
-				// this.node.center[1] = temp[1] * 0.5 + this.node.BB[1];
-				// this.node.center[2] = temp[2] * 0.5 + this.node.BB[2];
+				var temp = [this.node.BB[3] - this.node.BB[0], this.node.BB[4] - this.node.BB[1], this.node.BB[5] - this.node.BB[2]];
+				this.node.center[0] = temp[0] * 0.5 + this.node.BB[0];
+				this.node.center[1] = temp[1] * 0.5 + this.node.BB[1];
+				this.node.center[2] = temp[2] * 0.5 + this.node.BB[2];
 				this.node.radius =  Math.sqrt(temp[0] * temp[0] + temp[1] * temp[1] + temp[2] * temp[2]) * 0.5;
-
-				if(this.node.path === 'r') {
-					gridZinc = temp[2] / 100.0;
-					gridZPos = this.node.center[2];
-					$("#gPos").val(gridZPos);
-					if(temp[0] > temp[1]) {
-						generateGrid(this.node.center, temp[0] * 0.5);
-					}
-					else {
-						generateGrid(this.node.center, temp[1] * 0.5);
-					}
-				}
 
 				// this.node.lastRendered = (new Date()).getTime();
 				this.node.status = COMPLETE;
@@ -371,8 +271,7 @@ var PCTree = (function() {
 				status: STARTED, 
 				center: [0, 0, 0],
 				radius: 1,
-				// Isleaf: 0,
-				numChildren: 0,
+				Isleaf: 0,
 				Children: {},
 				path: null,
 				// lastRendered: 0,
@@ -390,11 +289,12 @@ var PCTree = (function() {
 
 			node.xmlhttp.node = node;
 			node.xmlhttp.onload = parseCallback;
-			node.xmlhttp.open("GET", "action.php?a=getnode&path="+node.path, true);
+			node.xmlhttp.open("GET", "action.php?a=getnode&path="+node.path+"&table="+table, true);
 			node.xmlhttp.send();
 		}
 
-		this.root = function(path) {
+		this.root = function(path, t) {
+			table = t;
 			load(null, path);
 			return Tree;
 		}

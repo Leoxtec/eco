@@ -45,13 +45,28 @@ while(!feof($file)) {
 	}
 }
 
-$border; $dim; $scale; $color;
-for($i = 0; $i < 2; $i++) {
-	$border[$i] = ($max[$i] - $min[$i]) * 0.125;
-	$min[$i] -= $border[$i]; $max[$i] += $border[$i];
-	$dim[$i] = $max[$i] - $min[$i];
-	$scale[$i] = 512 / $dim[$i];
+$squaringOffset; $border; $scale; $color;
+if($max[0] - $min[0] > $max[1] - $min[1]) {
+	$border = ($max[0] - $min[0]) * 0.125;
+	$min[0] -= $border; $max[0] += $border;
+	$scale = 512 / ($max[0] - $min[0]);
+	$squaringOffset = ($max[0] - $min[0]) / 2;
+	$center = ($max[1] + $min[1]) / 2;
+	$max[1] = $center + $squaringOffset; $min[1] = $center - $squaringOffset;
 }
+else {
+	$border = ($max[1] - $min[1]) * 0.125;
+	$min[1] -= $border; $max[1] += $border;
+	$scale = 512 / ($max[1] - $min[1]);
+	$squaringOffset = ($max[1] - $min[1]) / 2;
+	$center = ($max[0] + $min[0]) / 2;
+	$max[0] = $center + $squaringOffset; $min[0] = $center - $squaringOffset;
+}
+
+$link = mysql_connect('localhost', 'root', 'jessica') or die(mysql_error());
+$db = mysql_select_db('markers', $link) or die(mysql_error());
+
+mysql_query(sprintf("INSERT INTO orthosize(name, size) VALUES('%s', %f)", current(explode('.', $_FILES["file"]["name"])), ($max[0] - $min[0]) / 2));
 
 $depth = array();
 for($i = 0; $i < 512; $i++) {
@@ -72,8 +87,8 @@ while(!feof($file)) {
 	$tempStr = fgets($file);
 	if(!feof($file)) {
 		$tempPoint = strToPoint($tempStr);
-		$tempPoint[0] = (int)(($tempPoint[0] - $min[0]) * $scale[0]);
-		$tempPoint[1] = (int)(($tempPoint[1] - $min[1]) * $scale[1]);
+		$tempPoint[0] = (int)(($tempPoint[0] - $min[0]) * $scale);
+		$tempPoint[1] = (int)(($tempPoint[1] - $min[1]) * $scale);
 		if($tempPoint[2] > $depth[$tempPoint[0]][$tempPoint[1]]) {
 			$depth[$tempPoint[0]][$tempPoint[1]] = $tempPoint[2];
 			$color = imagecolorallocatealpha($img, $tempPoint[3], $tempPoint[4], $tempPoint[5], 0);
@@ -83,6 +98,7 @@ while(!feof($file)) {
 	}
 }
 fclose($file);
+
 imagesavealpha($img, true);
 imagepng($img, current(explode('.', $_FILES["file"]["name"])) . '.png');
 imagedestroy($img);
