@@ -4,7 +4,7 @@ var PointCloud = (function() {
 		this.basicCtx.setup(cvsElement);
 
 		this.basicCtx.setDefaults(540, 540);
-
+		//testing users
 		this.tree = new PCTree(this.basicCtx);
 		this.tree2 = new PCTree(this.basicCtx);
 		this.markers = new Markers(this.basicCtx);
@@ -30,31 +30,41 @@ var PointCloud = (function() {
 		// }
 
 		this.usePerspective = function() {
-			var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.tree.getCenter());
-			var near = -this.tree.getRadius() - centerVS[2] - 5.0;
+			//testing users
+			// var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.tree.getCenter());
+			// var near = -this.tree.getRadius() - centerVS[2] - 5.0;
+			// if(near < 0.1) {
+			// 	near = 0.1;
+			// }
+			// var far = this.tree.getRadius() - centerVS[2] + 5.0;
+			// var bound = near * this.basicCtx.t30;
+			// this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
+			var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.grid.getCenter());
+			var near = -this.grid.getRadius() - centerVS[2] - 5.0;
 			if(near < 0.1) {
 				near = 0.1;
 			}
-			var far = this.tree.getRadius() - centerVS[2] + 5.0;
+			var far = this.grid.getRadius() - centerVS[2] + 5.0;
 			var bound = near * this.basicCtx.t30;
 			this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
 
+
+			//testing users
 			this.tree.usePerspective(near, far);
-			this.tree2.usePerspective(near, far);
+			this.tree2.usePerspective(near, far);			
 			this.markers.usePerspective();
-			this.grid.usePerspective(near, far);
+			this.grid.usePerspective();
 		};
 
 		this.useOrthographic = function() {
 			this.basicCtx.scaleFactor = 196;
 			var projectionMatrix = M4x4.scale3(1 / 196, 1 / 196, 1, this.basicCtx.orthographicMatrix);
-			// this.basicCtx.scaleFactor = 31.25;
-			// var temp = 1.0 / 31.25;
-			// var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
+			//testing user
 			this.tree.useOrthographic(projectionMatrix);
 			this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
 			this.grid.useOrthographic(projectionMatrix);
+			this.users.useOrthographic(projectionMatrix);
 		};
 
 		this.scaleOrthographic = function(deltaS) {
@@ -65,15 +75,14 @@ var PointCloud = (function() {
 			else if(this.basicCtx.scaleFactor > 600) {
 				this.basicCtx.scaleFactor = 600;
 			}
-			// else if(this.basicCtx.scaleFactor > 60) {
-			// 	this.basicCtx.scaleFactor = 60;
-			// }
 			var temp = 1.0 / this.basicCtx.scaleFactor;
 			var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
+			//testing user
 			this.tree.useOrthographic(projectionMatrix);
 			this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
 			this.grid.useOrthographic(projectionMatrix);
+			this.users.useOrthographic(projectionMatrix);
 		};
 
 		var __empty_func = function() {};
@@ -229,7 +238,7 @@ var PointCloud = (function() {
 				delta = evt.detail / 3;
 			}
 			else if(evt.wheelDelta) {
-				delta = -evt.wheelDelta / 360;
+				delta = -evt.wheelDelta / 12;
 			}
 			userMouseScroll(delta);
 		}

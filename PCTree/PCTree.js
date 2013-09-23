@@ -17,6 +17,7 @@ var PCTree = (function() {
 		var leafVarLocs = [];
 
 		var checkOrtho = false;
+		var orthoProjection;
 
 		var table;
 
@@ -27,46 +28,51 @@ var PCTree = (function() {
 		basicCtx.ctx.useProgram(inNodeShader);
 		inNodeVarLocs.push(basicCtx.ctx.getAttribLocation(inNodeShader, "aVertexPosition"));
 		inNodeVarLocs.push(basicCtx.ctx.getAttribLocation(inNodeShader, "aVertexColor"));
-		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uModelViewMatrix"));
-		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uProjectionMatrix"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uMVP"));
+		// inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uModelViewMatrix"));
+		// inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uProjectionMatrix"));
 		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uSize"));
 
 		leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
 		basicCtx.ctx.useProgram(leafShader);
 		leafVarLocs.push(basicCtx.ctx.getAttribLocation(leafShader, "aVertexPosition"));
 		leafVarLocs.push(basicCtx.ctx.getAttribLocation(leafShader, "aVertexColor"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uModelViewMatrix"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uProjectionMatrix"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uMVP"));
+		// leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uModelViewMatrix"));
+		// leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uProjectionMatrix"));
 		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uPointSize"));
-		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uAttenuation"));
-		basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
-		basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
+		// leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uAttenuation"));
+		// basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
+		// basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
+		basicCtx.ctx.uniform1f(leafVarLocs[3], 1);
 
 		this.usePerspective = function(n, f) {
 			znear = n;
 			zfar = -f;
-			basicCtx.ctx.useProgram(inNodeShader);
-			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
-			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
+			// basicCtx.ctx.useProgram(inNodeShader);
+			// basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, basicCtx.perspectiveMatrix);
+			// basicCtx.ctx.useProgram(leafShader);
+			// basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
-			basicCtx.ctx.useProgram(inNodeShader);
-			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[3], false, projectionMatrix);
-			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[3], false, projectionMatrix);
+			orthoProjection = projectionMatrix;
+			// basicCtx.ctx.useProgram(inNodeShader);
+			// basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[2], false, projectionMatrix);
+			// basicCtx.ctx.useProgram(leafShader);
+			// basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, projectionMatrix);
 		};
 
 		this.pointSize = function(size) {
 			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniform1f(leafVarLocs[4], size);
+			// basicCtx.ctx.uniform1f(leafVarLocs[4], size);
+			basicCtx.ctx.uniform1f(leafVarLocs[3], size);
 		};
 
-		this.attenuation = function(constant, linear, quadratic) {
-			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniform3fv(leafVarLocs[5], [constant, linear, quadratic]);
-		};
+		// this.attenuation = function(constant, linear, quadratic) {
+		// 	basicCtx.ctx.useProgram(leafShader);
+		// 	basicCtx.ctx.uniform3fv(leafVarLocs[5], [constant, linear, quadratic]);
+		// };
 
 		this.getCenter = function() {
 			return Tree.center;
@@ -84,7 +90,8 @@ var PCTree = (function() {
 			if(basicCtx) {
 				if(!node.Isleaf) {
 					basicCtx.ctx.useProgram(inNodeShader);
-					basicCtx.ctx.uniform1f(inNodeVarLocs[4], size);
+					// basicCtx.ctx.uniform1f(inNodeVarLocs[4], size);
+					basicCtx.ctx.uniform1f(inNodeVarLocs[3], size);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer);
 					basicCtx.ctx.vertexAttribPointer(inNodeVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexColorBuffer);
@@ -147,12 +154,18 @@ var PCTree = (function() {
 		//Edit: start with level 3 and set a limit number of nodes rendering per frame
 
 		this.renderTree = function(viewpoint) {
+			if(checkOrtho) {
+				var MVP = M4x4.mul(orthoProjection, basicCtx.peekMatrix());
+			}
+			else {
+				var MVP = M4x4.mul(basicCtx.perspectiveMatrix, basicCtx.peekMatrix());
+			}
 			basicCtx.ctx.useProgram(inNodeShader);
-			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[2], false, basicCtx.peekMatrix());
+			basicCtx.ctx.uniformMatrix4fv(inNodeVarLocs[2], false, MVP);
 			basicCtx.ctx.enableVertexAttribArray(inNodeVarLocs[0]);
 			basicCtx.ctx.enableVertexAttribArray(inNodeVarLocs[1]);
 			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, basicCtx.peekMatrix());
+			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, MVP);
 			basicCtx.ctx.enableVertexAttribArray(leafVarLocs[0]);
 			basicCtx.ctx.enableVertexAttribArray(leafVarLocs[1]);
 			this.recurseTree(Tree, viewpoint);

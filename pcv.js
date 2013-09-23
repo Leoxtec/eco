@@ -11,9 +11,38 @@ var results1;
 var results2;
 var controllable = true;
 var cloudtree;
-// var lastTime;
+var lastTime;
 var PIover2 = Math.PI / 2;
 var pick = false;
+pcvUsername = null;
+
+function loginUser(user, password) {
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.open("GET", "action.php?a=login&username="+user+"&password="+password, false);
+	xmlhttp.send();
+	var response = JSON.parse(xmlhttp.responseText);
+	if(response.success) {
+		pcvUsername = user;
+		document.getElementById('login-section').style.display = "none";
+		document.getElementById('logout-section').style.display = "block";
+	}
+	else {
+		//display error
+	}
+}
+
+function logoutUser() {
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.open("GET", "action.php?a=logout&username="+pcvUsername, true);
+	xmlhttp.send();
+	pcvUsername = null;
+	document.getElementById('logout-section').style.display = "none";
+	document.getElementById('login-section').style.display = "block";
+}
+
+function flipControl() {
+	controllable = !controllable;
+}
 
 function switchDiv() {
 	var a = document.getElementById('markupInfo');
@@ -54,16 +83,16 @@ function changeGridPos(val) {
 	return pc.grid.gridPos(val);
 }
 
-function toggleAttenuation() {
-	if(document.getElementById('atten').checked) {
-		pc.tree.attenuation(0.01, 0.0, 0.003);
-		pc.tree2.attenuation(0.01, 0.0, 0.003);
-	}
-	else {
-		pc.tree.attenuation(1.0, 0.0, 0.0);
-		pc.tree2.attenuation(1.0, 0.0, 0.0);
-	}
-}
+// function toggleAttenuation() {
+// 	if(document.getElementById('atten').checked) {
+// 		pc.tree.attenuation(0.01, 0.0, 0.003);
+// 		pc.tree2.attenuation(0.01, 0.0, 0.003);
+// 	}
+// 	else {
+// 		pc.tree.attenuation(1.0, 0.0, 0.0);
+// 		pc.tree2.attenuation(1.0, 0.0, 0.0);
+// 	}
+// }
 
 function viewRadioButton(val) {
 	if(controllable) {
@@ -71,12 +100,15 @@ function viewRadioButton(val) {
 		viewMode = val;
 		if(viewMode === 4) {
 			pc.useOrthographic();
+			//testing user
 			pc.tree.setCheckOrtho(true);
 			pc.tree2.setCheckOrtho(true);
 		}
 		else {
+			//testing user
 			pc.tree.setCheckOrtho(false);
 			pc.tree2.setCheckOrtho(false);
+			pc.users.usePerspective();
 		}
 	}
 }
@@ -140,7 +172,7 @@ function keyDown() {
 				orthoZoom = true;
 				break;
 			case 49:
-				if(!placingMarker) {
+				if(!placingMarker && pcvUsername) {
 					StartCoords[0] = pc.mouseX;
 					StartCoords[1] = pc.mouseY;
 					pc.markers.markerBegin = V3.$(StartCoords[0], StartCoords[1], 0);
@@ -149,7 +181,7 @@ function keyDown() {
 				}
 				break;
 			case 50:
-				if(placingMarker) {
+				if(placingMarker && pcvUsername) {
 					pc.markers.recordNewMarker(results2, results1);
 					switchDiv();
 					placingMarker = false;
@@ -157,9 +189,11 @@ function keyDown() {
 				}
 				break;
 			case 51:
-				removingMarker = true;
-				StartCoords[0] = pc.mouseX;
-				StartCoords[1] = pc.mouseY;
+				if(pcvUsername) {
+					removingMarker = true;
+					StartCoords[0] = pc.mouseX;
+					StartCoords[1] = pc.mouseY;
+				}
 				break;
 		}
 	}
@@ -227,7 +261,9 @@ function renderPC() {
 	}
 
 	pc.basicCtx.ctx.viewport(0, 0, 540, 540);
-	var c = pc.tree.getCenter();
+	//testing users
+	//var c = pc.tree.getCenter();
+	var c = pc.grid.getCenter();
 	var camPos = cam.pos();
 	pc.basicCtx.pushMatrix();
 	pc.basicCtx.multMatrix(M4x4.makeLookAt(camPos, cam.at(), cam.up()));
@@ -242,16 +278,18 @@ function renderPC() {
 	}
 
 	pc.basicCtx.clear();
+	//testing users
 	if(document.getElementById('pc1').checked) {
 		pc.tree.renderTree(camPos);
 	}
-	// if(document.getElementById('pc2').checked) {
-	// 	pc.tree2.renderTree(camPos);
-	// }
+	if(document.getElementById('pc2').checked) {
+		pc.tree2.renderTree(camPos);
+	}
 	if(document.getElementById('grid').checked) {
 		pc.grid.render();
 	}
 	pc.basicCtx.popMatrix();
+
 	// if(document.getElementById('scale').checked) {
 		// if(document.getElementById('overlay').checked) {
 			// pc.renderScaleBar(true);
@@ -260,7 +298,6 @@ function renderPC() {
 			// pc.renderScaleBar(false);
 		// }
 	// }
-	pc.users.render();
 	
 	if(document.getElementById('markers').checked) {
 		if(viewMode === 4) {
@@ -285,6 +322,14 @@ function renderPC() {
 		}
 		pc.markers.renderOrthoMarkers();
 	}
+
+
+	var now = (new Date()).getTime();
+	if(now - lastTime > 1000) {
+		pc.users.updateUsers(camPos);
+		lastTime = now;
+	}
+	pc.users.render();
 	pc.basicCtx.popMatrix();
 
 	// var now = (new Date()).getTime();
@@ -318,8 +363,9 @@ function renderPC() {
 
 function start() {
 	pc = new PointCloud(document.getElementById('canvas'));
+	//testing users
 	cloudtree = pc.tree.root('r', 'reduced_leaf_off');
-	// pc.tree2.root('r', 'reduced_leaf_on');
+	pc.tree2.root('r', 'reduced_leaf_on');
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;
@@ -327,5 +373,5 @@ function start() {
 	pc.onMouseReleased = mouseReleased;
 	pc.onKeyDown = keyDown;
 	pc.onKeyUp = keyUp;
-	// lastTime = (new Date()).getTime();
+	lastTime = (new Date()).getTime();
 }

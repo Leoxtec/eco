@@ -102,7 +102,6 @@ var Axes = (function() {
 				basicCtx.ctx.enable(basicCtx.ctx.BLEND);
 				basicCtx.ctx.blendFunc(basicCtx.ctx.SRC_ALPHA, basicCtx.ctx.ONE);
 				basicCtx.ctx.viewport(540, 270, 270, 270);
-				// basicCtx.ctx.viewport(270, 0, 270, 270);
 
 				basicCtx.ctx.useProgram(axesShader);
 				basicCtx.ctx.uniformMatrix4fv(axesVarLocs[2], false, basicCtx.peekMatrix());

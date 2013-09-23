@@ -2,9 +2,6 @@ var Grid = (function() {
 	function Grid(bctx) {
 		var basicCtx = bctx;
 
-		var znear = 0.1;
-		var zfar = -1000.0;
-
 		var gridVBO;
 		var gridCount = [];
 		var grid = 0;
@@ -15,6 +12,10 @@ var Grid = (function() {
 		var gridShader;
 
 		var gridVarLocs = [];
+
+		//testing users
+		var tempCenter;
+		var tempRadius;
 
 		gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/gridVertShader.c'), basicCtx.getShaderStr('shaders/gridFragShader.c'));
 		basicCtx.ctx.useProgram(gridShader);
@@ -50,6 +51,10 @@ var Grid = (function() {
 		tempExponent--;
 		tempFactor = Math.pow(10.0, tempExponent);
 		tempRadius2 = Math.ceil(tempRadius1 / tempFactor) * tempFactor;
+
+		//testing users
+		tempRadius = Math.sqrt(2 * tempRadius2 * tempRadius2);
+
 		tempArray = new Float32Array((tempRadius2 * 8 + 4) * 3);
 		for(i = 0; i < (tempRadius2 / tempFactor * 8 + 4) * 3; i += 12) {
 			tempArray[i] = tempCenter[0] - tempRadius2;
@@ -89,16 +94,24 @@ var Grid = (function() {
 		delete tempSpan;
 		delete tempExponent;
 		delete tempFactor;
-		delete tempCenter;
+		//testing users
+		// delete tempCenter;
 		delete tempRadius1;
 		delete tempRadius2;
 		delete tempArray;
 		delete i;
 
+		//testing users
+		this.getCenter = function() {
+			return tempCenter;
+		}
+		//testing users
+		this.getRadius = function() {
+			return tempRadius;
+		}
 
-		this.usePerspective = function(n, f) {
-			znear = n;
-			zfar = -f;
+
+		this.usePerspective = function() {
 			basicCtx.ctx.useProgram(gridShader);
 			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, basicCtx.perspectiveMatrix);
 		};
@@ -121,7 +134,9 @@ var Grid = (function() {
 			if(basicCtx) {
 				basicCtx.ctx.useProgram(gridShader);
 				basicCtx.pushMatrix();
+				//testing users
 				basicCtx.translate(0.0, 0.0, gridZOffset);
+				// basicCtx.translate(-tempCenter[0], -tempCenter[1], gridZOffset - tempCenter[2]);
 				basicCtx.ctx.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
 				basicCtx.ctx.vertexAttribPointer(gridVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);

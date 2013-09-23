@@ -1,7 +1,8 @@
 <?php
+include 'PasswordHash.php';
 
 $link = mysql_connect('localhost', 'root', 'jessica');
-$db = mysql_select_db('markers' ,$link);
+$db = mysql_select_db('markers', $link);
 
 $key = $_GET["a"];
 
@@ -20,6 +21,18 @@ switch($key) {
 		break;
 	case 'getMapSize':
 		getMapSize();
+		break;
+	case 'login':
+		login();
+		break;
+	case 'logout':
+		logout();
+		break;
+	case 'initUsers':
+		initUsers();
+		break;
+	case 'updateUsers':
+		updateUsers();
 		break;
 }
 
@@ -100,7 +113,7 @@ function delete() {
 }
 
 function start() {
-	$result = mysql_query(sprintf("SELECT * FROM markers"));
+	$result = mysql_query("SELECT * FROM markers");
 	echo '{"markers" : [';
 	if($row = mysql_fetch_assoc($result)) {
 		echo '{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '"}';
@@ -119,4 +132,49 @@ function getnode() {
 function getMapSize() {
 	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT size FROM orthosize WHERE name = '%s'", mysql_real_escape_string($_GET['name']))));
 	echo $result['size'];
+}
+
+function login() {
+	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT password FROM users WHERE username = '%s'", mysql_real_escape_string($_GET['username']))));
+	if($result) {
+		if(validate_password($_GET['password'], $result['password'])) {
+			mysql_query(sprintf("UPDATE users SET loggedin = 1, secs = %d WHERE username = '%s'", time(), mysql_real_escape_string($_GET['username'])));
+			echo '{"success":true}';
+		}
+		else {
+			echo '{"success":false,"error":"password does not match"}';
+		}
+	}
+	else {
+		echo '{"success":false,"error":"username does not exist"}';
+	}
+}
+
+function logout() {
+	mysql_query(sprintf("UPDATE users SET loggedin = 0 WHERE username = '%s'", mysql_real_escape_string($_GET['username'])));
+}
+
+function initUsers() {
+	$result = mysql_query("SELECT * FROM users WHERE loggedin = 1");
+	echo '{"users" : [';
+	if($row = mysql_fetch_assoc($result)) {
+		echo '{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
+		while ($row = mysql_fetch_assoc($result)) {
+			echo ',{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
+		}
+	}
+	echo "]}";
+}
+
+function updateUsers() {
+	mysql_query(sprintf("UPDATE users SET secs = %d, x = %f, y = %f, z = %f WHERE username = '%s'", time(), $_GET['x'], $_GET['y'], $_GET['z'], mysql_real_escape_string($_GET['id'])));
+	$result = mysql_query(sprintf("SELECT * FROM users WHERE loggedin = 1 and username != '%s'", mysql_real_escape_string($_GET['id'])));
+	echo '{"users" : [';
+	if($row = mysql_fetch_assoc($result)) {
+		echo '{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
+		while ($row = mysql_fetch_assoc($result)) {
+			echo ',{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
+		}
+	}
+	echo "]}";
 }
