@@ -27,7 +27,8 @@ function loginUser(user, password) {
 		document.getElementById('logout-section').style.display = "block";
 	}
 	else {
-		//display error
+		flipControl();
+		$("#falied-login").dialog({close: function() {flipControl();}});
 	}
 }
 
