@@ -76,7 +76,7 @@
                                                  value: 0,
                                                  orientation: "vertical",
                                                  slide: function(event, ui) {
-                                                                $("#gPos").val(changeGridPos(ui.value));
+                                                                $("#gPos").val(changeGridPos(ui.value).toFixed(3));
                                                         }
                                                 });
         });
@@ -153,6 +153,8 @@
             <Label for="markers" title="Toggle the markers.">Markers</Label>
             <!-- <input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
             <Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label> -->
+            <input type="checkbox" id="BS" name="checkbox" onclick="toggleBS()">
+            <Label for="BS" title="Toggle color enhancement.">Color Enhance</Lable>
         </div>
         <!--<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
         <span>overlay:</span> <input type="checkbox" id="overlay"/></br>-->
@@ -215,10 +217,12 @@
     </div>
 
     <div id="content1" style="background-color:#000000;height:540px;width:810px;float:left;">
-        <canvas id="canvas" width="810" height="540"></canvas>
+        <canvas id="canvas" width="810" height="540">Your browser doesn't support WebGL</canvas>
     </div>
     
-    <div id="markupInfo" style="background-color:#666666;height:270px;width:225px;float:left;display:block">
+    <div id="markupInfo" style="background-color:#666666;height:178px;width:225px;float:left;display:block">
+        <label for="createdBy">Set By:</label>
+        <input type="text" id="createdBy" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br>
         <label for="markRadius">Radius:</label>
         <input type="text" id="markRadius" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br>
         <label for="markHeight">Height:</label>
@@ -229,7 +233,7 @@
         <textarea id="markDescr" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></textarea>
     </div>
     
-    <div id="newMarkupInfo" style="background-color:#666666;height:270px;width:225px;float:left;display:none">
+    <div id="newMarkupInfo" style="background-color:#666666;height:178px;width:225px;float:left;display:none">
         <form>
             <label for="newSpecies">Species:</label>
             <input type="text" id="newSpecies" style="border: 0; color: #000000; font-weight: bold; background-color: #FFFFFF;" /></br>
@@ -238,9 +242,11 @@
             <input type="button" value="Submit" onclick="setValues();">
         </form>
     </div>
-    
+
+    <!-- <img id="thumbnail" src="" width=300 height=225 style="border:0;margin:7px;float:left"> -->
+    <canvas id="thumbnail" src="" width=300 height=225 style="border:0;margin:7px;float:left"></canvas>
     <input type="text" id="onOffMap" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666; margin: 15px; float: left;"/>
-    
+
     <div id="footer" style="background-color:#949aa1;clear:both;text-align:center;">  
         <a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_on.ply" title="Click to download point cloud">
             <span style="font-family:arial;float:left">Get the point cloud<span></a>

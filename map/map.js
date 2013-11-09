@@ -15,8 +15,7 @@ var Map = (function() {
 		var arrowVarLocs = [];
 
 		xmlhttpForOrthoSize = new XMLHttpRequest();
-		// xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII", false);
-		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=reduced_map", false);
+		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=point_pick_test", false);
 		xmlhttpForOrthoSize.send();
 		orthoSize = JSON.parse(xmlhttpForOrthoSize.responseText);
 		arrowAspect = orthoSize / 31.25;
@@ -87,8 +86,7 @@ var Map = (function() {
 			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 			delete this;
 		}
-		// mapImage.src = "preprocess/2_LocalFilter_10m_Grid_3_STDCutoff_SE_F1_2011_v084_Lirio_redo_POINTS_ASCII.png";
-		mapImage.src = "preprocess/reduced_map.png";
+		mapImage.src = "preprocess/point_pick_test.png";
 
 		delete orthographicMatrix;
 		delete orthoSize;
@@ -129,7 +127,6 @@ var Map = (function() {
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapTexCoords);
 				basicCtx.ctx.vertexAttribPointer(mapVarLocs[1], 2, basicCtx.ctx.FLOAT, false, 0, 0);
 				basicCtx.ctx.enableVertexAttribArray(mapVarLocs[1]);
-				basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, mapTexture);
 				basicCtx.ctx.uniform1i(mapVarLocs[4], mapTexture);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);

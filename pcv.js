@@ -14,6 +14,8 @@ var cloudtree;
 var lastTime;
 var PIover2 = Math.PI / 2;
 var pick = false;
+var photoPick = false;
+updateTimeStamp = 0;
 pcvUsername = null;
 
 function loginUser(user, password) {
@@ -63,6 +65,7 @@ function switchDiv() {
 	}
 	
 	controllable = !controllable;
+	updateTimeStamp = 1;
 }
 
 function setValues() {
@@ -73,14 +76,17 @@ function setValues() {
 
 function changePointSize(val) {
 	pc.tree.pointSize(val);
-	pc.tree2.pointSize(val);
+	//pc.tree2.pointSize(val);
+	updateTimeStamp = 1;
 }
 
 function changeGridSize(val) {
 	pc.grid.gridSize(val);
+	updateTimeStamp = 1;
 }
 
 function changeGridPos(val) {
+	updateTimeStamp = 1;
 	return pc.grid.gridPos(val);
 }
 
@@ -93,7 +99,12 @@ function changeGridPos(val) {
 // 		pc.tree.attenuation(1.0, 0.0, 0.0);
 // 		pc.tree2.attenuation(1.0, 0.0, 0.0);
 // 	}
+// 	updateTimeStamp = 1;
 // }
+
+function toggleBS() {
+	pc.tree.toggleBS();
+}
 
 function viewRadioButton(val) {
 	if(controllable) {
@@ -101,17 +112,16 @@ function viewRadioButton(val) {
 		viewMode = val;
 		if(viewMode === 4) {
 			pc.useOrthographic();
-			//testing user
 			pc.tree.setCheckOrtho(true);
-			pc.tree2.setCheckOrtho(true);
+			//pc.tree2.setCheckOrtho(true);
 		}
 		else {
-			//testing user
 			pc.tree.setCheckOrtho(false);
-			pc.tree2.setCheckOrtho(false);
+			//pc.tree2.setCheckOrtho(false);
 			pc.users.usePerspective();
 		}
 	}
+	updateTimeStamp = 1;
 }
 
 function zoom(amt) {
@@ -123,6 +133,7 @@ function zoom(amt) {
 			cam.updateRadius(amt);
 		}
 	}
+	updateTimeStamp = 1;
 }
 
 function mousePressed() {
@@ -131,12 +142,14 @@ function mousePressed() {
 		StartCoords[1] = pc.mouseY;
 		isDragging = true;
 	}
+	updateTimeStamp = 1;
 }
 
 function mouseReleased() {
 	if(controllable) {
 		isDragging = false;
 	}
+	updateTimeStamp = 1;
 }
 
 function keyDown() {
@@ -196,8 +209,13 @@ function keyDown() {
 					StartCoords[1] = pc.mouseY;
 				}
 				break;
+			case 66:
+			case 98:
+				photoPick = true;
+				break;
 		}
 	}
+	updateTimeStamp = 1;
 }
 
 function keyUp() {
@@ -206,6 +224,7 @@ function keyUp() {
 			case 86:
 			case 118:
 				pick = false;
+				$("#createdBy").val('');
 				$("#markRadius").val('');
 				$("#markHeight").val('');
 				$("#markSpecies").val('');
@@ -233,6 +252,10 @@ function keyUp() {
 			case 49:
 				isDragging = false;
 				placingMarker = false;
+				break;
+			case 66:
+			case 98:
+				photoPick = false;
 				break;
 		}
 	}
@@ -262,8 +285,6 @@ function renderPC() {
 	}
 
 	pc.basicCtx.ctx.viewport(0, 0, 540, 540);
-	//testing users
-	//var c = pc.tree.getCenter();
 	var c = pc.grid.getCenter();
 	var camPos = cam.pos();
 	pc.basicCtx.pushMatrix();
@@ -279,12 +300,14 @@ function renderPC() {
 	}
 
 	pc.basicCtx.clear();
-	//testing users
 	if(document.getElementById('pc1').checked) {
+		if(photoPick) {
+			pc.tree.pointPicking(camPos, pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
+		}
 		pc.tree.renderTree(camPos);
 	}
 	if(document.getElementById('pc2').checked) {
-		pc.tree2.renderTree(camPos);
+		//pc.tree2.renderTree(camPos);
 	}
 	if(document.getElementById('grid').checked) {
 		pc.grid.render();
@@ -319,7 +342,7 @@ function renderPC() {
 			}
 		}
 		else if(pick) {
-			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
+			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY) + 0.5;
 		}
 		pc.markers.renderOrthoMarkers();
 	}
@@ -328,6 +351,7 @@ function renderPC() {
 	var now = (new Date()).getTime();
 	if(now - lastTime > 1000) {
 		pc.users.updateUsers(camPos);
+		updateTimeStamp = 0;
 		lastTime = now;
 	}
 	pc.users.render();
@@ -364,9 +388,8 @@ function renderPC() {
 
 function start() {
 	pc = new PointCloud(document.getElementById('canvas'));
-	//testing users
-	cloudtree = pc.tree.root('r', 'reduced_leaf_off');
-	pc.tree2.root('r', 'reduced_leaf_on');
+	cloudtree = pc.tree.root('r', 'point_pick_test');
+	//pc.tree2.root('r', 'reduced_leaf_on');
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;

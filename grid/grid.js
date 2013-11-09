@@ -13,7 +13,6 @@ var Grid = (function() {
 
 		var gridVarLocs = [];
 
-		//testing users
 		var tempCenter;
 		var tempRadius;
 
@@ -24,7 +23,7 @@ var Grid = (function() {
 		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uProjectionMatrix"));
 
 		xmlhttpForBB = new XMLHttpRequest();
-		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=reduced_leaf_off", false);
+		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=point_pick_test", false);
 		xmlhttpForBB.send();
 		BB = JSON.parse(xmlhttpForBB.responseText).BB;
 
@@ -36,7 +35,7 @@ var Grid = (function() {
 
 		gridZinc = tempSpan[2] / 100.0;
 		gridZPos = tempCenter[2];
-		$("#gPos").val(gridZPos);
+		$("#gPos").val(gridZPos.toFixed(3));
 		if(tempSpan[0] > tempSpan[1]) {
 			tempRadius1 = tempSpan[0] * 0.5;
 		}
@@ -51,8 +50,6 @@ var Grid = (function() {
 		tempExponent--;
 		tempFactor = Math.pow(10.0, tempExponent);
 		tempRadius2 = Math.ceil(tempRadius1 / tempFactor) * tempFactor;
-
-		//testing users
 		tempRadius = Math.sqrt(2 * tempRadius2 * tempRadius2);
 
 		tempArray = new Float32Array((tempRadius2 * 8 + 4) * 3);
@@ -94,18 +91,16 @@ var Grid = (function() {
 		delete tempSpan;
 		delete tempExponent;
 		delete tempFactor;
-		//testing users
-		// delete tempCenter;
 		delete tempRadius1;
 		delete tempRadius2;
 		delete tempArray;
 		delete i;
 
-		//testing users
+
 		this.getCenter = function() {
 			return tempCenter;
 		}
-		//testing users
+
 		this.getRadius = function() {
 			return tempRadius;
 		}
@@ -134,9 +129,7 @@ var Grid = (function() {
 			if(basicCtx) {
 				basicCtx.ctx.useProgram(gridShader);
 				basicCtx.pushMatrix();
-				//testing users
 				basicCtx.translate(0.0, 0.0, gridZOffset);
-				// basicCtx.translate(-tempCenter[0], -tempCenter[1], gridZOffset - tempCenter[2]);
 				basicCtx.ctx.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
 				basicCtx.ctx.vertexAttribPointer(gridVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);

@@ -28,16 +28,15 @@ switch($key) {
 	case 'logout':
 		logout();
 		break;
-	case 'initUsers':
-		initUsers();
-		break;
 	case 'updateUsers':
 		updateUsers();
 		break;
+	case 'getBS':
+		getBS();
 }
 
 function findHeight($cyl) {
-	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM reduced_leaf_on WHERE path = 'r'")));
+	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM point_pick_test WHERE path = 'r'")));
 	$data = json_decode($query['data']);
 	$cyl[0] += ($data->BB[0] - $data->BB[3]) / 2 + $data->BB[3];
 	$cyl[1] += ($data->BB[1] - $data->BB[4]) / 2 + $data->BB[4];
@@ -50,7 +49,7 @@ function findHeight($cyl) {
 }
 
 function findHeightRecursive($cyl, $path) {
-	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM reduced_leaf_on WHERE path = '%s'", $path)));
+	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM point_pick_test WHERE path = '%s'", $path)));
 	$data = json_decode($query['data']);
 	if(intersect($cyl, $data->BB)) {
 		$highest = -INF;
@@ -103,8 +102,8 @@ function add() {
 	$cyl[2] = mysql_real_escape_string($_GET['centerZ']);
 	$cyl[3] = mysql_real_escape_string($_GET['radius']);
 	$height = findHeight($cyl);
-	mysql_query(sprintf("INSERT INTO markers(radius, centerX, centerY, centerZ, height, species, description) VALUES(%f, %f, %f, %f, %f, '%s', '%s')",
-						$cyl[3], $cyl[0], $cyl[1], $cyl[2], $height, mysql_real_escape_string($_GET['species']), mysql_real_escape_string($_GET['descr'])));
+	mysql_query(sprintf("INSERT INTO markers(radius, centerX, centerY, centerZ, height, user, species, description) VALUES(%f, %f, %f, %f, %f, '%s', '%s', '%s')",
+						$cyl[3], $cyl[0], $cyl[1], $cyl[2], $height, mysql_real_escape_string($_GET['user']), mysql_real_escape_string($_GET['species']), mysql_real_escape_string($_GET['descr']))) or die('Query failed. ' . mysql_error());
 	echo '{"id":' . mysql_insert_id() . ',"height":' . $height . '}';
 }
 
@@ -116,9 +115,9 @@ function start() {
 	$result = mysql_query("SELECT * FROM markers");
 	echo '{"markers" : [';
 	if($row = mysql_fetch_assoc($result)) {
-		echo '{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '"}';
+		echo '{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '","user":"', $row['user'], '"}';
 		while ($row = mysql_fetch_assoc($result)) {
-			echo ',{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '"}';
+			echo ',{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '","user":"', $row['user'], '"}';
 		}
 	}
 	echo "]}";
@@ -154,27 +153,23 @@ function logout() {
 	mysql_query(sprintf("UPDATE users SET loggedin = 0 WHERE username = '%s'", mysql_real_escape_string($_GET['username'])));
 }
 
-function initUsers() {
-	$result = mysql_query("SELECT * FROM users WHERE loggedin = 1");
-	echo '{"users" : [';
-	if($row = mysql_fetch_assoc($result)) {
-		echo '{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
-		while ($row = mysql_fetch_assoc($result)) {
-			echo ',{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
-		}
-	}
-	echo "]}";
-}
-
 function updateUsers() {
-	mysql_query(sprintf("UPDATE users SET secs = %d, x = %f, y = %f, z = %f WHERE username = '%s'", time(), $_GET['x'], $_GET['y'], $_GET['z'], mysql_real_escape_string($_GET['id'])));
+	$currentTime = time();
+	if($_GET['update'] == 1) {
+		mysql_query(sprintf("UPDATE users SET secs = %d, x = %f, y = %f, z = %f WHERE username = '%s'", $currentTime, $_GET['x'], $_GET['y'], $_GET['z'], mysql_real_escape_string($_GET['id'])));
+	}
 	$result = mysql_query(sprintf("SELECT * FROM users WHERE loggedin = 1 and username != '%s'", mysql_real_escape_string($_GET['id'])));
 	echo '{"users" : [';
 	if($row = mysql_fetch_assoc($result)) {
-		echo '{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
+		echo '{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], ',"t":', $row['secs'], '}';
 		while ($row = mysql_fetch_assoc($result)) {
-			echo ',{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], '}';
+			echo ',{"username":"', $row['username'], '","x":', $row['x'], ',"y":', $row['y'], ',"z":', $row['z'], ',"t":', $row['secs'], '}';
 		}
 	}
-	echo "]}";
+	echo '], "t" : ', $currentTime, '}';
+}
+
+function getBS() {
+	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT bs FROM change_color WHERE name = '%s'", mysql_real_escape_string($_GET['name'])))) or die(mysql_error());
+	echo $result['bs'];
 }

@@ -20,9 +20,33 @@ var PCTree = (function() {
 		var orthoProjection;
 
 		var table;
+		var useBS = false;
 
 		const STARTED = 1;
 		const COMPLETE = 2;
+
+		var picInfo = [];
+		var pointPickIndex = 1;
+
+		var thumbCtx = document.getElementById("thumbnail").getContext('2d');
+		var thumbImg = new Image();
+
+		function drawThumbNail() {
+			thumbCtx.drawImage(thumbImg, 0, 0);
+			thumbCtx.strokeStyle = "#FF00FF";
+			thumbCtx.beginPath();
+			thumbCtx.moveTo(this.tempX - 5, this.tempY - 5);
+			thumbCtx.lineTo(this.tempX - 5, this.tempY + 5);
+			thumbCtx.lineTo(this.tempX + 5, this.tempY + 5);
+			thumbCtx.lineTo(this.tempX + 5, this.tempY - 5);
+			thumbCtx.closePath();
+			thumbCtx.stroke();
+		};
+
+		xmlhttpForBiasAndScale = new XMLHttpRequest();
+		xmlhttpForBiasAndScale.open("GET", "action.php?a=getBS&name=point_pick_test", false);
+		xmlhttpForBiasAndScale.send();
+		biasAndScale = JSON.parse(xmlhttpForBiasAndScale.responseText);
 
 		inNodeShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/inNodeVertShader.c'), basicCtx.getShaderStr('shaders/inNodeFragShader.c'));
 		basicCtx.ctx.useProgram(inNodeShader);
@@ -32,6 +56,12 @@ var PCTree = (function() {
 		// inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uModelViewMatrix"));
 		// inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uProjectionMatrix"));
 		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uSize"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uBias"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uScale"));
+		inNodeVarLocs.push(basicCtx.ctx.getUniformLocation(inNodeShader, "uUseBS"));
+		basicCtx.ctx.uniform3fv(inNodeVarLocs[4], biasAndScale.b);
+		basicCtx.ctx.uniform3fv(inNodeVarLocs[5], biasAndScale.s);
+		basicCtx.ctx.uniform1i(inNodeVarLocs[6], 0);
 
 		leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
 		basicCtx.ctx.useProgram(leafShader);
@@ -42,9 +72,114 @@ var PCTree = (function() {
 		// leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uProjectionMatrix"));
 		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uPointSize"));
 		// leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uAttenuation"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uBias"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uScale"));
+		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uUseBS"));
 		// basicCtx.ctx.uniform1f(leafVarLocs[4], 1);
 		// basicCtx.ctx.uniform3fv(leafVarLocs[5], [1.0, 0.0, 0.0]);
 		basicCtx.ctx.uniform1f(leafVarLocs[3], 1);
+		basicCtx.ctx.uniform3fv(leafVarLocs[4], biasAndScale.b);
+		basicCtx.ctx.uniform3fv(leafVarLocs[5], biasAndScale.s);
+		basicCtx.ctx.uniform1i(leafVarLocs[6], 0);
+
+		delete xmlhttpForBiasAndScale;
+		delete biasAndScale;
+
+		var pointPickShader;
+		var pointPickVarLocs = [];
+		pointPickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/testVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
+		basicCtx.ctx.useProgram(pointPickShader);
+		pointPickVarLocs.push(basicCtx.ctx.getAttribLocation(pointPickShader, "aVertexPosition"));
+		pointPickVarLocs.push(basicCtx.ctx.getAttribLocation(pointPickShader, "aPickColor"));
+		pointPickVarLocs.push(basicCtx.ctx.getUniformLocation(pointPickShader, "uPPMV"));
+
+		var pointPickingFBO;
+		pointPickingFBO = basicCtx.ctx.createFramebuffer();
+		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pointPickingFBO);
+		pointPickingTexture = basicCtx.ctx.createTexture();
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, pointPickingTexture);
+		basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 16, 16, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
+		// basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 512, 512, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
+		basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
+		basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MAG_FILTER, basicCtx.ctx.NEAREST);
+		pointRenderBuffer = basicCtx.ctx.createRenderbuffer();
+		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, pointRenderBuffer);
+		basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 16, 16);
+		// basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 512, 512);
+		basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, pointPickingTexture, 0);
+		basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.DEPTH_ATTACHMENT, basicCtx.ctx.RENDERBUFFER, pointRenderBuffer);
+		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, null);
+		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+		delete pointRenderBuffer;
+		// delete pointPickingTexture;
+
+		// var pointPickingFBO;
+		// pointPickingFBO = basicCtx.ctx.createFramebuffer();
+		// basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pointPickingFBO);
+		// // pointPickingTexture = basicCtx.ctx.createTexture();
+		// // basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, pointPickingTexture);
+		// // basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
+		// // basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
+		// pointPickingTexture = basicCtx.ctx.createRenderbuffer();
+		// basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, pointPickingTexture);
+		// basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.RGBA4, 1, 1);
+
+		// pointRenderBuffer = basicCtx.ctx.createRenderbuffer();
+		// basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, pointRenderBuffer);
+		// basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 1, 1);
+
+		// basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.RENDERBUFFER, pointPickingTexture, 0);
+		// basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.DEPTH_ATTACHMENT, basicCtx.ctx.RENDERBUFFER, pointRenderBuffer);
+		// basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, null);
+		// basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
+		// //basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+		// delete pointRenderBuffer;
+		// delete pointPickingTexture;
+
+		// var quadShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/fullQuadVertShader.c'), basicCtx.getShaderStr('shaders/tempFragShader.c'));
+		// var quadVarLocs = [];
+		// basicCtx.ctx.useProgram(quadShader);
+		// quadVarLocs.push(basicCtx.ctx.getAttribLocation(quadShader, "index"));
+		// quadVarLocs.push(basicCtx.ctx.getUniformLocation(quadShader, "uSampler"));
+
+		// var indexVBO = basicCtx.ctx.createBuffer();
+		// basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, indexVBO);
+		// basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([0.0, 1.0, 2.0, 3.0]), basicCtx.ctx.STATIC_DRAW);
+
+		var crossShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/crossVertShader.c'), basicCtx.getShaderStr('shaders/gridFragShader.c'));
+		var crossVarLocs = [];
+		basicCtx.ctx.useProgram(crossShader);
+		crossVarLocs.push(basicCtx.ctx.getAttribLocation(crossShader, "aVertexPosition"));
+		crossVarLocs.push(basicCtx.ctx.getUniformLocation(crossShader, "uOffset"));
+
+		var crossVBO = basicCtx.ctx.createBuffer();
+		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, crossVBO);
+		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([ 0.0074, 	  0.0,
+																			  0.0814, 	  0.0,
+																			 -0.0074, 	  0.0,
+																			 -0.0814, 	  0.0,
+																			 	 0.0,  0.0074,
+																			 	 0.0,  0.0814,
+																			 	 0.0, -0.0074,
+																			 	 0.0, -0.0814]), basicCtx.ctx.STATIC_DRAW);
+
+		this.toggleBS = function() {
+			useBS = !useBS;
+			if(useBS) {
+				basicCtx.ctx.useProgram(inNodeShader);
+				basicCtx.ctx.uniform1i(inNodeVarLocs[6], 1);
+				basicCtx.ctx.useProgram(leafShader);
+				basicCtx.ctx.uniform1i(leafVarLocs[6], 1);
+			}
+			else {
+				basicCtx.ctx.useProgram(inNodeShader);
+				basicCtx.ctx.uniform1i(inNodeVarLocs[6], 0);
+				basicCtx.ctx.useProgram(leafShader);
+				basicCtx.ctx.uniform1i(leafVarLocs[6], 0);
+			}
+		};
+
 
 		this.usePerspective = function(n, f) {
 			znear = n;
@@ -149,10 +284,6 @@ var PCTree = (function() {
 		//  viewpoint is for decided whether object is visible 
 		//  and compute its size on screen.
 		/////////////////////////////////////////////////////
-
-		//Todo
-		//Edit: start with level 3 and set a limit number of nodes rendering per frame
-
 		this.renderTree = function(viewpoint) {
 			if(checkOrtho) {
 				var MVP = M4x4.mul(orthoProjection, basicCtx.peekMatrix());
@@ -231,19 +362,164 @@ var PCTree = (function() {
 		// 	}
 		// };
 
+		this.pointPicking = function(viewpoint, x, y) {
+			// var pickingTransform = new Float32Array([	 	 108,			0, 0, 0,
+			// 													   0,		  108, 0, 0,
+			// 											 		   0,			0, 1, 0,
+			// 											 108 - x * 0.4, 108 - y * 0.4, 0, 1]);
+			var pickingTransform = new Float32Array([	 	 54,			0, 0, 0,
+																   0,		  54, 0, 0,
+														 		   0,			0, 1, 0,
+														 54 - x * 0.2, 54 - y * 0.2, 0, 1]);
+			// pc.basicCtx.ctx.viewport(0, 0, 5, 5);
+			pc.basicCtx.ctx.viewport(0, 0, 10, 10);
+			basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pointPickingFBO);
+			basicCtx.clear();
+			basicCtx.ctx.useProgram(pointPickShader);
+			if(checkOrtho) {
+				var proj = orthoProjection;
+			}
+			else {
+				var proj = basicCtx.perspectiveMatrix;
+			}
+			var PPVM = M4x4.mul(pickingTransform, M4x4.mul(proj, basicCtx.peekMatrix()));
+			basicCtx.ctx.uniformMatrix4fv(pointPickVarLocs[2], false, PPVM);
+			basicCtx.ctx.enableVertexAttribArray(pointPickVarLocs[0]);
+			basicCtx.ctx.enableVertexAttribArray(pointPickVarLocs[1]);
+
+			this.recursePP(Tree, viewpoint);
+
+			basicCtx.ctx.disableVertexAttribArray(pointPickVarLocs[0]);
+			basicCtx.ctx.disableVertexAttribArray(pointPickVarLocs[1]);
+
+			// var arr = new Uint8Array(100);
+			// basicCtx.ctx.readPixels(0, 0, 5, 5, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, arr);
+			// //window.console.log(arr);
+			// var closest = [-3, -3];
+			// var distance = Number.POSITIVE_INFINITY;
+			// var id;
+			// var index;
+			// for(var i = 0; i < 5; i++) {
+			// 	for(var j = 0; j < 5; j++) {
+			// 		index = i * 20 + j * 4;
+			// 		if(arr[index] != 0) {
+			// 			var temp = (i - 2) * (i - 2) + (j - 2) * (j - 2);
+			// 			if(temp < distance) {
+			// 				distance = temp;
+			// 				closest[0] = j - 2;
+			// 				closest[1] = i - 2;
+			// 				id = arr[index];
+			// 			}
+			// 		}
+			// 	}
+			// }
+			var arr = new Uint8Array(400);
+			basicCtx.ctx.readPixels(0, 0, 10, 10, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, arr);
+			var closest = [-5, -5];
+			var distance = Number.POSITIVE_INFINITY;
+			var id = -1;
+			var index;
+			for(var i = 0; i < 10; i++) {
+				for(var j = 0; j < 10; j++) {
+					index = i * 40 + j * 4;
+					if(arr[index] != 0 && arr[index + 1] != 0 && arr[index + 2] != 0) {
+						var temp = (i - 4.5) * (i - 4.5) + (j - 4.5) * (j - 4.5);
+						if(temp < distance) {
+							distance = temp;
+							closest[0] = j - 4.5;
+							closest[1] = i - 4.5;
+							id = arr[index] << 16 | arr[index + 1] << 8 | arr[index + 2];
+						}
+					}
+				}
+			}
+
+			pc.basicCtx.ctx.viewport(0, 0, 540, 540);
+			basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
+
+			// basicCtx.ctx.useProgram(quadShader);
+			// basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, indexVBO);
+			// basicCtx.ctx.vertexAttribPointer(quadVarLocs[0], 1, basicCtx.ctx.FLOAT, false, 0, 0);
+			// basicCtx.ctx.enableVertexAttribArray(quadVarLocs[0]);
+			// basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
+			// basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, pointPickingTexture);
+			// basicCtx.ctx.uniform1i(quadVarLocs[1], pointPickingTexture);
+			// basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
+			// basicCtx.ctx.disableVertexAttribArray(quadVarLocs[0]);
+			// basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+
+			if(id > -1) {
+				var tempPic = picInfo[id - 1];
+				thumbImg.tempX = tempPic.x * 300;
+				thumbImg.tempY = tempPic.y * 225;
+				thumbImg.onload = drawThumbNail;
+				if(tempPic.pic < 10) {
+					thumbImg.src = "thumbnail_pics/0000000" + tempPic.pic + ".jpg";
+				}
+				else if(tempPic.pic < 100) {
+					thumbImg.src = "thumbnail_pics/000000" + tempPic.pic + ".jpg";
+				}
+				else {
+					thumbImg.src = "thumbnail_pics/00000" + tempPic.pic + ".jpg";
+				}
+
+				basicCtx.ctx.useProgram(crossShader);
+				basicCtx.ctx.uniform2fv(crossVarLocs[1], new Float32Array([(x + closest[0] - 270) / 270, (y + closest[1] - 270) / 270]));
+				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, crossVBO);
+				basicCtx.ctx.vertexAttribPointer(crossVarLocs[0], 2, basicCtx.ctx.FLOAT, false, 0, 0);
+				basicCtx.ctx.enableVertexAttribArray(crossVarLocs[0]);
+				basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, 8);
+				basicCtx.ctx.disableVertexAttribArray(crossVarLocs[0]);
+			}
+			else {
+				thumbCtx.clearRect(0, 0, 300, 225);
+			}
+		};
+
+		this.recursePP = function(node, viewpoint) {
+			if(node.status == COMPLETE) {
+				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
+				if(isvisible(node.radius, centerVS)) {
+					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
+					if(node.Isleaf) {
+						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
+						basicCtx.ctx.vertexAttribPointer(pointPickVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.PickingColorBuffer);
+						basicCtx.ctx.vertexAttribPointer(pointPickVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+						basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, node.VertexPositionBuffer.length / 3);
+					}
+					else {
+						for(var k = 0; k < 8; k++) {
+							if(typeof node.Children[k] != "undefined" && node.Children[k].status == COMPLETE) {
+								this.recursePP(node.Children[k], viewpoint);
+							}
+						}
+					}
+				}
+			}
+		};
+
 		function parseCallback() {
 			if(this.readyState == 4 && this.status == 200) {
 				var obj = JSON.parse(this.responseText);
 				var verts = new Float32Array(obj.Point.length / 2);
 				var cols = new Float32Array(verts.length);
+				var pickCols = new Float32Array(verts.length);
 
-				for(var i = 0, j = 0; i < obj.Point.length; i += 6, j += 3) {
+				for(var i = 0, j = 0; i < obj.Point.length; i += 9, j += 3) {
 					verts[j] 	 = obj.Point[i];
 					verts[j + 1] = obj.Point[i + 1];
 					verts[j + 2] = obj.Point[i + 2];
 					cols[j] 	= obj.Point[i + 3] / 255;
 					cols[j + 1] = obj.Point[i + 4] / 255;
 					cols[j + 2] = obj.Point[i + 5] / 255;
+					if(obj.Isleaf) {
+						picInfo.push({pic: obj.Point[i + 6], x: obj.Point[i + 7], y: obj.Point[i + 8]});
+						pickCols[j]     = (pointPickIndex >> 16) / 255;
+						pickCols[j + 1] = ((pointPickIndex >> 8) & 255) / 255;
+						pickCols[j + 2] = (pointPickIndex & 255) / 255;
+						pointPickIndex++;
+					}
 				}
 
 				if(!obj.Isleaf) {
@@ -255,7 +531,10 @@ var PCTree = (function() {
 					var VBO = basicCtx.ctx.createBuffer();
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, VBO);
 					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
-					this.node.VertexPositionBuffer = {length: verts.length, VBO: VBO}
+					this.node.VertexPositionBuffer = {length: verts.length, VBO: VBO};
+					this.node.PickingColorBuffer = basicCtx.ctx.createBuffer();
+					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.PickingColorBuffer);
+					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, pickCols, basicCtx.ctx.STATIC_DRAW);
 				}
 				this.node.VertexColorBuffer = basicCtx.ctx.createBuffer();
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, this.node.VertexColorBuffer);
@@ -280,6 +559,7 @@ var PCTree = (function() {
 			var node = {
 				VertexPositionBuffer: {},
 				VertexColorBuffer: {},
+				PickingColorBuffer: {},
 				BB: [],
 				status: STARTED, 
 				center: [0, 0, 0],

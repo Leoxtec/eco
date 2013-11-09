@@ -6,6 +6,7 @@ var Markers = (function() {
 		var markerTexCoords;
 		var markerBegin;
 		var markers = [];
+		var cylVBO;
 		var cylinderNormals;
 		var pickingFBO;
 
@@ -68,7 +69,8 @@ var Markers = (function() {
 						radius: temp[i].radius,
 						height: temp[i].height,
 						species: temp[i].species,
-						descr: temp[i].descr
+						descr: temp[i].descr,
+						user: temp[i].user
 					}
 					markers.push(obj);
 				}
@@ -92,23 +94,17 @@ var Markers = (function() {
 																			 -1.0, 1.0, -17.5,
 																			 -1.0, -1.0, -17.5]), basicCtx.ctx.STATIC_DRAW);
 		vertexCylTemp = new Float32Array(126);
-		for(i = 0; i < 126; i += 6) {
-			rads = (i * Math.PI) / 60;
-			vertexCylTemp[i] 	 = vertexCylTemp[i + 3] = Math.cos(rads);
-			vertexCylTemp[i + 1] = vertexCylTemp[i + 4] = Math.sin(rads);
-			vertexCylTemp[i + 2] = 35.0;
-			vertexCylTemp[i + 5] = -17.5;
-		}
-		var cylVBO = basicCtx.ctx.createBuffer();
-		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, cylVBO);
-		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, vertexCylTemp, basicCtx.ctx.STATIC_DRAW);
 		tempNorms = new Float32Array(126);
 		for(i = 0; i < 126; i += 6) {
 			rads = (i * Math.PI) / 60;
-			tempNorms[i] 	 = tempNorms[i + 3] = Math.cos(rads);
-			tempNorms[i + 1] = tempNorms[i + 4] = Math.sin(rads);
+			vertexCylTemp[i] 	 = vertexCylTemp[i + 3] = tempNorms[i] 	   = tempNorms[i + 3] = Math.cos(rads);
+			vertexCylTemp[i + 1] = vertexCylTemp[i + 4] = tempNorms[i + 1] = tempNorms[i + 4] = Math.sin(rads);
+			vertexCylTemp[i + 2] = 35.0; vertexCylTemp[i + 5] = -17.5;
 			tempNorms[i + 2] = tempNorms[i + 5] = 0;
 		}
+		cylVBO = basicCtx.ctx.createBuffer();
+		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, cylVBO);
+		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, vertexCylTemp, basicCtx.ctx.STATIC_DRAW);
 		cylinderNormals = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, cylinderNormals);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempNorms, basicCtx.ctx.STATIC_DRAW);
@@ -190,7 +186,8 @@ var Markers = (function() {
 					radius: V3.length(V3.sub(center, edgePoint)),
 					height: 0,
 					species: 'tree type',
-					descr: 'short description'
+					descr: 'short description',
+					user: pcvUsername
 				}
 				markers.push(obj);
 			}
@@ -202,7 +199,7 @@ var Markers = (function() {
 			mark.descr = descr;
 			
 			var xmlhttp = new XMLHttpRequest();
-			xmlhttp.open("GET", "action.php?a=add&radius="+mark.radius+"&centerX="+mark.center[0]+"&centerY="+mark.center[1]+"&centerZ="+mark.center[2]+"&species="+mark.species+"&descr="+mark.descr, false);
+			xmlhttp.open("GET", "action.php?a=add&radius="+mark.radius+"&centerX="+mark.center[0]+"&centerY="+mark.center[1]+"&centerZ="+mark.center[2]+"&species="+mark.species+"&descr="+mark.descr+"&user="+pcvUsername, false);
 			xmlhttp.send();
 			var response = JSON.parse(xmlhttp.responseText);
 			mark.id = response.id;
@@ -248,12 +245,14 @@ var Markers = (function() {
 				}
 			}
 			if(closestIndex > -1) {
-				$("#markRadius").val(markers[closestIndex].radius);
-				$("#markHeight").val(markers[closestIndex].height);
+				$("#createdBy").val(markers[closestIndex].user);
+				$("#markRadius").val(markers[closestIndex].radius.toFixed(3));
+				$("#markHeight").val(markers[closestIndex].height.toFixed(3));
 				$("#markSpecies").val(markers[closestIndex].species);
 				$("#markDescr").val(markers[closestIndex].descr);
 			}
 			else {
+				$("#createdBy").val('');
 				$("#markRadius").val('');
 				$("#markHeight").val('');
 				$("#markSpecies").val('');
@@ -263,11 +262,12 @@ var Markers = (function() {
 
 		this.displayMarkerInfo = function(x, y) {
 			if(basicCtx.ctx && markers) {
-				var pickingTransform = new Float32Array([		-540,			0, 0, 0,
-														 		   0,		 -540, 0, 0,
+				var pickingTransform = new Float32Array([	 	 540,			0, 0, 0,
+																   0,		  540, 0, 0,
 														 		   0,			0, 1, 0,
-														 2 * x - 540, 2 * y - 540, 0, 1]);
+														 540 - x * 2, 540 - y * 2, 0, 1]);
 				var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
+				pc.basicCtx.ctx.viewport(0, 0, 1, 1);
 				basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
 				basicCtx.ctx.enable(basicCtx.ctx.CULL_FACE);
 				basicCtx.ctx.useProgram(pickShader);
@@ -310,18 +310,21 @@ var Markers = (function() {
 				basicCtx.ctx.readPixels(0, 0, 1, 1, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, arr);
 				var closestIndex = arr[2] - 1;
 				if(closestIndex > -1) {
-					$("#markRadius").val(markers[closestIndex].radius);
-					$("#markHeight").val(markers[closestIndex].height);
+					$("#createdBy").val(markers[closestIndex].user);
+					$("#markRadius").val(markers[closestIndex].radius.toFixed(3));
+					$("#markHeight").val(markers[closestIndex].height.toFixed(3));
 					$("#markSpecies").val(markers[closestIndex].species);
 					$("#markDescr").val(markers[closestIndex].descr);
 				}
 				else {
+					$("#createdBy").val('');
 					$("#markRadius").val('');
 					$("#markHeight").val('');
 					$("#markSpecies").val('');
 					$("#markDescr").val('');
 				}
 				basicCtx.clear();
+				pc.basicCtx.ctx.viewport(0, 0, 540, 540);
 				basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
 			}
 		};

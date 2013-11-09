@@ -123,7 +123,6 @@ var Axes = (function() {
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, letterIndexVBO);
 				basicCtx.ctx.vertexAttribPointer(letterVarLocs[1], 1, basicCtx.ctx.FLOAT, false, 0, 0);
 				basicCtx.ctx.enableVertexAttribArray(letterVarLocs[1]);
-				basicCtx.ctx.activeTexture(basicCtx.ctx.TEXTURE0);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, letterTexture);
 				// basicCtx.ctx.uniform1i(letterVarLocs[5], letterTexture);
 				// basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, 3);

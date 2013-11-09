@@ -1,4 +1,3 @@
-attribute vec3 aVertexPosition;
 attribute float aVertIndex;
 
 uniform mat4 uModelViewMatrix;
@@ -11,7 +10,7 @@ const vec2 offset = vec2(75.0 / 540.0, 20.0 / 540.0);
 
 void main(void) {
 	changeBG = 0.0;
-	vec4 ecPos4 = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
+	vec4 ecPos4 = uProjectionMatrix * uModelViewMatrix * vec4(0.0, 0.0, 2.1036, 1.0);
 	float tempZ = ecPos4.z;
 	float tempW = ecPos4.w;
 	ecPos4 /= ecPos4.w;

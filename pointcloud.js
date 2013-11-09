@@ -4,9 +4,8 @@ var PointCloud = (function() {
 		this.basicCtx.setup(cvsElement);
 
 		this.basicCtx.setDefaults(540, 540);
-		//testing users
 		this.tree = new PCTree(this.basicCtx);
-		this.tree2 = new PCTree(this.basicCtx);
+		//this.tree2 = new PCTree(this.basicCtx);
 		this.markers = new Markers(this.basicCtx);
 
 		this.map = new Map(this.basicCtx);
@@ -30,15 +29,6 @@ var PointCloud = (function() {
 		// }
 
 		this.usePerspective = function() {
-			//testing users
-			// var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.tree.getCenter());
-			// var near = -this.tree.getRadius() - centerVS[2] - 5.0;
-			// if(near < 0.1) {
-			// 	near = 0.1;
-			// }
-			// var far = this.tree.getRadius() - centerVS[2] + 5.0;
-			// var bound = near * this.basicCtx.t30;
-			// this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
 			var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.grid.getCenter());
 			var near = -this.grid.getRadius() - centerVS[2] - 5.0;
 			if(near < 0.1) {
@@ -48,10 +38,8 @@ var PointCloud = (function() {
 			var bound = near * this.basicCtx.t30;
 			this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
 
-
-			//testing users
 			this.tree.usePerspective(near, far);
-			this.tree2.usePerspective(near, far);			
+			//this.tree2.usePerspective(near, far);			
 			this.markers.usePerspective();
 			this.grid.usePerspective();
 		};
@@ -59,9 +47,8 @@ var PointCloud = (function() {
 		this.useOrthographic = function() {
 			this.basicCtx.scaleFactor = 196;
 			var projectionMatrix = M4x4.scale3(1 / 196, 1 / 196, 1, this.basicCtx.orthographicMatrix);
-			//testing user
 			this.tree.useOrthographic(projectionMatrix);
-			this.tree2.useOrthographic(projectionMatrix);
+			//this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
 			this.grid.useOrthographic(projectionMatrix);
 			this.users.useOrthographic(projectionMatrix);
@@ -77,9 +64,8 @@ var PointCloud = (function() {
 			}
 			var temp = 1.0 / this.basicCtx.scaleFactor;
 			var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
-			//testing user
 			this.tree.useOrthographic(projectionMatrix);
-			this.tree2.useOrthographic(projectionMatrix);
+			//this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);
 			this.grid.useOrthographic(projectionMatrix);
 			this.users.useOrthographic(projectionMatrix);
