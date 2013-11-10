@@ -1,5 +1,5 @@
 var pc, ax, map;
-var cam = new Camera({});
+var cam;
 var isDragging = false;
 var placingMarker = false;
 var removingMarker = false;
@@ -388,6 +388,7 @@ function renderPC() {
 
 function start() {
 	pc = new PointCloud(document.getElementById('canvas'));
+	cam = new Camera({radius: pc.grid.getRadius() / Math.tan(Math.PI / 6.0)});
 	cloudtree = pc.tree.root('r', 'point_pick_test');
 	//pc.tree2.root('r', 'reduced_leaf_on');
 	pc.basicCtx.onRender = renderPC;

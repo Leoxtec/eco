@@ -45,8 +45,8 @@ var PointCloud = (function() {
 		};
 
 		this.useOrthographic = function() {
-			this.basicCtx.scaleFactor = 196;
-			var projectionMatrix = M4x4.scale3(1 / 196, 1 / 196, 1, this.basicCtx.orthographicMatrix);
+			this.basicCtx.scaleFactor = this.grid.getRadius();
+			var projectionMatrix = M4x4.scale3(1 / this.basicCtx.scaleFactor, 1 / this.basicCtx.scaleFactor, 1, this.basicCtx.orthographicMatrix);
 			this.tree.useOrthographic(projectionMatrix);
 			//this.tree2.useOrthographic(projectionMatrix);
 			this.markers.useOrthographic(projectionMatrix);

@@ -2,16 +2,10 @@ var Camera = (function(){
     function Camera(config) {
 		var self = this;
 		var nearR = config.closest || 10;
-		var farR = config.farthest || 860;
-		// var farR = config.farthest || 160;
-		var radius = farR / 2;
-		if(config.distance && config.distance <= farR && config.distance >= nearR) {
-		  radius = config.distance;
-		}
+		var startR = config.radius;
+		var radius = config.radius;
 		var point = V3.$(0, 0, 0);
 		var globalUp = V3.$(0, 0, 1);
-		// var tilt = Math.PI / 2;
-		// var pan = -tilt;
 		var tiltMin = 5 * Math.PI / 180;
 		var tiltMax = 175 * Math.PI / 180;
 		var tilt = tiltMin;
@@ -27,13 +21,11 @@ var Camera = (function(){
 		
 		this.setViewMode = function(m){
 			mode = m;
-			radius = farR / 2;
-			// tilt = Math.PI / 2;
+			radius = startR;
 			zoomVel = 0;
 			switch(mode) {
 				case 0:
-					point = V3.$(0, 0, 0);				
-					// pan = -tilt;
+					point = V3.$(0, 0, 0);
 					pan = -Math.PI / 2;
 					tilt = tiltMin;
 					globalUp = V3.$(0, 0, 1);
@@ -42,7 +34,6 @@ var Camera = (function(){
 				case 1:
 				case 2:
 					point = V3.$(0, -radius, 0);
-					// pan = tilt;
 					pan = Math.PI / 2;
 					tilt = pan;
 					dir = V3.$(0, 1, 0);
