@@ -102,8 +102,8 @@ function changeGridPos(val) {
 // 	updateTimeStamp = 1;
 // }
 
-function toggleBS() {
-	pc.tree.toggleBS();
+function colorEnhance(val) {
+	pc.tree.setCE(val);
 }
 
 function viewRadioButton(val) {
@@ -342,7 +342,7 @@ function renderPC() {
 			}
 		}
 		else if(pick) {
-			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY) + 0.5;
+			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY + 0.5);
 		}
 		pc.markers.renderOrthoMarkers();
 	}
@@ -389,7 +389,7 @@ function renderPC() {
 function start() {
 	pc = new PointCloud(document.getElementById('canvas'));
 	cam = new Camera({radius: pc.grid.getRadius() / Math.tan(Math.PI / 6.0)});
-	cloudtree = pc.tree.root('r', 'point_pick_test');
+	cloudtree = pc.tree.root('r', 'point_pick_test_sep');
 	//pc.tree2.root('r', 'reduced_leaf_on');
 	pc.basicCtx.onRender = renderPC;
 	//pc.initializeScaleBar();

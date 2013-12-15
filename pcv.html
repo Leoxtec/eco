@@ -22,6 +22,7 @@
     <script>
         $(document).ready(function(){ 
                 $("#radio").buttonsetv();
+                $("#CEradio").buttonsetv();
                 $("#checkbox").buttonsetv();
         });
     </script>
@@ -142,7 +143,7 @@
     <div id="menu" style="background-color:#FFFFFF;height:540px;width:225px;float:left;">
         <span style="font-family:arial;title='hello'">
         <b>Menu</b><br>
-        <div id="checkbox" style="font-size: 10;">
+        <div id="checkbox" style="font-size: 10; float: left; width: 100">
             <input type="checkbox" id="pc2" name="checkbox" checked="checked">
             <Label for="pc2" title="Toggle the leaf_on point cloud.">Leaf On</Label>
             <input type="checkbox" id="pc1" name="checkbox" checked="checked">
@@ -153,11 +154,20 @@
             <Label for="markers" title="Toggle the markers.">Markers</Label>
             <!-- <input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
             <Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label> -->
-            <input type="checkbox" id="BS" name="checkbox" onclick="toggleBS()">
-            <Label for="BS" title="Toggle color enhancement.">Color Enhance</Lable>
         </div>
         <!--<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
         <span>overlay:</span> <input type="checkbox" id="overlay"/></br>-->
+
+        </br>
+        <div id="CEradio" style="font-size: 10;">
+            <input type="radio" id="radio6" name="CEradio" checked="checked" onclick="colorEnhance(0);">
+            <Label for="radio6" title="Use natural colors">Original</Label>
+            <input type="radio" id="radio7" name="CEradio" onclick="colorEnhance(1);"> 
+            <Label for="radio7" title="Use min max color enhancement.">Min Max</Label>
+            <input type="radio" id="radio8" name="CEradio" onclick="colorEnhance(2);">
+            <Label for="radio8" title="Use histogram equalization color enhancement.">Hist EQ</Label>
+        </div>
+
         </br>
         <div id="radio" style="font-size: 10;">
             <input type="radio" id="radio1" name="radio" checked="checked" onclick="viewRadioButton(0);">

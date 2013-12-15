@@ -8,13 +8,13 @@ uniform float uPointSize;
 // uniform vec3 uAttenuation;
 uniform vec3 uBias;
 uniform vec3 uScale;
-uniform bool uUseBS;
+uniform int uCEMode;
 
 varying vec4 vFrontColor;
 
 void main(void) {
-	if(uUseBS) {
-		vFrontColor = (aVertexColor - vec4(uBias, 0.0)) * vec4(uScale, 1.0); 
+	if(uCEMode == 1) {
+		vFrontColor = (aVertexColor - vec4(uBias, 0.0)) * vec4(uScale, 1.0);
 	}
 	else {
 		vFrontColor = aVertexColor;
