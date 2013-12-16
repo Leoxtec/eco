@@ -35,89 +35,135 @@ switch($key) {
 		getBS();
 }
 
-function findHeight($cyl) {
-	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM point_pick_test WHERE path = 'r'")));
+$heightArr;
+$planes;
+$polyBB;
+function findHeight($mPoints) {
+	global $planes, $heightArr, $polyBB;
+	$heightArr = array();
+	$planes = array();
+	$polyBB = array();
+	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM point_pick_test_qt WHERE path = 'r'")));
 	$data = json_decode($query['data']);
-	$cyl[0] += ($data->BB[0] - $data->BB[3]) / 2 + $data->BB[3];
-	$cyl[1] += ($data->BB[1] - $data->BB[4]) / 2 + $data->BB[4];
-	$cyl[2] += ($data->BB[2] - $data->BB[5]) / 2 + $data->BB[5];
-	$height = findHeightRecursive($cyl, 'r');
-	if($height === -INF) {
-		$height = $data->BB[5];
+	$offset[0] = ($data->BB[2] - $data->BB[0]) / 2 + $data->BB[0];
+	$offset[1] = ($data->BB[3] - $data->BB[1]) / 2 + $data->BB[1];
+	for($i = 0; $i < count($mPoints); $i += 2) {
+		$mPoints[$i] 	 += $offset[0];
+		$mPoints[$i + 1] += $offset[1];
 	}
-	return $height;
+	$pointCount = count($mPoints);
+	$polyBB[0] = $polyBB[1] = INF;
+	$polyBB[2] = $polyBB[3] = -INF;
+	for($i = 0, $j = 0; $i < $pointCount; $i += 2, $j += 5) {
+		$x = $mPoints[$i + 1] - $mPoints[($i + 3) % $pointCount];
+		$y = $mPoints[($i + 2) % $pointCount] - $mPoints[$i];
+		$planes[$j] = $x;
+		$planes[$j + 1] = $y;
+		$planes[$j + 2] = $x * $mPoints[$i] + $y * $mPoints[$i + 1];
+		$planes[$j + 3] = $mPoints[$i + 1];
+		$planes[$j + 4] = $mPoints[($i + 3) % $pointCount];
+		if($mPoints[$i] < $polyBB[0]) {
+			$polyBB[0] = $mPoints[$i];
+		}
+		if($mPoints[$i + 1] < $polyBB[1]) {
+			$polyBB[1] = $mPoints[$i + 1];
+		}
+		if($mPoints[$i] > $polyBB[2]) {
+			$polyBB[2] = $mPoints[$i];
+		}
+		if($mPoints[$i + 1] > $polyBB[3]) {
+			$polyBB[3] = $mPoints[$i + 1];
+		}
+	}
+	findHeightRecursive('r');
+	if(count($heightArr) === 0) {
+		return 0.0;
+	}
+	else {
+		sort($heightArr);
+		return $heightArr[floor(0.95 * count($heightArr))];
+	}
 }
 
-function findHeightRecursive($cyl, $path) {
-	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM point_pick_test WHERE path = '%s'", $path)));
+function findHeightRecursive($path) {
+	$query = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM point_pick_test_qt WHERE path = '%s'", $path)));
 	$data = json_decode($query['data']);
-	if(intersect($cyl, $data->BB)) {
-		$highest = -INF;
-		$result;
+	if(BBIntersect($data->BB)) {
 		if($data->numChildren > 0) {
 			for($i = 0; $i < $data->numChildren; $i++) {
-				$result = findHeightRecursive($cyl, $path . '/' . $i);
-				if($result > $highest) {
-					$highest = $result;
-				}
+				findHeightRecursive($path . '/' . $i);
 			}
 		}
 		else {
-			for($i = 0; $i < count($data->Point); $i += 6) {
-				$distX = $cyl[0] - $data->Point[$i];
-				$distY = $cyl[1] - $data->Point[$i + 1];
-				$squareDist = $distX * $distX + $distY * $distY;
-				if($squareDist < $cyl[3] * $cyl[3] && $data->Point[$i + 2] > $highest) {
-					$highest = $data->Point[$i + 2];
+			pointIntersect($data->Point);
+		}
+	}
+}
+
+function BBIntersect($BB) {
+	global $planes, $polyBB;
+
+	if($BB[0] > $polyBB[2] || $BB[2] < $polyBB[0] || $BB[1] > $polyBB[3] || $BB[3] < $polyBB[1]) {
+		return false;
+	}
+	return true;
+}
+
+function pointIntersect($points) {
+	global $planes, $heightArr, $polyBB;
+	for($i = 0; $i < count($points); $i += 3) {
+		if($points[$i] <= $polyBB[2] && $points[$i] >= $polyBB[0] && $points[$i + 1] <= $polyBB[3] && $points[$i + 1] >= $polyBB[1]) {
+			// winding count code adapted from http://geomalgorithms.com/a03-_inclusion.html
+			// Copyright 2000 softSurfer, 2012 Dan Sunday 
+			// This code may be freely used and modified for any purpose providing that this copyright notice is included with it.
+			// SoftSurfer makes no warranty for this code, and cannot be held liable for any real or imagined damage resulting from its use.
+			// Users of this code must verify correctness for their application.
+			$wn = 0;
+			for($j = 0; $j < count($planes); $j += 5) {
+				if($planes[$j + 3] <=  $points[$i + 1]) {
+					if($planes[$j + 4] > $points[$i + 1]) {
+						if($points[$i] * $planes[$j] + $points[$i + 1] * $planes[$j + 1] - $planes[$j + 2] > 0.0) {
+							$wn++;
+						}
+					}
+				}
+				else {
+					if($planes[$j + 4] <= $points[$i + 1]) {
+						if($points[$i] * $planes[$j] + $points[$i + 1] * $planes[$j + 1] - $planes[$j + 2] < 0.0) {
+							$wn--;
+						}
+					}
 				}
 			}
+			if($wn != 0) {
+				array_push($heightArr, $points[$i + 2]);
+			}
 		}
-		return $highest;
 	}
-	return -INF;
-}
-
-function intersect($cyl, $BB) {
-	$closestX = clamp($cyl[0], $BB[3], $BB[0]);
-	$closestY = clamp($cyl[1], $BB[4], $BB[1]);
-	$distX = $cyl[0] - $closestX;
-	$distY = $cyl[1] - $closestY;
-	$squareDist = $distX * $distX + $distY * $distY;
-	return $squareDist < $cyl[3] * $cyl[3];
-}
-
-function clamp($val, $min, $max) {
-	if($val < $min) {
-		return $min;
-	}
-	if($val > $max) {
-		return $max;
-	}
-	return $val;
 }
 
 function add() {
-	$cyl[0] = mysql_real_escape_string($_GET['centerX']);
-	$cyl[1] = mysql_real_escape_string($_GET['centerY']);
-	$cyl[2] = mysql_real_escape_string($_GET['centerZ']);
-	$cyl[3] = mysql_real_escape_string($_GET['radius']);
-	$height = findHeight($cyl);
-	mysql_query(sprintf("INSERT INTO markers(radius, centerX, centerY, centerZ, height, user, species, description) VALUES(%f, %f, %f, %f, %f, '%s', '%s', '%s')",
-						$cyl[3], $cyl[0], $cyl[1], $cyl[2], $height, mysql_real_escape_string($_GET['user']), mysql_real_escape_string($_GET['species']), mysql_real_escape_string($_GET['descr']))) or die('Query failed. ' . mysql_error());
+	$height = findHeight(json_decode($_GET['points']));
+	if($_GET['id'] > -1) {
+		delete();
+	}
+	mysql_query(sprintf("INSERT INTO new_markers(points, height, species, description, user) VALUES('%s', %f, '%s', '%s', '%s')",
+						mysql_real_escape_string($_GET['points']), $height, mysql_real_escape_string($_GET['species']), mysql_real_escape_string($_GET['descr']), mysql_real_escape_string($_GET['user']))) or die('Query failed. ' . mysql_error());
 	echo '{"id":' . mysql_insert_id() . ',"height":' . $height . '}';
 }
 
 function delete() {
-	mysql_query(sprintf("DELETE FROM markers WHERE id=%d", mysql_real_escape_string($_GET['id'])));
+	mysql_query(sprintf("DELETE FROM new_markers WHERE id=%d", mysql_real_escape_string($_GET['id'])));
 }
 
 function start() {
-	$result = mysql_query("SELECT * FROM markers");
+	$result = mysql_query("SELECT * FROM new_markers");
 	echo '{"markers" : [';
 	if($row = mysql_fetch_assoc($result)) {
-		echo '{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '","user":"', $row['user'], '"}';
+		echo '{"id":', $row['id'], ',"points":', $row['points'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '","user":"', $row['user'], '"}';
 		while ($row = mysql_fetch_assoc($result)) {
-			echo ',{"id":', $row['id'], ',"radius":', $row['radius'], ',"centerX":', $row['centerX'], ',"centerY":', $row['centerY'], ',"centerZ":', $row['centerZ'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '","user":"', $row['user'], '"}';
+			echo ',{"id":', $row['id'], ',"points":', $row['points'], ',"height":', $row['height'], ',"species":"', $row['species'], '","descr":"', $row['description'], '","user":"', $row['user'], '"}';
+
 		}
 	}
 	echo "]}";

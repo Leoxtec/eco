@@ -7,16 +7,18 @@ var StartCoords = [0, 0];
 var viewMode = 0;
 var orthoZoom = false;
 var viewportArray = [233, 585, 540, -540];
-var results1;
-var results2;
+var pickResults;
 var controllable = true;
 var cloudtree;
 var lastTime;
 var PIover2 = Math.PI / 2;
-var pick = false;
+var markerPick = false;
 var photoPick = false;
+var addPoint = false;
 updateTimeStamp = 0;
 pcvUsername = null;
+editMarker = false, markerFound = false, editVert = false, setMarker = false;
+var markerIndex;
 
 function loginUser(user, password) {
 	var xmlhttp = new XMLHttpRequest();
@@ -63,14 +65,13 @@ function switchDiv() {
 	else {
 		a.style.display = "block";
 	}
-	
 	controllable = !controllable;
 	updateTimeStamp = 1;
 }
 
 function setValues() {
 	var form = document.forms[0];
-	pc.markers.setLatestMarkerValues(form.elements[0].value, form.elements[1].value);
+	pc.markers.setMarkerValues(markerIndex, form.elements[0].value, form.elements[1].value);
 	switchDiv();
 }
 
@@ -120,6 +121,10 @@ function viewRadioButton(val) {
 			//pc.tree2.setCheckOrtho(false);
 			pc.users.usePerspective();
 		}
+		if(placingMarker) {
+			pc.markers.cancelNewMarker();
+			placingMarker = false;
+		}
 	}
 	updateTimeStamp = 1;
 }
@@ -141,6 +146,9 @@ function mousePressed() {
 		StartCoords[0] = pc.mouseX;
 		StartCoords[1] = pc.mouseY;
 		isDragging = true;
+		if(markerFound) {
+			editVert = pc.markers.vertexToEdit(pickResults);
+		}
 	}
 	updateTimeStamp = 1;
 }
@@ -148,6 +156,10 @@ function mousePressed() {
 function mouseReleased() {
 	if(controllable) {
 		isDragging = false;
+		if(markerFound) {
+			pc.markers.checkNewVertPos();
+			editVert = false;
+		}
 	}
 	updateTimeStamp = 1;
 }
@@ -155,9 +167,24 @@ function mouseReleased() {
 function keyDown() {
 	if(controllable) {
 		switch(pc.key) {
+			case 78:
+			case 110:
+				// if(pcvUsername && viewMode === 4 && !placingMarker && !setMarker) {
+				if(viewMode === 4 && !placingMarker && !setMarker) {
+					editMarker = !editMarker;
+					if(editMarker) {
+						//not sure what goes here yet...
+					}
+					else {
+						pc.markers.generateMesh();
+						pc.markers.restoreMarker();
+						markerFound = false;
+					}
+				}
+				break;
 			case 86:
 			case 118:
-				pick = true;
+				markerPick = true;
 				break;
 			case 87:
 			case 119:
@@ -186,27 +213,66 @@ function keyDown() {
 				orthoZoom = true;
 				break;
 			case 49:
-				if(!placingMarker && pcvUsername) {
-					StartCoords[0] = pc.mouseX;
-					StartCoords[1] = pc.mouseY;
-					pc.markers.markerBegin = V3.$(StartCoords[0], StartCoords[1], 0);
-					isDragging = true;
-					placingMarker = true;
+				//add pont
+				// if(pcvUsername && viewMode === 4) {
+				if(viewMode === 4) {
+					if(!editMarker) {
+						addPoint = isDragging = placingMarker = true;
+					}
+					if(markerFound) {
+						pc.markers.addEditPoint(pickResults);
+					}
 				}
 				break;
 			case 50:
-				if(placingMarker && pcvUsername) {
-					pc.markers.recordNewMarker(results2, results1);
-					switchDiv();
-					placingMarker = false;
-					isDragging = false;
+				//remove point
+				// if(pcvUsername && viewMode === 4) {
+				if(viewMode === 4) {
+					if(placingMarker) {
+						isDragging = placingMarker = pc.markers.removePoint();
+					}
+					if(markerFound) {
+						pc.markers.removeEditPoint(pickResults);
+					}
 				}
 				break;
 			case 51:
-				if(pcvUsername) {
-					removingMarker = true;
-					StartCoords[0] = pc.mouseX;
-					StartCoords[1] = pc.mouseY;
+				//cancel polygon
+				// if(pcvUsername && viewMode === 4) {
+				if(viewMode === 4) {
+					if(placingMarker) {
+						pc.markers.cancelNewMarker();
+						isDragging = placingMarker = false;
+					}
+				}
+				break;
+			case 52:
+				//accept and close polygon
+				// if(pcvUsername && viewMode === 4) {
+				if(viewMode === 4) {
+					if(placingMarker) {
+						placingMarker = isDragging = pc.markers.recordNewMarker(pickResults);
+						//switchDiv();
+					}
+				}
+				break;
+			case 53:
+				//remove marker
+				// if(pcvUsername && viewMode === 4) {
+				if(viewMode === 4) {
+					if(!editMarker) {
+						removingMarker = true;
+						StartCoords[0] = pc.mouseX;
+						StartCoords[1] = pc.mouseY;
+					}
+				}
+				break;
+			case 54:
+				// if(pcvUsername && viewMode === 4) {
+				if(viewMode === 4) {
+					if(!editMarker && !setMarker) {
+						setMarker = true;
+					}
 				}
 				break;
 			case 66:
@@ -223,9 +289,8 @@ function keyUp() {
 		switch(pc.key) {
 			case 86:
 			case 118:
-				pick = false;
+				markerPick = false;
 				$("#createdBy").val('');
-				$("#markRadius").val('');
 				$("#markHeight").val('');
 				$("#markSpecies").val('');
 				$("#markDescr").val('');
@@ -249,10 +314,6 @@ function keyUp() {
 				cam.setZoomVel(0);
 				orthoZoom = false;
 				break;
-			case 49:
-				isDragging = false;
-				placingMarker = false;
-				break;
 			case 66:
 			case 98:
 				photoPick = false;
@@ -272,7 +333,7 @@ function renderPC() {
 		// rotation will start for the next time this function is called.
 		StartCoords = [pc.mouseX, pc.mouseY];
 		
-		if(!placingMarker) {
+		if(!placingMarker && !editMarker) {
 			if(viewMode === 3 || viewMode === 4) {
 				cam.mapScrollX(-deltaX * 0.25);
 				cam.mapScrollY(deltaY * 0.25);
@@ -325,26 +386,48 @@ function renderPC() {
 	
 	if(document.getElementById('markers').checked) {
 		if(viewMode === 4) {
-			results1 = [];
+			pickResults = V3.$();
 			var sf = pc.basicCtx.getSF();
-			results1[0] = (((pc.mouseX - viewportArray[0]) / viewportArray[2]) * 2 - 1) * sf + camPos[0];
-			results1[1] = (((pc.mouseY - viewportArray[1]) / viewportArray[3]) * 2 - 1) * sf + camPos[1];
-			pc.markers.displayMarkerInfoOrtho(results1);
+			pickResults[0] = (((pc.mouseX - viewportArray[0]) / viewportArray[2]) * 2 - 1) * sf + camPos[0];
+			pickResults[1] = (((pc.mouseY - viewportArray[1]) / viewportArray[3]) * 2 - 1) * sf + camPos[1];
+			if(addPoint) {
+				pc.markers.addPoint(pickResults);
+				addPoint = false;
+			}
 			if(placingMarker) {
-				results2 = [];
-				results2[0] = (((pc.markers.markerBegin[0] - viewportArray[0]) / viewportArray[2]) * 2 - 1) * sf + camPos[0];
-				results2[1] = (((pc.markers.markerBegin[1] - viewportArray[1]) / viewportArray[3]) * 2 - 1) * sf + camPos[1];
-				pc.markers.renderNewMarker(results2, results1);
+				pc.markers.renderNewMarker(pickResults);
 			}
 			if(removingMarker) {
-				pc.markers.removeMarker(results1);
+				pc.markers.removeMarker(pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY + 0.5, false));
 				removingMarker = false;
 			}
+			if(editMarker) {
+				if(!markerFound) {
+					markerFound = pc.markers.markerToEdit(pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY + 0.5, false));
+				}
+				if(!markerFound) {
+					editMarker = false;
+				}
+				else {
+					if(editVert) {
+						pc.markers.moveVertex(pickResults);
+					}
+					pc.markers.renderEditMarker();
+				}
+			}
+			if(setMarker) {
+				markerIndex = pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY + 0.5, false);
+				if(markerIndex > -1) {
+					switchDiv();
+					pc.markers.setNewInfo(markerIndex);
+				}
+				setMarker = false;
+			}
 		}
-		else if(pick) {
-			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY + 0.5);
+		if(markerPick) {
+			pc.markers.displayMarkerInfo(pc.mouseX - viewportArray[0] + 0.5, viewportArray[1] - pc.mouseY + 0.5, true);
 		}
-		pc.markers.renderOrthoMarkers();
+		pc.markers.renderMarkers();
 	}
 
 

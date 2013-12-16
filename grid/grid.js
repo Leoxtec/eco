@@ -23,7 +23,7 @@ var Grid = (function() {
 		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uProjectionMatrix"));
 
 		xmlhttpForBB = new XMLHttpRequest();
-		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=point_pick_test", false);
+		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=point_pick_test_sep", false);
 		xmlhttpForBB.send();
 		BB = JSON.parse(xmlhttpForBB.responseText).BB;
 
@@ -50,7 +50,7 @@ var Grid = (function() {
 		tempExponent--;
 		tempFactor = Math.pow(10.0, tempExponent);
 		tempRadius2 = Math.ceil(tempRadius1 / tempFactor) * tempFactor;
-		tempRadius = Math.sqrt(2 * tempRadius2 * tempRadius2);
+		tempRadius = Math.sqrt(2 * tempRadius2 * tempRadius2 + 0.25 * tempSpan[2] * tempSpan[2]);
 
 		tempArray = new Float32Array((tempRadius2 * 8 + 4) * 3);
 		for(i = 0; i < (tempRadius2 / tempFactor * 8 + 4) * 3; i += 12) {

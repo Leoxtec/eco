@@ -232,7 +232,7 @@ var PCTree = (function() {
 				d[1] = c - a;
 				d[2] = c - b;
 				d[3] = c + b;
-				d[4] = znear + center[2];
+				d[4] = -znear + center[2];
 				d[5] = zfar - center[2];
 			}
 			for(var i = 0; i < 6; i++) {
@@ -278,8 +278,8 @@ var PCTree = (function() {
 				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
 				if(isvisible(node.radius, centerVS)) {
 					// node.lastRendered = (new Date()).getTime();
-					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
-					if(size < 25 || node.Isleaf) {
+					var size = (node.radius * basicCtx.height) / (centerVS[2] * t30);
+					if(Math.abs(size) < 25 || node.Isleaf) {
 						render(node, size); 
 					}
 					else {
@@ -461,36 +461,83 @@ var PCTree = (function() {
 				if(obj[0] === undefined) {
 					obj[0] = obj;
 				}
-				for(var h = 0; h < currentRequest.length; h++) {
-					var verts = new Float32Array(obj[h].Point.length / 4);
-					var cols = new Float32Array(verts.length * 2);
-					var pickCols = new Float32Array(verts.length);
+				// for(var h = 0; h < currentRequest.length; h++) {
+				// 	var verts = new Float32Array(obj[h].Point.length / 4);
+				// 	var cols = new Float32Array(verts.length * 2);
+				// 	var pickCols = new Float32Array(verts.length);
 
-					for(var i = 0, j = 0, k = 0; i < obj[h].Point.length; i += 12, j += 3, k += 6) {
-						verts[j] 	 = obj[h].Point[i];
-						verts[j + 1] = obj[h].Point[i + 1];
-						verts[j + 2] = obj[h].Point[i + 2];
-						cols[k] 	= obj[h].Point[i + 3] / 255;
-						cols[k + 1] = obj[h].Point[i + 4] / 255;
-						cols[k + 2] = obj[h].Point[i + 5] / 255;
-						cols[k + 3] = obj[h].Point[i + 6] / 255;
-						cols[k + 4] = obj[h].Point[i + 7] / 255;
-						cols[k + 5] = obj[h].Point[i + 8] / 255;
-						if(obj[h].Isleaf) {
+				// 	for(var i = 0, j = 0, k = 0; i < obj[h].Point.length; i += 12, j += 3, k += 6) {
+				// 		verts[j] 	 = obj[h].Point[i];
+				// 		verts[j + 1] = obj[h].Point[i + 1];
+				// 		verts[j + 2] = obj[h].Point[i + 2];
+				// 		cols[k] 	= obj[h].Point[i + 3] / 255;
+				// 		cols[k + 1] = obj[h].Point[i + 4] / 255;
+				// 		cols[k + 2] = obj[h].Point[i + 5] / 255;
+				// 		cols[k + 3] = obj[h].Point[i + 6] / 255;
+				// 		cols[k + 4] = obj[h].Point[i + 7] / 255;
+				// 		cols[k + 5] = obj[h].Point[i + 8] / 255;
+				// 		if(obj[h].Isleaf) {
+				// 			picInfo.push({pic: obj[h].Point[i + 9], x: obj[h].Point[i + 10], y: obj[h].Point[i + 11]});
+				// 			pickCols[j]     = (pointPickIndex >> 16) / 255;
+				// 			pickCols[j + 1] = ((pointPickIndex >> 8) & 255) / 255;
+				// 			pickCols[j + 2] = (pointPickIndex & 255) / 255;
+				// 			pointPickIndex++;
+				// 		}
+				// 	}
+
+				// 	if(!obj[h].Isleaf) {
+				// 		currentRequest[h].node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
+				// 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.VertexPositionBuffer);
+				// 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
+				// 	}
+				// 	else {
+				// 		var VBO = basicCtx.ctx.createBuffer();
+				// 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, VBO);
+				// 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
+				// 		currentRequest[h].node.VertexPositionBuffer = {length: verts.length, VBO: VBO};
+				// 		currentRequest[h].node.PickingColorBuffer = basicCtx.ctx.createBuffer();
+				// 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.PickingColorBuffer);
+				// 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, pickCols, basicCtx.ctx.STATIC_DRAW);
+				// 	}
+
+				for(var h = 0; h < currentRequest.length; h++) {
+					if(!obj[h].Isleaf) {
+						var verts = new Float32Array(obj[h].Point.length / 2);
+						var cols = new Float32Array(verts.length);
+
+						verts[0] = obj[h].Point[0];
+						verts[1] = obj[h].Point[1];
+						verts[2] = obj[h].Point[2];
+						cols[0]  = obj[h].Point[3] / 255;
+						cols[1]  = obj[h].Point[4] / 255;
+						cols[2]  = obj[h].Point[5] / 255;
+
+						currentRequest[h].node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
+						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.VertexPositionBuffer);
+						basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
+					}
+					else {
+						var verts = new Float32Array(obj[h].Point.length / 4);
+						var cols = new Float32Array(verts.length * 2);
+						var pickCols = new Float32Array(verts.length);
+
+						for(var i = 0, j = 0, k = 0; i < obj[h].Point.length; i += 12, j += 3, k += 6) {
+							verts[j] 	 = obj[h].Point[i];
+							verts[j + 1] = obj[h].Point[i + 1];
+							verts[j + 2] = obj[h].Point[i + 2];
+							cols[k] 	= obj[h].Point[i + 3] / 255;
+							cols[k + 1] = obj[h].Point[i + 4] / 255;
+							cols[k + 2] = obj[h].Point[i + 5] / 255;
+							cols[k + 3] = obj[h].Point[i + 6] / 255;
+							cols[k + 4] = obj[h].Point[i + 7] / 255;
+							cols[k + 5] = obj[h].Point[i + 8] / 255;
 							picInfo.push({pic: obj[h].Point[i + 9], x: obj[h].Point[i + 10], y: obj[h].Point[i + 11]});
 							pickCols[j]     = (pointPickIndex >> 16) / 255;
 							pickCols[j + 1] = ((pointPickIndex >> 8) & 255) / 255;
 							pickCols[j + 2] = (pointPickIndex & 255) / 255;
 							pointPickIndex++;
 						}
-					}
 
-					if(!obj[h].Isleaf) {
-						currentRequest[h].node.VertexPositionBuffer = basicCtx.ctx.createBuffer();
-						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.VertexPositionBuffer);
-						basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
-					}
-					else {
 						var VBO = basicCtx.ctx.createBuffer();
 						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, VBO);
 						basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, verts, basicCtx.ctx.STATIC_DRAW);
@@ -499,6 +546,7 @@ var PCTree = (function() {
 						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.PickingColorBuffer);
 						basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, pickCols, basicCtx.ctx.STATIC_DRAW);
 					}
+
 					currentRequest[h].node.VertexColorBuffer = basicCtx.ctx.createBuffer();
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.VertexColorBuffer);
 					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, cols, basicCtx.ctx.STATIC_DRAW);

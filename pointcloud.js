@@ -30,11 +30,11 @@ var PointCloud = (function() {
 
 		this.usePerspective = function() {
 			var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.grid.getCenter());
-			var near = -this.grid.getRadius() - centerVS[2] - 5.0;
+			var near = -this.grid.getRadius() - centerVS[2]; // - 5.0;
 			if(near < 0.1) {
 				near = 0.1;
 			}
-			var far = this.grid.getRadius() - centerVS[2] + 5.0;
+			var far = this.grid.getRadius() - centerVS[2]; // + 5.0;
 			var bound = near * this.basicCtx.t30;
 			this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
 
