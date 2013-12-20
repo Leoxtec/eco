@@ -1,0 +1,50 @@
+Changes/optimizations to existing code:
+
+I.		Update control scheme, particularly for placing markers.
+
+II.		Fix the window framing so that web page elements scale and/or don't change relative position.
+
+
+IV. 	Optimizations
+
+		Current:
+		__________________________________________________________________
+		Eliminated overhead code from basicCtx -> cached attribute and uniform locations instead of constantly querying for them. (a lot of time)
+
+		reduced calls for setting modelview matrix and any other uniforms/attributes.
+
+		reduced memory overhead for VBO's.
+
+		moved initialization of tree, markers, axes and map from a function to the constructor (w/ removal of temp vars) to reduce footprint.
+
+		removed memory leak on GPU side for tree pruning and marker deletion.
+
+		changed picking transform to use less time and memory.
+
+		removed normal matrix (which calculated the transpose inverse) and set up the shader to use the regular modelview matrix with the normals having homogeneous coordinate w = 0.
+
+		removed normalization of normals (they are close enough together).
+
+		changed axes to use texture sprite instead of modeled letters.
+
+		the bottleneck is the webGL readpixels() function.  Replaced with cpu side raycasting.
+
+		reworked matrix stack
+
+		combined parser into tree code
+
+		misc little things
+
+		cut down on cylinder polygon count
+
+		changed markers to scale and translate one cylinder instead of storing individual cylinders
+
+		________________________________________________________________________________________
+		possible
+		________________________________________________________________________________________
+
+		check out the other matrix class (may be better implemented)
+
+		try using one canvas with viewporting
+
+		minify JS
