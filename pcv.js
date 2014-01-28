@@ -279,6 +279,10 @@ function keyDown() {
 			case 98:
 				photoPick = true;
 				break;
+			case 85:
+			case 117:
+				pc.tree.toggleLeafDisplayType();
+				break;
 		}
 	}
 	updateTimeStamp = 1;

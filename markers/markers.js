@@ -468,21 +468,22 @@ var Markers = (function() {
 						k++;
 					}
 				}
-				vertsToSubdivide[i] = {point: [vertices[i][0], vertices[i][1]], index: i * 2, convex: convex, ear: ear};
+				vertsToSubdivide[i] = {point: [vertices[i][0], vertices[i][1]], index: el, convex: convex, ear: ear};
 				if(ear) {
 					firstEar = i;
 				}
 			}
 
+			var polyIndexStart = triIndices.length;
 			while(concave && vertsToSubdivide.length > 3) {
 				triIndices.splice(triIndices.length, 0, 
-									   vertsToSubdivide[firstEar % vertsToSubdivide.length].index, 
-									   vertsToSubdivide[(firstEar + 1) % vertsToSubdivide.length].index, 
-									   vertsToSubdivide[(vertsToSubdivide.length + firstEar - 1) % vertsToSubdivide.length].index);
+								  vertsToSubdivide[firstEar % vertsToSubdivide.length].index, 
+								  vertsToSubdivide[(firstEar + 1) % vertsToSubdivide.length].index, 
+								  vertsToSubdivide[(vertsToSubdivide.length + firstEar - 1) % vertsToSubdivide.length].index);
 				triIndices.splice(triIndices.length, 0, 
-									   vertsToSubdivide[firstEar % vertsToSubdivide.length].index + 1,
-									   vertsToSubdivide[(vertsToSubdivide.length + firstEar - 1) % vertsToSubdivide.length].index + 1,
-									   vertsToSubdivide[(firstEar + 1) % vertsToSubdivide.length].index + 1);
+								  vertsToSubdivide[firstEar % vertsToSubdivide.length].index + 1,
+								  vertsToSubdivide[(vertsToSubdivide.length + firstEar - 1) % vertsToSubdivide.length].index + 1,
+								  vertsToSubdivide[(firstEar + 1) % vertsToSubdivide.length].index + 1);
 				vertsToSubdivide.splice(firstEar, 1);
 				j = (vertsToSubdivide.length + firstEar - 1) % vertsToSubdivide.length;
 				for(i = 0; i < 2; i++) {
@@ -529,9 +530,16 @@ var Markers = (function() {
 				vertsToSubdivide.splice(1, 1);
 			}
 
+			polyIndices = [];
+			for(i = polyIndexStart, j = 0; i < triIndices.length; i += 6, j += 3) {
+				polyIndices[j] 	   = triIndices[i] / 2;
+				polyIndices[j + 1] = triIndices[i + 1] / 2;
+				polyIndices[j + 2] = triIndices[i + 2] / 2;
+			}
 			var obj = {
 				id : -1,
 				verts: vertices.slice(),
+				indices: polyIndices,
 				vertVBO : basicCtx.ctx.createBuffer(),
 				triIndVBO : basicCtx.ctx.createBuffer(),
 				lineIndVBO : basicCtx.ctx.createBuffer(),
