@@ -16,7 +16,7 @@ var Grid = (function() {
 		var tempCenter;
 		var tempRadius;
 
-		gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/gridVertShader.c'), basicCtx.getShaderStr('shaders/gridFragShader.c'));
+		gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/grid.vert'), basicCtx.getShaderStr('shaders/grid.frag'));
 		basicCtx.ctx.useProgram(gridShader);
 		gridVarLocs.push(basicCtx.ctx.getAttribLocation(gridShader, "aVertexPosition"));
 		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uModelViewMatrix"));
@@ -133,9 +133,7 @@ var Grid = (function() {
 				basicCtx.ctx.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
 				basicCtx.ctx.vertexAttribPointer(gridVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(gridVarLocs[0]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, gridCount[grid]);
-				basicCtx.ctx.disableVertexAttribArray(gridVarLocs[0]);
 				basicCtx.popMatrix();
 			}
 		};

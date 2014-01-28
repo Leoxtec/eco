@@ -26,7 +26,7 @@ var Map = (function() {
 		var xmax = ymax;
 		orthographicMatrix = M4x4.makeOrtho(-orthoSize, orthoSize, -orthoSize, orthoSize, 0.1, 1000);
 
-		arrowShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basicVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
+		arrowShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basic.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		basicCtx.ctx.useProgram(arrowShader);
 		arrowVarLocs.push(basicCtx.ctx.getAttribLocation(arrowShader, "aVertexPosition"));
 		arrowVarLocs.push(basicCtx.ctx.getAttribLocation(arrowShader, "aVertexColor"));
@@ -53,7 +53,7 @@ var Map = (function() {
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowColorVBO);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, temp, basicCtx.ctx.STATIC_DRAW);
 
-		mapShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cylCapVertShader.c'), basicCtx.getShaderStr('shaders/mapFragShader.c'));
+		mapShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cylCap.vert'), basicCtx.getShaderStr('shaders/map.frag'));
 		basicCtx.ctx.useProgram(mapShader);
 		mapVarLocs.push(basicCtx.ctx.getAttribLocation(mapShader, "aVertexPosition"));
 		mapVarLocs.push(basicCtx.ctx.getAttribLocation(mapShader, "aTexCoord"));
@@ -123,16 +123,12 @@ var Map = (function() {
 				basicCtx.ctx.useProgram(mapShader);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapVBO);
 				basicCtx.ctx.vertexAttribPointer(mapVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(mapVarLocs[0]);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, mapTexCoords);
 				basicCtx.ctx.vertexAttribPointer(mapVarLocs[1], 2, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(mapVarLocs[1]);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, mapTexture);
 				basicCtx.ctx.uniform1i(mapVarLocs[4], mapTexture);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
-				basicCtx.ctx.disableVertexAttribArray(mapVarLocs[0]);
-				basicCtx.ctx.disableVertexAttribArray(mapVarLocs[1]);
 
 				basicCtx.ctx.useProgram(arrowShader);
 				basicCtx.pushMatrix();
@@ -142,13 +138,9 @@ var Map = (function() {
 				basicCtx.ctx.uniformMatrix4fv(arrowVarLocs[2], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowVBO);
 				basicCtx.ctx.vertexAttribPointer(arrowVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[0]);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, arrowColorVBO);
 				basicCtx.ctx.vertexAttribPointer(arrowVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(arrowVarLocs[1]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLES, 0, 9);
-				basicCtx.ctx.disableVertexAttribArray(arrowVarLocs[0]);
-				basicCtx.ctx.disableVertexAttribArray(arrowVarLocs[1]);
 				basicCtx.popMatrix();
 				if(offTheMap) {
 					$("#onOffMap").val('Off the map');

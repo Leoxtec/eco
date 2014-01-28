@@ -10,14 +10,14 @@ uniform vec3 uBias;
 uniform vec3 uScale;
 uniform int uCEMode;
 
-varying vec4 vFrontColor;
+varying vec4 vColor;
 
 void main(void) {
 	if(uCEMode == 1) {
-		vFrontColor = (aVertexColor - vec4(uBias, 0.0)) * vec4(uScale, 1.0);
+		vColor = (aVertexColor - vec4(uBias, 0.0)) * vec4(uScale, 1.0);
 	}
 	else {
-		vFrontColor = aVertexColor;
+		vColor = aVertexColor;
 	}
 	// vec4 ecPos4 = uModelViewMatrix * vec4(aVertexPosition, 1.0);
 	// float dist = length(ecPos4);

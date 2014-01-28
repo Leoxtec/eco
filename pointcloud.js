@@ -4,6 +4,15 @@ var PointCloud = (function() {
 		this.basicCtx.setup(cvsElement);
 
 		this.basicCtx.setDefaults(540, 540);
+		var junkBuffer = this.basicCtx.ctx.createBuffer();
+		this.basicCtx.ctx.bindBuffer(this.basicCtx.ctx.ARRAY_BUFFER, junkBuffer);
+		this.basicCtx.ctx.bufferData(this.basicCtx.ctx.ARRAY_BUFFER, new Float32Array([0.0]), this.basicCtx.ctx.STATIC_DRAW);
+		this.basicCtx.ctx.enableVertexAttribArray(0);
+		this.basicCtx.ctx.enableVertexAttribArray(1);
+		this.basicCtx.ctx.vertexAttribPointer(0, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
+		this.basicCtx.ctx.vertexAttribPointer(1, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
+
+
 		this.tree = new PCTree(this.basicCtx);
 		//this.tree2 = new PCTree(this.basicCtx);
 		this.markers = new Markers(this.basicCtx);

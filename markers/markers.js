@@ -21,7 +21,7 @@ var Markers = (function() {
 		var perspectiveMatrix = M4x4.makeFrustum(-tempBound, tempBound, -tempBound, tempBound, 0.1, 5000.0);
 		delete tempBound;
 
-		var outlineShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/outlineVertShader.c'), basicCtx.getShaderStr('shaders/outlineFragShader.c'));
+		var outlineShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/uniformColor.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		basicCtx.ctx.useProgram(outlineShader);
 		var outlineVarLocs = [];
 		outlineVarLocs.push(basicCtx.ctx.getAttribLocation(outlineShader, "aVertexPosition"));
@@ -61,7 +61,7 @@ var Markers = (function() {
 		xmlhttp.open("GET", "action.php?a=start", true);
 		xmlhttp.send();
 
-		var cylShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cylVertShader.c'), basicCtx.getShaderStr('shaders/cylFragShader.c'));
+		var cylShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/grid.vert'), basicCtx.getShaderStr('shaders/cyl.frag'));
 		basicCtx.ctx.useProgram(cylShader);
 		var cylVarLocs = [];
 		cylVarLocs.push(basicCtx.ctx.getAttribLocation(cylShader, "aVertexPosition"));
@@ -69,7 +69,7 @@ var Markers = (function() {
 		cylVarLocs.push(basicCtx.ctx.getUniformLocation(cylShader, "uProjectionMatrix"));
 		basicCtx.ctx.uniformMatrix4fv(cylVarLocs[2], false, perspectiveMatrix);
 
-		var pickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pickVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
+		var pickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pick.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		basicCtx.ctx.useProgram(pickShader);
 		var pickVarLocs = [];
 		pickVarLocs.push(basicCtx.ctx.getAttribLocation(pickShader, "aVertexPosition"));
@@ -79,7 +79,7 @@ var Markers = (function() {
 		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uColor"));
 		basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, perspectiveMatrix);
 
-		var piontMarkShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointMarkVertShader.c'), basicCtx.getShaderStr('shaders/pointMarkFragShader.c'));
+		var piontMarkShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointMark.vert'), basicCtx.getShaderStr('shaders/pointMark.frag'));
 		basicCtx.ctx.useProgram(piontMarkShader);
 		var pointMarkLocs = [];
 		pointMarkLocs.push(basicCtx.ctx.getAttribLocation(piontMarkShader, "aVertexPosition"));
@@ -141,19 +141,15 @@ var Markers = (function() {
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
 				basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, pointCount * 12, currPos);
 				basicCtx.ctx.useProgram(outlineShader);
-				basicCtx.ctx.uniform4fv(outlineVarLocs[3], [0.0, 0.0, 1.0, 1.0]);
+				basicCtx.ctx.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 1.0]);
 				basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.vertexAttribPointer(outlineVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(outlineVarLocs[0]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.LINE_STRIP, 0, pointCount + 1);
-				basicCtx.ctx.disableVertexAttribArray(outlineVarLocs[0]);
 
 				basicCtx.ctx.useProgram(piontMarkShader);
 				basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.vertexAttribPointer(pointMarkLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(pointMarkLocs[0]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, pointCount + 1);
-				basicCtx.ctx.disableVertexAttribArray(pointMarkLocs[0]);
 			}
 		};
 
@@ -188,19 +184,15 @@ var Markers = (function() {
 			if(basicCtx.ctx) {
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
 				basicCtx.ctx.useProgram(outlineShader);
-				basicCtx.ctx.uniform4fv(outlineVarLocs[3], [0.0, 0.0, 1.0, 1.0]);
+				basicCtx.ctx.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 1.0]);
 				basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.vertexAttribPointer(outlineVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(outlineVarLocs[0]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.LINE_LOOP, 0, pointCount);
-				basicCtx.ctx.disableVertexAttribArray(outlineVarLocs[0]);
 
 				basicCtx.ctx.useProgram(piontMarkShader);
 				basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[1], false, basicCtx.peekMatrix());
 				basicCtx.ctx.vertexAttribPointer(pointMarkLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(pointMarkLocs[0]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, pointCount);
-				basicCtx.ctx.disableVertexAttribArray(pointMarkLocs[0]);
 			}
 		};
 
@@ -641,7 +633,6 @@ var Markers = (function() {
 				basicCtx.ctx.useProgram(pickShader);
 				basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, pickingTransform);
 				basicCtx.ctx.uniformMatrix4fv(pickVarLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.enableVertexAttribArray(pickVarLocs[0]);
 				for(var i = 0; i < markers.length; i++) {
 					color[2] = (i + 1) / 255.0;
 					basicCtx.ctx.uniform4fv(pickVarLocs[4], color);
@@ -650,7 +641,6 @@ var Markers = (function() {
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, markers[i].triIndVBO);
 					basicCtx.ctx.drawElements(basicCtx.ctx.TRIANGLES, markers[i].triSize, basicCtx.ctx.UNSIGNED_BYTE, 0);
 				}
-				basicCtx.ctx.disableVertexAttribArray(pickVarLocs[0]);
 				basicCtx.ctx.disable(basicCtx.ctx.CULL_FACE);
 
 				var arr = new Uint8Array(4);
@@ -690,23 +680,19 @@ var Markers = (function() {
 					basicCtx.ctx.blendFunc(basicCtx.ctx.SRC_ALPHA, basicCtx.ctx.ONE);
 					basicCtx.ctx.useProgram(cylShader);
 					basicCtx.ctx.uniformMatrix4fv(cylVarLocs[1], false, basicCtx.peekMatrix());
-					basicCtx.ctx.enableVertexAttribArray(cylVarLocs[0]);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markers[i].vertVBO);
 					basicCtx.ctx.vertexAttribPointer(cylVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, markers[i].triIndVBO);
 					basicCtx.ctx.drawElements(basicCtx.ctx.TRIANGLES, markers[i].triSize, basicCtx.ctx.UNSIGNED_BYTE, 0);
-					basicCtx.ctx.disableVertexAttribArray(cylVarLocs[0]);
 
 					basicCtx.ctx.disable(basicCtx.ctx.BLEND);
 					basicCtx.ctx.useProgram(outlineShader);
-					basicCtx.ctx.uniform4fv(outlineVarLocs[3], [0.0, 0.0, 0.0, 1.0]);
+					basicCtx.ctx.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 0.0]);
 					basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
-					basicCtx.ctx.enableVertexAttribArray(outlineVarLocs[0]);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markers[i].vertVBO);
 					basicCtx.ctx.vertexAttribPointer(outlineVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, markers[i].lineIndVBO);
 					basicCtx.ctx.drawElements(basicCtx.ctx.LINES, markers[i].lineSize, basicCtx.ctx.UNSIGNED_BYTE, 0)
-					basicCtx.ctx.disableVertexAttribArray(outlineVarLocs[0]);
 				}				
 				basicCtx.ctx.disable(basicCtx.ctx.BLEND);
 				basicCtx.ctx.disable(basicCtx.ctx.CULL_FACE);

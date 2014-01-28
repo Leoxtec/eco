@@ -13,7 +13,7 @@ var Axes = (function() {
 		var axesVarLocs = [];
 		var letterVarLocs = [];
 
-		axesShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basicVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
+		axesShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basic.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		basicCtx.ctx.useProgram(axesShader);
 		axesVarLocs.push(basicCtx.ctx.getAttribLocation(axesShader, "aVertexPosition"));
 		axesVarLocs.push(basicCtx.ctx.getAttribLocation(axesShader, "aVertexColor"));
@@ -38,23 +38,17 @@ var Axes = (function() {
 																			 0.0,0.0,1.0,
 																			 0.0,0.0,1.0]), basicCtx.ctx.STATIC_DRAW);
 
-		// letterShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/axesLetterVertShader.c'), basicCtx.getShaderStr('shaders/axesLetterFragShader.c'));
-		letterShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/letterVertShader.c'), basicCtx.getShaderStr('shaders/mapFragShader.c'));
+		letterShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/letter.vert'), basicCtx.getShaderStr('shaders/map.frag'));
 		basicCtx.ctx.useProgram(letterShader);
 		letterVarLocs.push(basicCtx.ctx.getAttribLocation(letterShader, "aVertexPosition"));
 		letterVarLocs.push(basicCtx.ctx.getAttribLocation(letterShader, "aLetterIndex"));
 		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uModelViewMatrix"));
 		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uProjectionMatrix"));
-		// letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uSizeFactor"));
 		letterVarLocs.push(basicCtx.ctx.getUniformLocation(letterShader, "uSampler"));
 		basicCtx.ctx.uniformMatrix4fv(letterVarLocs[3], false, basicCtx.perspectiveMatrix);
-		// basicCtx.ctx.uniform1f(letterVarLocs[4], (270.0 * (7.0 / 105.0)) / Math.tan(Math.PI / 6.0));
 
 		letterPositionVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, letterPositionVBO);
-		// basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([1.075, 0.0, 0.0,
-		// 																	 0.0, 1.075, 0.0,
-		// 																	 0.0, 0.0, 1.075]), basicCtx.ctx.STATIC_DRAW);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([1.075, 0.0, 0.0,
 																			 1.075, 0.0, 0.0,
 																			 1.075, 0.0, 0.0,
@@ -76,7 +70,6 @@ var Axes = (function() {
 
 		letterIndexVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, letterIndexVBO);
-		// basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([0.0, 1.0, 2.0]), basicCtx.ctx.STATIC_DRAW);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([0.0, 1.0, 2.0, 2.0, 1.0, 3.0,
 																			 4.0, 5.0, 6.0, 6.0, 5.0, 7.0,
 																			 8.0, 9.0, 10.0, 10.0, 9.0, 11.0]), basicCtx.ctx.STATIC_DRAW);
@@ -107,29 +100,19 @@ var Axes = (function() {
 				basicCtx.ctx.uniformMatrix4fv(axesVarLocs[2], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, axesVBO);
 				basicCtx.ctx.vertexAttribPointer(axesVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(axesVarLocs[0]);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, axesColorsVBO);
 				basicCtx.ctx.vertexAttribPointer(axesVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(axesVarLocs[1]);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, 6);
-				basicCtx.ctx.disableVertexAttribArray(axesVarLocs[0]);
-				basicCtx.ctx.disableVertexAttribArray(axesVarLocs[1]);
 
 				basicCtx.ctx.useProgram(letterShader);
 				basicCtx.ctx.uniformMatrix4fv(letterVarLocs[2], false, basicCtx.peekMatrix());
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, letterPositionVBO);
 				basicCtx.ctx.vertexAttribPointer(letterVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(letterVarLocs[0]);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, letterIndexVBO);
 				basicCtx.ctx.vertexAttribPointer(letterVarLocs[1], 1, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(letterVarLocs[1]);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, letterTexture);
-				// basicCtx.ctx.uniform1i(letterVarLocs[5], letterTexture);
-				// basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, 3);
 				basicCtx.ctx.uniform1i(letterVarLocs[4], letterTexture);
 				basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLES, 0, 18);
-				basicCtx.ctx.disableVertexAttribArray(letterVarLocs[0]);
-				basicCtx.ctx.disableVertexAttribArray(letterVarLocs[1]);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 
 				basicCtx.ctx.disable(basicCtx.ctx.BLEND);

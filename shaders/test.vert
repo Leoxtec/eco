@@ -9,11 +9,11 @@ uniform mat4 uPickingMatrix;
 uniform mat4 uPPMV;
 // uniform vec4 uColor;
 
-varying vec4 vFrontColor;
+varying vec4 vColor;
 
 void main(void) {
-	// vFrontColor = uColor;
-	vFrontColor = vec4(aPickColor, 1.0);
+	// vColor = uColor;
+	vColor = vec4(aPickColor, 1.0);
 
 	// vec4 temp = uProjectionMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
 	// temp /= temp.w;

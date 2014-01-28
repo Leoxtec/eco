@@ -3,7 +3,6 @@ var Users = (function() {
 		var basicCtx = bctx;
 
 		var userVBO;
-		// var namePositionVBO;
 		var nameIndexVBO;
 
 		var userShader;
@@ -25,13 +24,13 @@ var Users = (function() {
 		tempBound = 0.1 * Math.tan(Math.PI / 6.0);
 		perspectiveMatrix = M4x4.makeFrustum(-tempBound, tempBound, -tempBound, tempBound, 0.1, 5000.0);
 
-		userShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/uniformColorVertShader.c'), basicCtx.getShaderStr('shaders/basicFragShader.c'));
+		userShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/uniformColor.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		basicCtx.ctx.useProgram(userShader);
 		userVarLocs.push(basicCtx.ctx.getAttribLocation(userShader, "aVertexPosition"));
-		userVarLocs.push(basicCtx.ctx.getUniformLocation(userShader, "uVertexColor"));
 		userVarLocs.push(basicCtx.ctx.getUniformLocation(userShader, "uModelViewMatrix"));
 		userVarLocs.push(basicCtx.ctx.getUniformLocation(userShader, "uProjectionMatrix"));
-		basicCtx.ctx.uniformMatrix4fv(userVarLocs[3], false, perspectiveMatrix);
+		userVarLocs.push(basicCtx.ctx.getUniformLocation(userShader, "uColor"));
+		basicCtx.ctx.uniformMatrix4fv(userVarLocs[2], false, perspectiveMatrix);
 		userVBO = basicCtx.ctx.createBuffer();
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, userVBO);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array([   0.0,     0.0, 0.0,
@@ -50,7 +49,7 @@ var Users = (function() {
 		var yellow = new Float32Array([1.0, 1.0, 0.0]);
 		var black = new Float32Array([0.0, 0.0, 0.0]);
 
-		nameShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/nameVertShader.c'), basicCtx.getShaderStr('shaders/nameFragShader.c'));
+		nameShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/name.vert'), basicCtx.getShaderStr('shaders/name.frag'));
 		basicCtx.ctx.useProgram(nameShader);
 		nameVarLocs.push(basicCtx.ctx.getAttribLocation(nameShader, "aVertIndex"));
 		nameVarLocs.push(basicCtx.ctx.getUniformLocation(nameShader, "uModelViewMatrix"));
@@ -114,14 +113,14 @@ var Users = (function() {
 
 		this.usePerspective = function() {
 			basicCtx.ctx.useProgram(userShader);
-			basicCtx.ctx.uniformMatrix4fv(userVarLocs[3], false, perspectiveMatrix);
+			basicCtx.ctx.uniformMatrix4fv(userVarLocs[2], false, perspectiveMatrix);
 			basicCtx.ctx.useProgram(nameShader);
 			basicCtx.ctx.uniformMatrix4fv(nameVarLocs[2], false, perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
 			basicCtx.ctx.useProgram(userShader);
-			basicCtx.ctx.uniformMatrix4fv(userVarLocs[3], false, projectionMatrix);
+			basicCtx.ctx.uniformMatrix4fv(userVarLocs[2], false, perspectiveMatrix);
 			basicCtx.ctx.useProgram(nameShader);
 			basicCtx.ctx.uniformMatrix4fv(nameVarLocs[2], false, projectionMatrix);
 		};
@@ -154,25 +153,23 @@ var Users = (function() {
 				basicCtx.ctx.useProgram(userShader);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, userVBO);
 				basicCtx.ctx.vertexAttribPointer(userVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(userVarLocs[0]);
 				for(i = 0; i < currentUsers.length; i++) {
 					if(timeStamp - currentUsers[i].t < 1800) {
 						basicCtx.pushMatrix();
 						basicCtx.loadMatrix(viewMatrix);
 						basicCtx.translate(currentUsers[i].x, currentUsers[i].y, currentUsers[i].z);
-						basicCtx.ctx.uniformMatrix4fv(userVarLocs[2], false, basicCtx.peekMatrix());
+						basicCtx.ctx.uniformMatrix4fv(userVarLocs[1], false, basicCtx.peekMatrix());
 						if(timeStamp - currentUsers[i].t > 300) {
-							basicCtx.ctx.uniform3fv(userVarLocs[1], red);
+							basicCtx.ctx.uniform3fv(userVarLocs[3], red);
 						}
 						else {
-							basicCtx.ctx.uniform3fv(userVarLocs[1], yellow);
+							basicCtx.ctx.uniform3fv(userVarLocs[3], yellow);
 						}
 						basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLES, 0, 12);
-						basicCtx.ctx.uniform3fv(userVarLocs[1], black);
+						basicCtx.ctx.uniform3fv(userVarLocs[3], black);
 						basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, 12);
 					}
 				}
-				basicCtx.ctx.disableVertexAttribArray(userVarLocs[0]);
 
 				basicCtx.ctx.enable(basicCtx.ctx.BLEND);
 				basicCtx.ctx.blendFunc(basicCtx.ctx.SRC_ALPHA, basicCtx.ctx.ONE_MINUS_SRC_ALPHA);
@@ -181,7 +178,6 @@ var Users = (function() {
 				basicCtx.ctx.useProgram(nameShader);
 				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, nameIndexVBO);
 				basicCtx.ctx.vertexAttribPointer(nameVarLocs[0], 1, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(nameVarLocs[0]);
 				i--;
 				for(; i > -1; i--) {
 					if(timeStamp - currentUsers[i].t < 1800) {
@@ -192,7 +188,6 @@ var Users = (function() {
 						basicCtx.popMatrix();
 					}
 				}
-				basicCtx.ctx.disableVertexAttribArray(nameVarLocs[0]);
 				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 
 				basicCtx.ctx.disable(basicCtx.ctx.BLEND);
