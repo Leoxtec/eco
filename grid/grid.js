@@ -1,6 +1,7 @@
 var Grid = (function() {
 	function Grid(bctx, BB) {
 		var basicCtx = bctx;
+		var gl = basicCtx.ctx;
 
 		var gridVBO;
 		var gridCount = [];
@@ -16,10 +17,10 @@ var Grid = (function() {
 		var tempRadius;
 
 		gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/grid.vert'), basicCtx.getShaderStr('shaders/grid.frag'));
-		basicCtx.ctx.useProgram(gridShader);
-		gridVarLocs.push(basicCtx.ctx.getAttribLocation(gridShader, "aVertexPosition"));
-		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uModelViewMatrix"));
-		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uProjectionMatrix"));
+		gl.useProgram(gridShader);
+		gridVarLocs.push(gl.getAttribLocation(gridShader, "aVertexPosition"));
+		gridVarLocs.push(gl.getUniformLocation(gridShader, "uModelViewMatrix"));
+		gridVarLocs.push(gl.getUniformLocation(gridShader, "uProjectionMatrix"));
 
 		tempSpan = [BB[3] - BB[0], BB[4] - BB[1], BB[5] - BB[2]];
 		tempCenter = [];
@@ -76,9 +77,9 @@ var Grid = (function() {
 			tempExponent--;
 			tempFactor *= 0.1;
 		}
-		gridVBO = basicCtx.ctx.createBuffer();
-		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
-		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempArray, basicCtx.ctx.STATIC_DRAW);
+		gridVBO = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, gridVBO);
+		gl.bufferData(gl.ARRAY_BUFFER, tempArray, gl.STATIC_DRAW);
 
 		delete tempSpan;
 		delete tempExponent;
@@ -97,13 +98,13 @@ var Grid = (function() {
 		}
 
 		this.usePerspective = function() {
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, basicCtx.perspectiveMatrix);
+			gl.useProgram(gridShader);
+			gl.uniformMatrix4fv(gridVarLocs[2], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, projectionMatrix);
+			gl.useProgram(gridShader);
+			gl.uniformMatrix4fv(gridVarLocs[2], false, projectionMatrix);
 		};
 
 		this.gridSize = function(g) {
@@ -116,16 +117,14 @@ var Grid = (function() {
 		}
 
 		this.render = function() {
-			if(basicCtx) {
-				basicCtx.ctx.useProgram(gridShader);
-				basicCtx.pushMatrix();
-				basicCtx.translate(0.0, 0.0, gridZOffset);
-				basicCtx.ctx.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
-				basicCtx.ctx.vertexAttribPointer(gridVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, gridCount[grid]);
-				basicCtx.popMatrix();
-			}
+			gl.useProgram(gridShader);
+			basicCtx.pushMatrix();
+			basicCtx.translate(0.0, 0.0, gridZOffset);
+			gl.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
+			gl.bindBuffer(gl.ARRAY_BUFFER, gridVBO);
+			gl.vertexAttribPointer(gridVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+			gl.drawArrays(gl.LINES, 0, gridCount[grid]);
+			basicCtx.popMatrix();
 		};
 	}// constructor
 

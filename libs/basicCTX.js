@@ -236,7 +236,12 @@ var BasicCTX = (function() {
 				} catch(e) {}
 			}
 			if(!this.ctx) {
-				window.console.log("Your browser does not support WebGL.");
+				this.canvas.parentNode.innerHTML = 	'<table style="background-color: #8CE; width: 100%; height: 100%;"><tr>' +
+													'<td align="center">' +
+													'<div style="display: table-cell; vertical-align: middle;">' +
+													'<div style="">' + 'This page requires a browser that supports WebGL.<br/>' +
+													'<a href="http://get.webgl.org">Click here to upgrade your browser.</a>' + 
+													'</div></div></td></tr></table>';
 			}
 			// parseInt hack used for Chrome/Chromium
 			this.ctx.viewport(0, 0, parseInt(pWidth), parseInt(pHeight));

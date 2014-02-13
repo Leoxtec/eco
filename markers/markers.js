@@ -2,6 +2,7 @@ var Markers = (function() {
 
 	function Markers(bctx, BB) {
 		var basicCtx = bctx;
+		var gl = basicCtx.ctx;
 
 		var markers = [];
 		var vertEdit;
@@ -17,17 +18,17 @@ var Markers = (function() {
 		delete tempBound;
 
 		var outlineShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/uniformColor.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
-		basicCtx.ctx.useProgram(outlineShader);
+		gl.useProgram(outlineShader);
 		var outlineVarLocs = [];
-		outlineVarLocs.push(basicCtx.ctx.getAttribLocation(outlineShader, "aVertexPosition"));
-		outlineVarLocs.push(basicCtx.ctx.getUniformLocation(outlineShader, "uModelViewMatrix"));
-		outlineVarLocs.push(basicCtx.ctx.getUniformLocation(outlineShader, "uProjectionMatrix"));
-		outlineVarLocs.push(basicCtx.ctx.getUniformLocation(outlineShader, "uColor"));
-		basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[2], false, perspectiveMatrix);
+		outlineVarLocs.push(gl.getAttribLocation(outlineShader, "aVertexPosition"));
+		outlineVarLocs.push(gl.getUniformLocation(outlineShader, "uModelViewMatrix"));
+		outlineVarLocs.push(gl.getUniformLocation(outlineShader, "uProjectionMatrix"));
+		outlineVarLocs.push(gl.getUniformLocation(outlineShader, "uColor"));
+		gl.uniformMatrix4fv(outlineVarLocs[2], false, perspectiveMatrix);
 
-		var outlineBuffer = basicCtx.ctx.createBuffer();
-		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
-		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, new Float32Array(maxPoints * 3), basicCtx.ctx.DYNAMIC_DRAW);
+		var outlineBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(maxPoints * 3), gl.DYNAMIC_DRAW);
 		var vertices = [];
 		var pointCount = 0;
 
@@ -57,95 +58,93 @@ var Markers = (function() {
 		xmlhttp.send();
 
 		var cylShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/grid.vert'), basicCtx.getShaderStr('shaders/cyl.frag'));
-		basicCtx.ctx.useProgram(cylShader);
+		gl.useProgram(cylShader);
 		var cylVarLocs = [];
-		cylVarLocs.push(basicCtx.ctx.getAttribLocation(cylShader, "aVertexPosition"));
-		cylVarLocs.push(basicCtx.ctx.getUniformLocation(cylShader, "uModelViewMatrix"));
-		cylVarLocs.push(basicCtx.ctx.getUniformLocation(cylShader, "uProjectionMatrix"));
-		basicCtx.ctx.uniformMatrix4fv(cylVarLocs[2], false, perspectiveMatrix);
+		cylVarLocs.push(gl.getAttribLocation(cylShader, "aVertexPosition"));
+		cylVarLocs.push(gl.getUniformLocation(cylShader, "uModelViewMatrix"));
+		cylVarLocs.push(gl.getUniformLocation(cylShader, "uProjectionMatrix"));
+		gl.uniformMatrix4fv(cylVarLocs[2], false, perspectiveMatrix);
 
 		var pickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pick.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
-		basicCtx.ctx.useProgram(pickShader);
+		gl.useProgram(pickShader);
 		var pickVarLocs = [];
-		pickVarLocs.push(basicCtx.ctx.getAttribLocation(pickShader, "aVertexPosition"));
-		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uModelViewMatrix"));
-		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uProjectionMatrix"));
-		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uPickingMatrix"));
-		pickVarLocs.push(basicCtx.ctx.getUniformLocation(pickShader, "uColor"));
-		basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, perspectiveMatrix);
+		pickVarLocs.push(gl.getAttribLocation(pickShader, "aVertexPosition"));
+		pickVarLocs.push(gl.getUniformLocation(pickShader, "uModelViewMatrix"));
+		pickVarLocs.push(gl.getUniformLocation(pickShader, "uProjectionMatrix"));
+		pickVarLocs.push(gl.getUniformLocation(pickShader, "uPickingMatrix"));
+		pickVarLocs.push(gl.getUniformLocation(pickShader, "uColor"));
+		gl.uniformMatrix4fv(pickVarLocs[2], false, perspectiveMatrix);
 
 		var piontMarkShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointMark.vert'), basicCtx.getShaderStr('shaders/pointMark.frag'));
-		basicCtx.ctx.useProgram(piontMarkShader);
+		gl.useProgram(piontMarkShader);
 		var pointMarkLocs = [];
-		pointMarkLocs.push(basicCtx.ctx.getAttribLocation(piontMarkShader, "aVertexPosition"));
-		pointMarkLocs.push(basicCtx.ctx.getUniformLocation(piontMarkShader, "uModelViewMatrix"));
-		pointMarkLocs.push(basicCtx.ctx.getUniformLocation(piontMarkShader, "uProjectionMatrix"));
-		basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[2], false, perspectiveMatrix);
+		pointMarkLocs.push(gl.getAttribLocation(piontMarkShader, "aVertexPosition"));
+		pointMarkLocs.push(gl.getUniformLocation(piontMarkShader, "uModelViewMatrix"));
+		pointMarkLocs.push(gl.getUniformLocation(piontMarkShader, "uProjectionMatrix"));
+		gl.uniformMatrix4fv(pointMarkLocs[2], false, perspectiveMatrix);
 
-		var pickingFBO = basicCtx.ctx.createFramebuffer();
-		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
-		pickingTexture = basicCtx.ctx.createTexture();
-		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, pickingTexture);
-		basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
-		renderBuffer = basicCtx.ctx.createRenderbuffer();
-		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, renderBuffer);
-		basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 1, 1);
-		basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, pickingTexture, 0);
-		basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.DEPTH_ATTACHMENT, basicCtx.ctx.RENDERBUFFER, renderBuffer);
-		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, null);
-		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
-		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+		var pickingFBO = gl.createFramebuffer();
+		gl.bindFramebuffer(gl.FRAMEBUFFER, pickingFBO);
+		pickingTexture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, pickingTexture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		renderBuffer = gl.createRenderbuffer();
+		gl.bindRenderbuffer(gl.RENDERBUFFER, renderBuffer);
+		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, 1, 1);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, pickingTexture, 0);
+		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderBuffer);
+		gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		gl.bindTexture(gl.TEXTURE_2D, null);
 
 		delete renderBuffer;
 		delete pickingTexture;
 
 	    this.usePerspective = function() {
-			// basicCtx.ctx.useProgram(cylShader);
-			// basicCtx.ctx.uniformMatrix4fv(cylVarLocs[2], false, perspectiveMatrix);
-			// basicCtx.ctx.useProgram(pickShader);
-			// basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, perspectiveMatrix);
-			// basicCtx.ctx.useProgram(outlineShader);
-			// basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[2], false, perspectiveMatrix);
-			// basicCtx.ctx.useProgram(piontMarkShader);
-			// basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[2], false, perspectiveMatrix);
+			// gl.useProgram(cylShader);
+			// gl.uniformMatrix4fv(cylVarLocs[2], false, perspectiveMatrix);
+			// gl.useProgram(pickShader);
+			// gl.uniformMatrix4fv(pickVarLocs[2], false, perspectiveMatrix);
+			// gl.useProgram(outlineShader);
+			// gl.uniformMatrix4fv(outlineVarLocs[2], false, perspectiveMatrix);
+			// gl.useProgram(piontMarkShader);
+			// gl.uniformMatrix4fv(pointMarkLocs[2], false, perspectiveMatrix);
 
-			basicCtx.ctx.useProgram(cylShader);
-			basicCtx.ctx.uniformMatrix4fv(cylVarLocs[2], false, basicCtx.perspectiveMatrix);
-			basicCtx.ctx.useProgram(pickShader);
-			basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, basicCtx.perspectiveMatrix);
-			basicCtx.ctx.useProgram(outlineShader);
-			basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[2], false, basicCtx.perspectiveMatrix);
-			basicCtx.ctx.useProgram(piontMarkShader);
-			basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[2], false, basicCtx.perspectiveMatrix);
+			gl.useProgram(cylShader);
+			gl.uniformMatrix4fv(cylVarLocs[2], false, basicCtx.perspectiveMatrix);
+			gl.useProgram(pickShader);
+			gl.uniformMatrix4fv(pickVarLocs[2], false, basicCtx.perspectiveMatrix);
+			gl.useProgram(outlineShader);
+			gl.uniformMatrix4fv(outlineVarLocs[2], false, basicCtx.perspectiveMatrix);
+			gl.useProgram(piontMarkShader);
+			gl.uniformMatrix4fv(pointMarkLocs[2], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
-			basicCtx.ctx.useProgram(cylShader);
-			basicCtx.ctx.uniformMatrix4fv(cylVarLocs[2], false, projectionMatrix);
-			basicCtx.ctx.useProgram(pickShader);
-			basicCtx.ctx.uniformMatrix4fv(pickVarLocs[2], false, projectionMatrix);
-			basicCtx.ctx.useProgram(outlineShader);
-			basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[2], false, projectionMatrix);
-			basicCtx.ctx.useProgram(piontMarkShader);
-			basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[2], false, projectionMatrix);
+			gl.useProgram(cylShader);
+			gl.uniformMatrix4fv(cylVarLocs[2], false, projectionMatrix);
+			gl.useProgram(pickShader);
+			gl.uniformMatrix4fv(pickVarLocs[2], false, projectionMatrix);
+			gl.useProgram(outlineShader);
+			gl.uniformMatrix4fv(outlineVarLocs[2], false, projectionMatrix);
+			gl.useProgram(piontMarkShader);
+			gl.uniformMatrix4fv(pointMarkLocs[2], false, projectionMatrix);
 		};
 
 		this.renderNewMarker = function(currPos) {
-			if(basicCtx.ctx) {
-				currPos[2] = maxZ;
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
-				basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, pointCount * 12, currPos);
-				basicCtx.ctx.useProgram(outlineShader);
-				basicCtx.ctx.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 1.0]);
-				basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.vertexAttribPointer(outlineVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.drawArrays(basicCtx.ctx.LINE_STRIP, 0, pointCount + 1);
+			currPos[2] = maxZ;
+			gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, pointCount * 12, currPos);
+			gl.useProgram(outlineShader);
+			gl.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 1.0]);
+			gl.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
+			gl.vertexAttribPointer(outlineVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+			gl.drawArrays(gl.LINE_STRIP, 0, pointCount + 1);
 
-				basicCtx.ctx.useProgram(piontMarkShader);
-				basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.vertexAttribPointer(pointMarkLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, pointCount + 1);
-			}
+			gl.useProgram(piontMarkShader);
+			gl.uniformMatrix4fv(pointMarkLocs[1], false, basicCtx.peekMatrix());
+			gl.vertexAttribPointer(pointMarkLocs[0], 3, gl.FLOAT, false, 0, 0);
+			gl.drawArrays(gl.POINTS, 0, pointCount + 1);
 		};
 
 		this.markerToEdit = function(m) {
@@ -155,13 +154,13 @@ var Markers = (function() {
 			else {
 				vertices = markers[m].verts.slice();
 				pointCount = vertices.length;
-				basicCtx.ctx.deleteBuffer(markers[m].vertVBO);
-				basicCtx.ctx.deleteBuffer(markers[m].triIndVBO);
-				basicCtx.ctx.deleteBuffer(markers[m].lineIndVBO);
+				gl.deleteBuffer(markers[m].vertVBO);
+				gl.deleteBuffer(markers[m].triIndVBO);
+				gl.deleteBuffer(markers[m].lineIndVBO);
 				editMarker = markers.splice(m, 1)[0];
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
+				gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
 				for(var i = 0; i < vertices.length; i++) {
-					basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, i * 12, vertices[i]);
+					gl.bufferSubData(gl.ARRAY_BUFFER, i * 12, vertices[i]);
 				}
 				return true;
 			}
@@ -176,19 +175,17 @@ var Markers = (function() {
 		}
 
 		this.renderEditMarker = function() {
-			if(basicCtx.ctx) {
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
-				basicCtx.ctx.useProgram(outlineShader);
-				basicCtx.ctx.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 1.0]);
-				basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.vertexAttribPointer(outlineVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.drawArrays(basicCtx.ctx.LINE_LOOP, 0, pointCount);
+			gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
+			gl.useProgram(outlineShader);
+			gl.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 1.0]);
+			gl.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
+			gl.vertexAttribPointer(outlineVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+			gl.drawArrays(gl.LINE_LOOP, 0, pointCount);
 
-				basicCtx.ctx.useProgram(piontMarkShader);
-				basicCtx.ctx.uniformMatrix4fv(pointMarkLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.vertexAttribPointer(pointMarkLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, pointCount);
-			}
+			gl.useProgram(piontMarkShader);
+			gl.uniformMatrix4fv(pointMarkLocs[1], false, basicCtx.peekMatrix());
+			gl.vertexAttribPointer(pointMarkLocs[0], 3, gl.FLOAT, false, 0, 0);
+			gl.drawArrays(gl.POINTS, 0, pointCount);
 		};
 
 		this.addEditPoint = function(point) {
@@ -217,9 +214,9 @@ var Markers = (function() {
 					i = (closestIndex + 1) % vertices.length;
 					vertices.splice(i, 0, point);
 					pointCount = vertices.length;
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
 					for(; i < vertices.length; i++) {
-						basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, i * 12, vertices[i]);
+						gl.bufferSubData(gl.ARRAY_BUFFER, i * 12, vertices[i]);
 					}
 				}
 			}
@@ -259,9 +256,9 @@ var Markers = (function() {
 					if(!intersect) {
 						vertices.splice(closestIndex, 1);
 						pointCount = vertices.length;
-						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
+						gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
 						for(i = closestIndex; i < vertices.length; i++) {
-							basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, i * 12, vertices[i]);
+							gl.bufferSubData(gl.ARRAY_BUFFER, i * 12, vertices[i]);
 						}
 					}
 				}
@@ -296,8 +293,8 @@ var Markers = (function() {
 		this.moveVertex = function(point) {
 			point[2] = maxZ;
 			vertices[vertEditIndex] = point;
-			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
-			basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, vertEditIndex * 12, point);
+			gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, vertEditIndex * 12, point);
 		}
 
 		this.checkNewVertPos = function() {
@@ -321,8 +318,8 @@ var Markers = (function() {
 			}
 			if(intersect) {
 				vertices[vertEditIndex] = vertEdit;
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
-				basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, vertEditIndex * 12, vertEdit);
+				gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
+				gl.bufferSubData(gl.ARRAY_BUFFER, vertEditIndex * 12, vertEdit);
 			}
 		}
 
@@ -364,8 +361,8 @@ var Markers = (function() {
 				}
 				if(!intersect) {
 					vertices.push(point);
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, outlineBuffer);
-					basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, pointCount * 12, point);
+					gl.bindBuffer(gl.ARRAY_BUFFER, outlineBuffer);
+					gl.bufferSubData(gl.ARRAY_BUFFER, pointCount * 12, point);
 					pointCount++;
 				}
 			}
@@ -527,9 +524,9 @@ var Markers = (function() {
 				id : -1,
 				verts: vertices.slice(),
 				indices: polyIndices,
-				vertVBO : basicCtx.ctx.createBuffer(),
-				triIndVBO : basicCtx.ctx.createBuffer(),
-				lineIndVBO : basicCtx.ctx.createBuffer(),
+				vertVBO : gl.createBuffer(),
+				triIndVBO : gl.createBuffer(),
+				lineIndVBO : gl.createBuffer(),
 				triSize: triIndices.length,
 				lineSize : lineIndices.length,
 				height: 'not set',
@@ -538,43 +535,40 @@ var Markers = (function() {
 				// user: pcvUsername
 				user: 'testUser'
 			}
-			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, obj.vertVBO);
-			basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempVerts, basicCtx.ctx.STATIC_DRAW);
-			basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, obj.triIndVBO);
-			basicCtx.ctx.bufferData(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, new Uint8Array(triIndices), basicCtx.ctx.STATIC_DRAW);
-			basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, obj.lineIndVBO);
-			basicCtx.ctx.bufferData(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, lineIndices, basicCtx.ctx.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, obj.vertVBO);
+			gl.bufferData(gl.ARRAY_BUFFER, tempVerts, gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, obj.triIndVBO);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(triIndices), gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, obj.lineIndVBO);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lineIndices, gl.STATIC_DRAW);
 			markers.push(obj);
 			pointCount = 0;
 			vertices = [];
 		}
 		
 		this.recordNewMarker = function(lastPoint) {
-			if(basicCtx.ctx) {
-				if(vertices.length > 1) {
-					lastPoint[2] = maxZ;
-					var i;
-					var prev = vertices[vertices.length - 1];
-					var intersect = false;
-					i = 0;
-					while(!intersect && i < vertices.length - 1) {
-						intersect = lineIntersect(prev, lastPoint, vertices[i], vertices[i + 1]);
-						if(!intersect) {
-							intersect = lineIntersect(vertices[i], vertices[i + 1], lastPoint, vertices[0]);
-						}
-						i++;
-					}
+			if(vertices.length > 1) {
+				lastPoint[2] = maxZ;
+				var i;
+				var prev = vertices[vertices.length - 1];
+				var intersect = false;
+				i = 0;
+				while(!intersect && i < vertices.length - 1) {
+					intersect = lineIntersect(prev, lastPoint, vertices[i], vertices[i + 1]);
 					if(!intersect) {
-						intersect = lineIntersect(lastPoint, vertices[0], vertices[i], lastPoint);
+						intersect = lineIntersect(vertices[i], vertices[i + 1], lastPoint, vertices[0]);
 					}
-					if(intersect) {
-						return true;
-					}
-					vertices.push(lastPoint);
-					pointCount++;
-					this.generateMesh();
+					i++;
 				}
-				return false;
+				if(!intersect) {
+					intersect = lineIntersect(lastPoint, vertices[0], vertices[i], lastPoint);
+				}
+				if(intersect) {
+					return true;
+				}
+				vertices.push(lastPoint);
+				pointCount++;
+				this.generateMesh();
 			}
 			return false;
 		};
@@ -605,9 +599,9 @@ var Markers = (function() {
 		
 		this.removeMarker = function(m) {
 			if(m > -1) {
-				basicCtx.ctx.deleteBuffer(markers[m].vertVBO);
-				basicCtx.ctx.deleteBuffer(markers[m].triIndVBO);
-				basicCtx.ctx.deleteBuffer(markers[m].lineIndVBO);
+				gl.deleteBuffer(markers[m].vertVBO);
+				gl.deleteBuffer(markers[m].triIndVBO);
+				gl.deleteBuffer(markers[m].lineIndVBO);
 				var xmlhttp = new XMLHttpRequest();
 				xmlhttp.open("GET", "action.php?a=delete&id="+markers[m].id, true);
 				xmlhttp.send();
@@ -616,30 +610,30 @@ var Markers = (function() {
 		};
 
 		this.displayMarkerInfo = function(x, y, showInfo) {
-			if(basicCtx.ctx && markers) {
+			if(markers) {
 				var pickingTransform = new Float32Array([	 	 540,			0, 0, 0,
 																   0,		  540, 0, 0,
 														 		   0,			0, 1, 0,
 														 540 - x * 2, 540 - y * 2, 0, 1]);
 				var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
-				pc.basicCtx.ctx.viewport(0, 0, 1, 1);
-				basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pickingFBO);
-				basicCtx.ctx.enable(basicCtx.ctx.CULL_FACE);
-				basicCtx.ctx.useProgram(pickShader);
-				basicCtx.ctx.uniformMatrix4fv(pickVarLocs[3], false, pickingTransform);
-				basicCtx.ctx.uniformMatrix4fv(pickVarLocs[1], false, basicCtx.peekMatrix());
+				pc.gl.viewport(0, 0, 1, 1);
+				gl.bindFramebuffer(gl.FRAMEBUFFER, pickingFBO);
+				gl.enable(gl.CULL_FACE);
+				gl.useProgram(pickShader);
+				gl.uniformMatrix4fv(pickVarLocs[3], false, pickingTransform);
+				gl.uniformMatrix4fv(pickVarLocs[1], false, basicCtx.peekMatrix());
 				for(var i = 0; i < markers.length; i++) {
 					color[2] = (i + 1) / 255.0;
-					basicCtx.ctx.uniform4fv(pickVarLocs[4], color);
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markers[i].vertVBO);
-					basicCtx.ctx.vertexAttribPointer(pickVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, markers[i].triIndVBO);
-					basicCtx.ctx.drawElements(basicCtx.ctx.TRIANGLES, markers[i].triSize, basicCtx.ctx.UNSIGNED_BYTE, 0);
+					gl.uniform4fv(pickVarLocs[4], color);
+					gl.bindBuffer(gl.ARRAY_BUFFER, markers[i].vertVBO);
+					gl.vertexAttribPointer(pickVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, markers[i].triIndVBO);
+					gl.drawElements(gl.TRIANGLES, markers[i].triSize, gl.UNSIGNED_BYTE, 0);
 				}
-				basicCtx.ctx.disable(basicCtx.ctx.CULL_FACE);
+				gl.disable(gl.CULL_FACE);
 
 				var arr = new Uint8Array(4);
-				basicCtx.ctx.readPixels(0, 0, 1, 1, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, arr);
+				gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, arr);
 				var closestIndex = arr[2] - 1;
 				if(showInfo && closestIndex > -1) {
 					$("#createdBy").val(markers[closestIndex].user);
@@ -659,39 +653,39 @@ var Markers = (function() {
 					$("#markDescr").val('');
 				}
 				basicCtx.clear();
-				pc.basicCtx.ctx.viewport(0, 0, 540, 540);
-				basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
+				pc.gl.viewport(0, 0, 540, 540);
+				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 				return closestIndex;
 			}
 			return -1;
 		};
 
 		this.renderMarkers = function() {
-			if(basicCtx.ctx && markers) {
-				basicCtx.ctx.enable(basicCtx.ctx.CULL_FACE);
-				basicCtx.ctx.depthMask(false);
+			if(markers) {
+				gl.enable(gl.CULL_FACE);
+				gl.depthMask(false);
 				for(var i = 0; i < markers.length; i++) {
-					basicCtx.ctx.enable(basicCtx.ctx.BLEND);
-					basicCtx.ctx.blendFunc(basicCtx.ctx.SRC_ALPHA, basicCtx.ctx.ONE);
-					basicCtx.ctx.useProgram(cylShader);
-					basicCtx.ctx.uniformMatrix4fv(cylVarLocs[1], false, basicCtx.peekMatrix());
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markers[i].vertVBO);
-					basicCtx.ctx.vertexAttribPointer(cylVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, markers[i].triIndVBO);
-					basicCtx.ctx.drawElements(basicCtx.ctx.TRIANGLES, markers[i].triSize, basicCtx.ctx.UNSIGNED_BYTE, 0);
+					gl.enable(gl.BLEND);
+					gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+					gl.useProgram(cylShader);
+					gl.uniformMatrix4fv(cylVarLocs[1], false, basicCtx.peekMatrix());
+					gl.bindBuffer(gl.ARRAY_BUFFER, markers[i].vertVBO);
+					gl.vertexAttribPointer(cylVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, markers[i].triIndVBO);
+					gl.drawElements(gl.TRIANGLES, markers[i].triSize, gl.UNSIGNED_BYTE, 0);
 
-					basicCtx.ctx.disable(basicCtx.ctx.BLEND);
-					basicCtx.ctx.useProgram(outlineShader);
-					basicCtx.ctx.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 0.0]);
-					basicCtx.ctx.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, markers[i].vertVBO);
-					basicCtx.ctx.vertexAttribPointer(outlineVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-					basicCtx.ctx.bindBuffer(basicCtx.ctx.ELEMENT_ARRAY_BUFFER, markers[i].lineIndVBO);
-					basicCtx.ctx.drawElements(basicCtx.ctx.LINES, markers[i].lineSize, basicCtx.ctx.UNSIGNED_BYTE, 0)
+					gl.disable(gl.BLEND);
+					gl.useProgram(outlineShader);
+					gl.uniform3fv(outlineVarLocs[3], [0.0, 0.0, 0.0]);
+					gl.uniformMatrix4fv(outlineVarLocs[1], false, basicCtx.peekMatrix());
+					gl.bindBuffer(gl.ARRAY_BUFFER, markers[i].vertVBO);
+					gl.vertexAttribPointer(outlineVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, markers[i].lineIndVBO);
+					gl.drawElements(gl.LINES, markers[i].lineSize, gl.UNSIGNED_BYTE, 0)
 				}				
-				basicCtx.ctx.disable(basicCtx.ctx.BLEND);
-				basicCtx.ctx.disable(basicCtx.ctx.CULL_FACE);
-				basicCtx.ctx.depthMask(true);
+				gl.disable(gl.BLEND);
+				gl.disable(gl.CULL_FACE);
+				gl.depthMask(true);
 			}
 		};
 	}
