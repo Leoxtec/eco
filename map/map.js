@@ -1,5 +1,5 @@
 var Map = (function() {
-	function Map(bctx) {
+	function Map(bctx, orthoSize) {
 		var basicCtx = bctx;
 
 		var arrowVBO;
@@ -14,10 +14,6 @@ var Map = (function() {
 		var mapVarLocs = [];
 		var arrowVarLocs = [];
 
-		xmlhttpForOrthoSize = new XMLHttpRequest();
-		xmlhttpForOrthoSize.open("GET", "action.php?a=getMapSize&name=point_pick_test", false);
-		xmlhttpForOrthoSize.send();
-		orthoSize = JSON.parse(xmlhttpForOrthoSize.responseText);
 		arrowAspect = orthoSize / 31.25;
 
 		var ymax = orthoSize - 4 * arrowAspect;
@@ -76,6 +72,10 @@ var Map = (function() {
 																			 -orthoSize, -orthoSize, 0.0,
 																			 -orthoSize,  orthoSize, 0.0]), basicCtx.ctx.STATIC_DRAW);
 		mapTexture = basicCtx.ctx.createTexture();
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, mapTexture);
+		basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
+		basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MAG_FILTER, basicCtx.ctx.NEAREST);
+		basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
 		mapImage = new Image();
 		mapImage.onload = function() {
 			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, mapTexture);
@@ -86,11 +86,9 @@ var Map = (function() {
 			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 			delete this;
 		}
-		mapImage.src = "preprocess/point_pick_test.png";
+		mapImage.src = "StartupTextures/map.png";
 
 		delete orthographicMatrix;
-		delete orthoSize;
-		delete xmlhttpForOrthoSize;
 		delete arrowAspect;
 		delete temp;
 

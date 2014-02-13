@@ -9,7 +9,6 @@ var orthoZoom = false;
 var viewportArray = [233, 585, 540, -540];
 var pickResults;
 var controllable = true;
-var cloudtree;
 var lastTime;
 var PIover2 = Math.PI / 2;
 var markerPick = false;
@@ -369,7 +368,7 @@ function renderPC() {
 		if(photoPick) {
 			pc.tree.pointPicking(camPos, pc.mouseX - viewportArray[0], viewportArray[1] - pc.mouseY);
 		}
-		pc.tree.renderTree(camPos);
+		pc.tree.renderTree(camPos, c);
 	}
 	if(document.getElementById('pc2').checked) {
 		//pc.tree2.renderTree(camPos);
@@ -378,15 +377,6 @@ function renderPC() {
 		pc.grid.render();
 	}
 	pc.basicCtx.popMatrix();
-
-	// if(document.getElementById('scale').checked) {
-		// if(document.getElementById('overlay').checked) {
-			// pc.renderScaleBar(true);
-		// }
-		// else {
-			// pc.renderScaleBar(false);
-		// }
-	// }
 	
 	if(document.getElementById('markers').checked) {
 		if(viewMode === 4) {
@@ -444,13 +434,6 @@ function renderPC() {
 	pc.users.render();
 	pc.basicCtx.popMatrix();
 
-	// var now = (new Date()).getTime();
-	// if(now - lastTime > 2000) {
-	// 	pc.tree.pruneTree(cloudtree, now);
-	//  pc.tree2.pruneTree(cloudtree, now);
-	// 	lastTime = now;
-	// }
-
 	switch(viewMode) {
 		case 0:
 			pc.map.render(V3.scale(cam.getTemp(), cam.getRadius()), cam.getPan() + PIover2);
@@ -470,16 +453,14 @@ function renderPC() {
 			pc.axes.render();
 			break;
 	}
-
 }
 
-function start() {
-	pc = new PointCloud(document.getElementById('canvas'));
+function start(table) {
+	pc = new PointCloud(document.getElementById('canvas'), table);
 	cam = new Camera({radius: pc.grid.getRadius() / Math.tan(Math.PI / 6.0)});
-	cloudtree = pc.tree.root('r', 'point_pick_test_sep');
+	pc.tree.root(table);
 	//pc.tree2.root('r', 'reduced_leaf_on');
 	pc.basicCtx.onRender = renderPC;
-	//pc.initializeScaleBar();
 	pc.onMouseScroll = zoom;
 	pc.onMousePressed = mousePressed;
 	pc.onMouseReleased = mouseReleased;

@@ -116,11 +116,7 @@
     </script>
 </head>
 
-
-
-
-
-<body onLoad="start();" bgcolor="#666666">
+<body onLoad="start(decodeURI(location.search.slice(location.search.indexOf('=')+1, location.search.length)));" bgcolor="#666666">
     <div id="login-form" title="Login" style="font-size: 14;">
         <form>
             <fieldset>
@@ -155,8 +151,6 @@
             <!-- <input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
             <Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label> -->
         </div>
-        <!--<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
-        <span>overlay:</span> <input type="checkbox" id="overlay"/></br>-->
 
         </br>
         <div id="CEradio" style="font-size: 10;">

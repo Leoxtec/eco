@@ -74,6 +74,10 @@ var Axes = (function() {
 																			 4.0, 5.0, 6.0, 6.0, 5.0, 7.0,
 																			 8.0, 9.0, 10.0, 10.0, 9.0, 11.0]), basicCtx.ctx.STATIC_DRAW);
 		letterTexture = basicCtx.ctx.createTexture();
+		basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, letterTexture);
+		basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
+		basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MAG_FILTER, basicCtx.ctx.NEAREST);
+		basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
 		letterImage = new Image();
 		letterImage.onload = function() {
 			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, letterTexture);

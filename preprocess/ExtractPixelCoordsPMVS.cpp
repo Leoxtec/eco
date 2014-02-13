@@ -20,7 +20,15 @@ void calculateImageCoords(struct camera cam, const double point[], double imageC
 
 void fromLocalToWorld(struct geoRefTrans geoRef, const double localPoint[], double worldPoint[]);
 
-int main() {
+int main(int argc, const char* argv[]) {
+	if(argc < 2) {
+		cout << "please add working directory as command line argument" << endl;
+		// current local dir = "../../pointpickingstuff/511_pics"
+		exit(1);
+	}
+
+	string path(argv[1]);
+
 	ifstream inFile;
 	ostringstream oss;
 	string ignoreString;
@@ -31,7 +39,7 @@ int main() {
 	struct camera currCam;
 
 	while(found) {
-		oss << "../../pointpickingstuff/511_pics/pmvs/txt/" << setw(8) << camCount++ << ".txt";
+		oss << path << "/pmvs/txt/" << setw(8) << camCount++ << ".txt";
 		inFile.open(oss.str());
 		if(!inFile) {
 			found = false;
@@ -50,12 +58,13 @@ int main() {
 	}
 	if(cams.empty()) {
 		cout << "could not open pmvs .txt files (CONTOUR files)." << endl;
+		cout << "please ensure file path is correct" << endl;
 		exit(1);
 	}
 
 	struct geoRefTrans geoRef;
-	double omega, phi, kappa, s, ignoreDouble;
-	inFile.open("../../pointpickingstuff/511_pics/georef_transform.txt");
+	double omega, phi, kappa, ignoreDouble;
+	inFile.open(path + "/georef_transform.txt");
 	if(!inFile) {
 		cout << "could not open georeference transform file." << endl;
 		exit(0);
@@ -72,9 +81,10 @@ int main() {
 	geoRef.mat[2][1] = -sin(omega) * cos(phi);
 	geoRef.mat[2][2] = cos(omega) * cos(phi);
 
-	ifstream inPatchFile("../../pointpickingstuff/511_pics/pmvs/models/pmvs_options.txt.patch");
+	ifstream inPatchFile(path + "/pmvs/models/pmvs_options.txt.patch");
 	if(!inPatchFile) {
 		cout << "could not open .patch file" << endl;
+		cout << "please ensure file path is correct" << endl;
 		exit(1);
 	}
 	getline(inPatchFile, ignoreString);
@@ -85,9 +95,10 @@ int main() {
 	double localPoint[3], worldPoint[3];
 	int camIndex;
 
-	ifstream inPlyFile("../../pointpickingstuff/511_pics/pmvs/models/pmvs_options.txt.ply");
+	ifstream inPlyFile(path + "/pmvs/models/pmvs_options.txt.ply");
 	if(!inPlyFile) {
 		cout << "could not open .ply file" << endl;
+		cout << "please ensure file path is correct" << endl;
 		exit(1);
 	}
 	getline(inPlyFile, ignoreString);
@@ -97,7 +108,7 @@ int main() {
 	int color[3];
 	float ignoreFloat;
 
-	ofstream outPlyFile("../../pointpickingstuff/511_pics/pmvs/models/point_pick_test.ply");
+	ofstream outPlyFile(path + "/pmvs/models/point_pick_test.ply");
 	outPlyFile << "ply" << endl;
 	outPlyFile << "format ascii 1.0" << endl;
 	outPlyFile << "element vertex " << pointCount << endl;

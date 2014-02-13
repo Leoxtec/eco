@@ -1,5 +1,5 @@
 var Grid = (function() {
-	function Grid(bctx) {
+	function Grid(bctx, BB) {
 		var basicCtx = bctx;
 
 		var gridVBO;
@@ -10,7 +10,6 @@ var Grid = (function() {
 		var gridZinc;
 
 		var gridShader;
-
 		var gridVarLocs = [];
 
 		var tempCenter;
@@ -21,11 +20,6 @@ var Grid = (function() {
 		gridVarLocs.push(basicCtx.ctx.getAttribLocation(gridShader, "aVertexPosition"));
 		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uModelViewMatrix"));
 		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uProjectionMatrix"));
-
-		xmlhttpForBB = new XMLHttpRequest();
-		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=point_pick_test_sep", false);
-		xmlhttpForBB.send();
-		BB = JSON.parse(xmlhttpForBB.responseText).BB;
 
 		tempSpan = [BB[3] - BB[0], BB[4] - BB[1], BB[5] - BB[2]];
 		tempCenter = [];
@@ -86,8 +80,6 @@ var Grid = (function() {
 		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
 		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempArray, basicCtx.ctx.STATIC_DRAW);
 
-		delete xmlhttpForBB;
-		delete BB;
 		delete tempSpan;
 		delete tempExponent;
 		delete tempFactor;
@@ -96,7 +88,6 @@ var Grid = (function() {
 		delete tempArray;
 		delete i;
 
-
 		this.getCenter = function() {
 			return tempCenter;
 		}
@@ -104,7 +95,6 @@ var Grid = (function() {
 		this.getRadius = function() {
 			return tempRadius;
 		}
-
 
 		this.usePerspective = function() {
 			basicCtx.ctx.useProgram(gridShader);

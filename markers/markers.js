@@ -1,6 +1,6 @@
 var Markers = (function() {
 
-	function Markers(bctx) {
+	function Markers(bctx, BB) {
 		var basicCtx = bctx;
 
 		var markers = [];
@@ -9,13 +9,8 @@ var Markers = (function() {
 		var editMarker;
 		var maxPoints = 20;
 
-		xmlhttpForBB = new XMLHttpRequest();
-		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=point_pick_test_sep", false);
-		xmlhttpForBB.send();
-		tempBB = JSON.parse(xmlhttpForBB.responseText).BB;
-		var maxZ = (tempBB[5] - tempBB[2]) * 0.5;
+		var maxZ = (BB[5] - BB[2]) * 0.5;
 		var minZ = -maxZ;
-		delete tempBB;
 
 		tempBound = 0.1 * Math.tan(Math.PI / 6.0);
 		var perspectiveMatrix = M4x4.makeFrustum(-tempBound, tempBound, -tempBound, tempBound, 0.1, 5000.0);

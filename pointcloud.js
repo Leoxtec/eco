@@ -1,5 +1,5 @@
 var PointCloud = (function() {
-	function PointCloud(cvsElement) {
+	function PointCloud(cvsElement, table) {
 		this.basicCtx = new BasicCTX();
 		this.basicCtx.setup(cvsElement);
 
@@ -12,17 +12,21 @@ var PointCloud = (function() {
 		this.basicCtx.ctx.vertexAttribPointer(0, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
 		this.basicCtx.ctx.vertexAttribPointer(1, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
 
+		request = new XMLHttpRequest();
+		request.open("GET", "action.php?a=getnode&path=r&table="+table, false);
+		request.send();
+		obj = JSON.parse(request.responseText);
 
-		this.tree = new PCTree(this.basicCtx);
+		this.tree = new PCTree(this.basicCtx, obj.b, obj.s);
 		//this.tree2 = new PCTree(this.basicCtx);
-		this.markers = new Markers(this.basicCtx);
-
-		this.map = new Map(this.basicCtx);
+		this.markers = new Markers(this.basicCtx, obj.BB);
+		this.map = new Map(this.basicCtx, obj.o);
 		this.axes = new Axes(this.basicCtx);
-
-		this.grid = new Grid(this.basicCtx);
-
+		this.grid = new Grid(this.basicCtx, obj.BB);
 		this.users = new Users(this.basicCtx);
+
+		delete request;
+		delete obj;
 
 		// enable extensions
 		// var ext = (

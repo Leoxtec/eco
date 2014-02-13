@@ -1,11 +1,15 @@
 var PCTree = (function() {
-	function PCTree(bctx) {
+	function PCTree(bctx, b, s) {
 		var basicCtx = bctx;
 
+		var qSize = 128;
+		var e = Math.cos(Math.PI / 180.0);
+		var updateQueue = [];
+		var maxProcess = 50;
+
 		var requestQueue = [];
-		var currentRequest;
-		var requestFinish = true;
-		var request;
+		var requestCount = 0;
+		var maxRequest = 1;
 
 		var c30 = Math.cos(Math.PI / 6.0);
 		var s30 = Math.sin(Math.PI / 6.0);
@@ -48,11 +52,6 @@ var PCTree = (function() {
 			thumbCtx.stroke();
 		};
 
-		xmlhttpForBiasAndScale = new XMLHttpRequest();
-		xmlhttpForBiasAndScale.open("GET", "action.php?a=getBS&name=point_pick_test", false);
-		xmlhttpForBiasAndScale.send();
-		biasAndScale = JSON.parse(xmlhttpForBiasAndScale.responseText);
-
 		quadShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/quad.vert'), basicCtx.getShaderStr('shaders/quad.frag'));
 		basicCtx.ctx.useProgram(quadShader);
 		quadVarLocs.push(basicCtx.ctx.getAttribLocation(quadShader, "aVertexPosition"));
@@ -64,8 +63,8 @@ var PCTree = (function() {
 		quadVarLocs.push(basicCtx.ctx.getUniformLocation(quadShader, "uBias"));
 		quadVarLocs.push(basicCtx.ctx.getUniformLocation(quadShader, "uScale"));
 		quadVarLocs.push(basicCtx.ctx.getUniformLocation(quadShader, "uCEMode"));
-		basicCtx.ctx.uniform3fv(quadVarLocs[4], biasAndScale.b);
-		basicCtx.ctx.uniform3fv(quadVarLocs[5], biasAndScale.s);
+		basicCtx.ctx.uniform3fv(quadVarLocs[4], b);
+		basicCtx.ctx.uniform3fv(quadVarLocs[5], s);
 		basicCtx.ctx.uniform1i(quadVarLocs[6], 0);
 
 		leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/point.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
@@ -81,12 +80,9 @@ var PCTree = (function() {
 		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uScale"));
 		leafVarLocs.push(basicCtx.ctx.getUniformLocation(leafShader, "uCEMode"));
 		basicCtx.ctx.uniform1f(leafVarLocs[3], 1);
-		basicCtx.ctx.uniform3fv(leafVarLocs[4], biasAndScale.b);
-		basicCtx.ctx.uniform3fv(leafVarLocs[5], biasAndScale.s);
+		basicCtx.ctx.uniform3fv(leafVarLocs[4], b);
+		basicCtx.ctx.uniform3fv(leafVarLocs[5], s);
 		basicCtx.ctx.uniform1i(leafVarLocs[6], 0);
-
-		delete xmlhttpForBiasAndScale;
-		delete biasAndScale;
 
 		var pointPickShader;
 		var pointPickVarLocs = [];
@@ -136,10 +132,6 @@ var PCTree = (function() {
 
 		var currCE;
 		this.setCE = function(val) {
-			basicCtx.ctx.useProgram(quadShader);
-			basicCtx.ctx.uniform1i(quadVarLocs[6], val);
-			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniform1i(leafVarLocs[6], val);
 			currCE = val;
 			if(val === 2) {
 				colorOffset = 12;
@@ -167,11 +159,8 @@ var PCTree = (function() {
 			// basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, projectionMatrix);
 		};
 
-		var currPointSize;
+		var currPointSize = 1;
 		this.pointSize = function(size) {
-			basicCtx.ctx.useProgram(leafShader);
-			// basicCtx.ctx.uniform1f(leafVarLocs[4], size);
-			basicCtx.ctx.uniform1f(leafVarLocs[3], size);
 			currPointSize = size;
 		};
 
@@ -190,6 +179,9 @@ var PCTree = (function() {
 
 		this.setCheckOrtho = function(t) {
 			checkOrtho = t;
+			if(checkOrtho) {
+				checkImps(Tree);
+			}
 		}
 
 		var quadsOnly = false;
@@ -197,10 +189,9 @@ var PCTree = (function() {
 			quadsOnly = !quadsOnly;
 		}
 
-
 		function render(node, size) {
 			if(basicCtx) {
-				if(quadsOnly || !node.Isleaf || size < 25) {
+				if(quadsOnly || !node.Isleaf || size < qSize) {
 					basicCtx.ctx.useProgram(quadShader);
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.quadVBO);
 					basicCtx.ctx.vertexAttribPointer(quadVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 28, 0);
@@ -250,41 +241,135 @@ var PCTree = (function() {
 			return true;
 		}
 
-		this.renderTree = function(viewpoint) {
+		var stat = {viewUp: null, translate: null, camPos: null};
+		var dyn = {viewUp: null, translate: null, camPos: null};
+		var first = true;
+		this.renderTree = function(viewpoint, c) {
 			if(checkOrtho) {
 				var MVP = M4x4.mul(orthoProjection, basicCtx.peekMatrix());
 			}
 			else {
 				var MVP = M4x4.mul(basicCtx.perspectiveMatrix, basicCtx.peekMatrix());
 			}
-			basicCtx.ctx.useProgram(quadShader);
-			basicCtx.ctx.uniformMatrix4fv(quadVarLocs[2], false, MVP);
-			basicCtx.ctx.useProgram(leafShader);
-			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, MVP);
 
-			this.recurseTree(Tree, viewpoint);
-
-			if(requestQueue.length > 0 && requestFinish) {
-				sendRequest();
+			if(first) {
+				var staticMV = basicCtx.peekMatrix();
+				stat.viewUp = V3.$(staticMV[1], staticMV[5], staticMV[9]);
+				stat.translateVec = c;
+				stat.camPos = viewpoint;
+				first = false;
 			}
-		};
 
-		this.recurseTree = function(node, viewpoint) {
-			if(node.status == COMPLETE) {
-				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
-				if(isvisible(node.radius, centerVS)) {
-					var size = Math.abs((node.radius * basicCtx.height) / (centerVS[2] * t30));
-					if(size < 25 || node.Isleaf) {
-						render(node, size); 
+			if(Tree.status == COMPLETE) {
+				if(Tree.inTex) {
+					if(updateQueue.length > 0) {
+						processQueue();
 					}
 					else {
-						for(var k = 0; k < 8; k++) {
-							if(typeof node.Children[k] == "undefined") {
-								load(node, k);
-							}
-							else if(node.Children[k].status == COMPLETE){
-								this.recurseTree(node.Children[k], viewpoint);
-							}
+						var staticMV = basicCtx.peekMatrix();
+						dyn.viewUp = V3.$(staticMV[1], staticMV[5], staticMV[9]);
+						dyn.translateVec = c;
+						dyn.camPos = viewpoint;
+						if(!checkOrtho) {
+							checkImps(Tree);
+						}
+					}
+				}
+				basicCtx.ctx.useProgram(quadShader);
+				basicCtx.ctx.uniformMatrix4fv(quadVarLocs[2], false, MVP);
+				basicCtx.ctx.uniform1i(quadVarLocs[6], currCE);
+				basicCtx.ctx.useProgram(leafShader);
+				basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, MVP);
+				basicCtx.ctx.uniform1f(leafVarLocs[3], currPointSize);
+				basicCtx.ctx.uniform1i(leafVarLocs[6], currCE);
+				basicCtx.ctx.viewport(0, 0, 540, 540);
+
+				this.recurseTree(Tree);
+			}
+			sendRequest();
+		};
+
+		function processQueue() {
+			basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, FBO);
+			basicCtx.ctx.useProgram(leafShader);
+			basicCtx.ctx.uniform1f(leafVarLocs[3], 1.0);
+			basicCtx.ctx.uniform1i(leafVarLocs[6], 0);
+			basicCtx.ctx.useProgram(quadShader);
+			basicCtx.ctx.uniform1i(quadVarLocs[6], 0);
+
+			var count = 0;
+			while(count < maxProcess && updateQueue.length > 0) {
+				var node = updateQueue.splice(0, 1)[0];
+				updateBB(node, node.newDir, dyn);
+				if(node.Isleaf) {
+					rendTexImp(node, false);
+				}
+				else {
+					checkParent(node.Children[0], false);
+				}
+				count++;
+			}
+
+			basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
+		}
+
+		function checkImps(node) {
+			var update = false;
+			node.newDir = V3.normalize(V3.sub(V3.sub(node.center, dyn.translateVec), dyn.camPos));
+			// var vec = V3.sub(V3.sub(node.center, dyn.translateVec), dyn.camPos)
+			// node.newLen = V3.length(vec);
+			// node.newDir = V3.scale(vec, 1 / node.newLen);
+
+			// if(V3.dot(node.newDir, node.dir) < e) {
+			if(checkOrtho || !V3.equals(node.newDir, node.dir)) {
+				update = true;
+				if(node.Isleaf) {
+					updateQueue.push(node);
+					return true;
+				}
+			}
+			if(!node.Isleaf) {
+				for(var i = 0; i < 8; i++) {
+					if(checkImps(node.Children[i])) {
+						update = true;
+					}
+				}
+			}
+			if(update) {
+				updateQueue.push(node);
+			}
+			return update;
+		}
+
+		this.recurseTree = function(node) {
+			var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
+			if(isvisible(node.radius, centerVS)) {
+				if(checkOrtho) {
+					var size = node.radius * basicCtx.height / basicCtx.scaleFactor;
+				}
+				else {
+					var size = Math.abs((node.radius * basicCtx.height) / (centerVS[2] * t30));
+				}
+				if(node.inTex && (size < qSize || node.Isleaf)) {
+					render(node, size);
+				}
+				else {
+					var renderParent = false;
+					for(var i = 0; i < 8; i++) {						
+						if(typeof node.Children[i] == "undefined") {
+							load(node, i);
+							renderParent = true;
+						}
+						else if(node.Children[i].status != COMPLETE) {
+							renderParent = true;
+						}
+					}
+					if(renderParent) {
+						render(node, 0);
+					}
+					else {
+						for(var j = 0; j < 8; j++) {
+							this.recurseTree(node.Children[j]);
 						}
 					}
 				}
@@ -292,11 +377,11 @@ var PCTree = (function() {
 		};
 
 		this.pointPicking = function(viewpoint, x, y) {
-			var pickingTransform = new Float32Array([	 	 54,			0, 0, 0,
-																   0,		  54, 0, 0,
-														 		   0,			0, 1, 0,
-														 54 - x * 0.2, 54 - y * 0.2, 0, 1]);
-			pc.basicCtx.ctx.viewport(0, 0, 10, 10);
+			var pickingTransform = new Float32Array([		   54,			  0, 0, 0,
+																0,		     54, 0, 0,
+																0,			  0, 1, 0,
+													 54 - x * 0.2, 54 - y * 0.2, 0, 1]);
+			basicCtx.ctx.viewport(0, 0, 10, 10);
 			basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, pointPickingFBO);
 			basicCtx.clear();
 			basicCtx.ctx.useProgram(pointPickShader);
@@ -332,7 +417,7 @@ var PCTree = (function() {
 				}
 			}
 
-			pc.basicCtx.ctx.viewport(0, 0, 540, 540);
+			basicCtx.ctx.viewport(0, 0, 540, 540);
 			basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
 
 			if(id > -1) {
@@ -365,7 +450,6 @@ var PCTree = (function() {
 			if(node.status == COMPLETE) {
 				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
 				if(isvisible(node.radius, centerVS)) {
-					var size = (node.radius * basicCtx.height) / (-centerVS[2] * t30);
 					if(node.Isleaf) {
 						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
 						basicCtx.ctx.vertexAttribPointer(pointPickVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
@@ -388,13 +472,139 @@ var PCTree = (function() {
 		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, FBO);
 		depthBuffer = basicCtx.ctx.createRenderbuffer();
 		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, depthBuffer);
-		basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, 32, 32);
+		basicCtx.ctx.renderbufferStorage(basicCtx.ctx.RENDERBUFFER, basicCtx.ctx.DEPTH_COMPONENT16, qSize, qSize);
 		basicCtx.ctx.framebufferRenderbuffer(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.DEPTH_ATTACHMENT, basicCtx.ctx.RENDERBUFFER, depthBuffer);
 		basicCtx.ctx.bindRenderbuffer(basicCtx.ctx.RENDERBUFFER, null);
 		basicCtx.ctx.deleteRenderbuffer(depthBuffer);
 		basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
 		delete depthBuffer;
 
+		function transformBB(BB, transform) {
+			var newBB = [transform[12], transform[13], transform[14], transform[12], transform[13], transform[14]];
+
+			if(transform[0] > 0) {newBB[0] += transform[0] * BB[0]; newBB[3] += transform[0] * BB[3];}
+			else {newBB[3] += transform[0] * BB[0]; newBB[0] += transform[0] * BB[3];}
+
+			if(transform[4] > 0) {newBB[0] += transform[4] * BB[1]; newBB[3] += transform[4] * BB[4];}
+			else {newBB[3] += transform[4] * BB[1]; newBB[0] += transform[4] * BB[4];}
+
+			if(transform[8] > 0) {newBB[0] += transform[8] * BB[2]; newBB[3] += transform[8] * BB[5];}
+			else {newBB[3] += transform[8] * BB[2]; newBB[0] += transform[8] * BB[5];}
+
+			if(transform[1] > 0) {newBB[1] += transform[1] * BB[0]; newBB[4] += transform[1] * BB[3];}
+			else {newBB[4] += transform[1] * BB[0]; newBB[1] += transform[1] * BB[3];}
+
+			if(transform[5] > 0) {newBB[1] += transform[5] * BB[1]; newBB[4] += transform[5] * BB[4];}
+			else {newBB[4] += transform[5] * BB[1]; newBB[1] += transform[5] * BB[4];}
+
+			if(transform[9] > 0) {newBB[1] += transform[9] * BB[2]; newBB[4] += transform[9] * BB[5];}
+			else {newBB[4] += transform[9] * BB[2]; newBB[1] += transform[9] * BB[5];}
+
+			if(transform[2] > 0) {newBB[2] += transform[2] * BB[0]; newBB[5] += transform[2] * BB[3];}
+			else {newBB[5] += transform[2] * BB[0]; newBB[2] += transform[2] * BB[3];}
+
+			if(transform[6] > 0) {newBB[2] += transform[6] * BB[1]; newBB[5] += transform[6] * BB[4];}
+			else {newBB[5] += transform[6] * BB[1]; newBB[2] += transform[6] * BB[4];}
+
+			if(transform[10] > 0) {newBB[2] += transform[10] * BB[2]; newBB[5] += transform[10] * BB[5];}
+			else {newBB[5] += transform[10] * BB[2]; newBB[2] += transform[10] * BB[5];}
+
+			return newBB;
+		}
+
+		var quad = new Float32Array(28);
+		quad[3]  = 0.5; quad[4]  = 0;
+		quad[10] = 0.5; quad[11] = 1;
+		quad[17] = 0.0; quad[18] = 0;
+		quad[24] = 0.0; quad[25] = 1;
+		quad[5]  = 1.0; quad[6]  = 0;
+		quad[12] = 1.0; quad[13] = 1;
+		quad[19] = 0.5; quad[20] = 0;
+		quad[26] = 0.5; quad[27] = 1;
+
+		function updateBB(node, newDir, obj) {
+			if(checkOrtho) {
+				node.dir = [0, 0, 0];
+				var pos = [(node.BB[3] + node.BB[0]) * 0.5, (node.BB[4] + node.BB[1]) * 0.5, node.BB[5] + 1];
+				var viewMat = M4x4.makeLookAt(pos, V3.add(pos, [0, 0, -1]), [0, 1, 0]);
+
+				quad[0]  = node.BB[3]; quad[1]  = node.BB[1]; quad[2]  = node.BB[5];
+				quad[7]  = node.BB[3]; quad[8]  = node.BB[4]; quad[9]  = node.BB[5];
+				quad[14] = node.BB[0]; quad[15] = node.BB[1]; quad[16] = node.BB[5];
+				quad[21] = node.BB[0]; quad[22] = node.BB[4]; quad[23] = node.BB[5];
+
+				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.quadVBO);
+				basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, 0, quad);
+
+				var halfWidth = (node.BB[3] - node.BB[0]) * 0.5;
+				var halfHeight = (node.BB[4] - node.BB[1]) * 0.5;
+				node.mvpMat = M4x4.mul(M4x4.makeOrtho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1, 1 + node.BB[5] - node.BB[2]), viewMat);
+			}
+			else {
+				node.dir = newDir;
+				var viewMat = M4x4.makeLookAt(obj.camPos, V3.add(obj.camPos, newDir), obj.viewUp);
+				viewMat = M4x4.translate(V3.scale(obj.translateVec, -1), viewMat);
+				var viewMatInv = M4x4.inverse(viewMat);
+				var newBB = transformBB(node.BB, viewMat);
+
+				var point = V3.mul4x4(viewMatInv, [newBB[3], newBB[1], newBB[5]]);
+				quad[0] = point[0]; quad[1] = point[1]; quad[2] = point[2];
+
+				point = V3.mul4x4(viewMatInv, [newBB[3], newBB[4], newBB[5]]);
+				quad[7] = point[0]; quad[8] = point[1]; quad[9] = point[2];
+
+				point = V3.mul4x4(viewMatInv, [newBB[0], newBB[1], newBB[5]]);
+				quad[14] = point[0]; quad[15] = point[1]; quad[16] = point[2];
+
+				point = V3.mul4x4(viewMatInv, [newBB[0], newBB[4], newBB[5]]);
+				quad[21] = point[0]; quad[22] = point[1]; quad[23] = point[2];
+
+				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.quadVBO);
+				basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, 0, quad);
+
+				var newBBDiameter = V3.length(V3.sub(V3.mul4x4(viewMatInv, [newBB[3], newBB[4], newBB[2]]), [quad[14], quad[15], quad[16]]));
+
+				var quadCenter = V3.sub([(quad[0] + quad[7] + quad[14] + quad[21]) * 0.25, 
+								  		 (quad[1] + quad[8] + quad[15] + quad[22]) * 0.25, 
+								  		 (quad[2] + quad[9] + quad[16] + quad[23]) * 0.25],
+								  		obj.translateVec);
+
+				var halfWidth = V3.length(V3.sub([quad[0], quad[1], quad[2]], [quad[14], quad[15], quad[16]])) * 0.5;
+				var halfHeight = V3.length(V3.sub([quad[7], quad[8], quad[9]], [quad[0], quad[1], quad[2]])) * 0.5;
+				var nearPlane = V3.length(V3.sub(obj.camPos, quadCenter));
+				node.mvpMat = M4x4.mul(M4x4.makeFrustum(-halfWidth, halfWidth, -halfHeight, halfHeight, nearPlane, nearPlane + newBBDiameter), viewMat);
+
+				// node.dir = newDir;
+				// var viewMat = M4x4.makeLookAt(obj.camPos, V3.add(obj.camPos, newDir), obj.viewUp);
+				// var right = V3.scale([viewMat[0], viewMat[4], viewMat[8]], node.radius);
+				// var left = V3.scale(right, -1);
+				// var up = V3.scale([viewMat[1], viewMat[5], viewMat[9]], node.radius);
+				// var down = V3.scale(up, -1);
+				// var back = V3.scale([viewMat[2], viewMat[6], viewMat[10]], node.radius);
+
+				// quad[0] = right[0] + down[0] + back[0] + node.center[0];
+				// quad[1] = right[1] + down[1] + back[1] + node.center[1];
+				// quad[2] = right[2] + down[2] + back[2] + node.center[2];
+
+				// quad[7] = right[0] + up[0] + back[0] + node.center[0];
+				// quad[8] = right[1] + up[1] + back[1] + node.center[1];
+				// quad[9] = right[2] + up[2] + back[2] + node.center[2];
+
+				// quad[14] = left[0] + down[0] + back[0] + node.center[0];
+				// quad[15] = left[1] + down[1] + back[1] + node.center[1];
+				// quad[16] = left[2] + down[2] + back[2] + node.center[2];
+
+				// quad[21] = left[0] + up[0] + back[0] + node.center[0];
+				// quad[22] = left[1] + up[1] + back[1] + node.center[1];
+				// quad[23] = left[2] + up[2] + back[2] + node.center[2];
+
+				// basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.quadVBO);
+				// basicCtx.ctx.bufferSubData(basicCtx.ctx.ARRAY_BUFFER, 0, quad);
+
+				// viewMat = M4x4.translate(V3.scale(obj.translateVec, -1), viewMat);
+				// node.mvpMat = M4x4.mul(M4x4.makeFrustum(-node.radius, node.radius, -node.radius, node.radius, node.newLen - node.radius, node.newLen + node.radius), viewMat);
+			}
+		}
 
 		function parseCallback() {
 			if(this.readyState == 4 && this.status == 200) {
@@ -402,6 +612,8 @@ var PCTree = (function() {
 				if(obj[0] === undefined) {
 					obj[0] = obj;
 				}
+
+				var currentRequest = this.currentRequest;
 
 				for(var h = 0; h < currentRequest.length; h++) {
 					currentRequest[h].node.Isleaf = obj[h].Isleaf;
@@ -415,39 +627,15 @@ var PCTree = (function() {
 					currentRequest[h].node.center[2] = temp[2] * 0.5 + currentRequest[h].node.BB[2];
 					currentRequest[h].node.radius =  Math.sqrt(temp[0] * temp[0] + temp[1] * temp[1] + temp[2] * temp[2]) * 0.5;
 
-					var size;
-					var quad = new Float32Array(28);
-					quad[0]  = obj[h].BB[3]; quad[1]  = obj[h].BB[1]; quad[2]  = currentRequest[h].node.center[2];
-					quad[7]  = obj[h].BB[3]; quad[8]  = obj[h].BB[4]; quad[9]  = currentRequest[h].node.center[2];
-					quad[14] = obj[h].BB[0]; quad[15] = obj[h].BB[1]; quad[16] = currentRequest[h].node.center[2];
-					quad[21] = obj[h].BB[0]; quad[22] = obj[h].BB[4]; quad[23] = currentRequest[h].node.center[2];
-					if(temp[0] > temp[1]) {
-						size = temp[0] * 0.5;
-						var texOffset = 0.5 * temp[1] / temp[0];
-						quad[3]  = 0.5; quad[4]  = 0.5 - texOffset;
-						quad[10] = 0.5; quad[11] = 0.5 + texOffset;
-						quad[17] = 0.0; quad[18] = 0.5 - texOffset;
-						quad[24] = 0.0; quad[25] = 0.5 + texOffset;
-						quad[5]  = 1.0; quad[6]  = 0.5 - texOffset;
-						quad[12] = 1.0; quad[13] = 0.5 + texOffset;
-						quad[19] = 0.5; quad[20] = 0.5 - texOffset;
-						quad[26] = 0.5; quad[27] = 0.5 + texOffset;
-					}
-					else {
-						size = temp[1] * 0.5;
-						var texOffset = 0.5 * temp[0] / temp[1];
-						quad[3]  = 0.25 + texOffset * 0.5; quad[4]  = 0;
-						quad[10] = 0.25 + texOffset * 0.5; quad[11] = 1;
-						quad[17] = 0.25 - texOffset * 0.5; quad[18] = 0;
-						quad[24] = 0.25 - texOffset * 0.5; quad[25] = 1;
-						quad[5]  = 0.75 + texOffset * 0.5; quad[6]  = 0;
-						quad[12] = 0.75 + texOffset * 0.5; quad[13] = 1;
-						quad[19] = 0.75 - texOffset * 0.5; quad[20] = 0;
-						quad[26] = 0.75 - texOffset * 0.5; quad[27] = 1;
-					}
+					var dir = V3.normalize(V3.sub(V3.sub(currentRequest[h].node.center, stat.translateVec), stat.camPos));
+					// var vec = V3.sub(V3.sub(currentRequest[h].node.center, stat.translateVec), stat.camPos);
+					// currentRequest[h].node.newLen = V3.length(vec);
+					// var dir = V3.scale(vec, 1 / currentRequest[h].node.newLen);
+
 					currentRequest[h].node.quadVBO = basicCtx.ctx.createBuffer();
 					basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.quadVBO);
-					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, quad, basicCtx.ctx.STATIC_DRAW);
+					basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, 112, basicCtx.ctx.DYNAMIC_DRAW);
+					updateBB(currentRequest[h].node, dir, stat);
 
 					if(obj[h].Isleaf) {
 						var verts = new Float32Array(obj[h].Point.length / 4);
@@ -485,75 +673,77 @@ var PCTree = (function() {
 						basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, cols, basicCtx.ctx.STATIC_DRAW);
 
 						basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, FBO);
-						basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, currentRequest[h].node.texture);
-						basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, currentRequest[h].node.texture, 0);
-						basicCtx.clear();
-
-						var texMVP = M4x4.mul(M4x4.makeOrtho(-size, size, -size, size, temp[2] * 0.25, temp[2] * 1.75), 
-										   	  M4x4.makeLookAt(V3.add(currentRequest[h].node.center, V3.$(0, 0, temp[2])), 
-										   				   	  currentRequest[h].node.center, V3.$(0, 1, 0)));
-
 						basicCtx.ctx.useProgram(leafShader);
 						basicCtx.ctx.uniform1f(leafVarLocs[3], 1.0);
 						basicCtx.ctx.uniform1i(leafVarLocs[6], 0);
-						basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, texMVP);
-						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.VertexPositionBuffer.VBO);
-						basicCtx.ctx.vertexAttribPointer(leafVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, currentRequest[h].node.VertexColorBuffer);
-						
-						for (var x = 0; x < 2; x++) {
-							pc.basicCtx.ctx.viewport(x * 32, 0, 32, 32);
-							basicCtx.ctx.vertexAttribPointer(leafVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 24, x * 12);
-							basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, currentRequest[h].node.VertexPositionBuffer.length / 3);
-						}
+						basicCtx.ctx.useProgram(quadShader);
+						basicCtx.ctx.uniform1i(quadVarLocs[6], 0);
 
+						rendTexImp(currentRequest[h].node, true);
+
+						basicCtx.ctx.useProgram(leafShader);
 						basicCtx.ctx.uniform1f(leafVarLocs[3], currPointSize);
 						basicCtx.ctx.uniform1i(leafVarLocs[6], currCE);
-						pc.basicCtx.ctx.viewport(0, 0, 540, 540);
-
+						basicCtx.ctx.useProgram(quadShader);
+						basicCtx.ctx.uniform1i(quadVarLocs[6], currCE);
+						basicCtx.ctx.viewport(0, 0, 540, 540);
 						basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
-						basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
-
-						currentRequest[h].node.inTex = true;
-						checkParent(currentRequest[h].node);
 					}
 					currentRequest[h].node.status = COMPLETE;
 				}
-				requestFinish = true;
+				requestCount--;
+				delete this;
 			}
 		}
 
-		function checkParent(node) {
+		function rendTexImp(node, first) {
+			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, node.texture);
+			if(!node.inTex) {
+				basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, qSize * 2, qSize, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
+				node.inTex = true;
+			}
+			basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, node.texture, 0);
+			basicCtx.clear();
+
+			basicCtx.ctx.useProgram(leafShader);
+			basicCtx.ctx.uniformMatrix4fv(leafVarLocs[2], false, node.mvpMat);
+			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
+			basicCtx.ctx.vertexAttribPointer(leafVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
+			basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, node.VertexColorBuffer);
+			
+			for (var x = 0; x < 2; x++) {
+				basicCtx.ctx.viewport(x * qSize, 0, qSize, qSize);
+				basicCtx.ctx.vertexAttribPointer(leafVarLocs[1], 3, basicCtx.ctx.FLOAT, false, 24, x * 12);
+				basicCtx.ctx.drawArrays(basicCtx.ctx.POINTS, 0, node.VertexPositionBuffer.length / 3);
+			}
+
+			if(first) {
+				checkParent(node, true);
+			}
+		}
+
+		function checkParent(node, first) {
 			parentNode = node.parent;
 			if(parentNode != null) {
 				var go = true;
-				for(var i = 0; i < 8; i++) {
-					if(typeof parentNode.Children[i] == "undefined" || !parentNode.Children[i].inTex) {
-						go = false;
+				if(first) {
+					for(var i = 0; i < 8; i++) {
+						if(typeof parentNode.Children[i] == "undefined" || !parentNode.Children[i].inTex) {
+							go = false;
+						}
 					}
 				}
 				if(go) {
-					var temp = [parentNode.BB[3] - parentNode.BB[0], parentNode.BB[4] - parentNode.BB[1], parentNode.BB[5] - parentNode.BB[2]];
-					var size;
-					if(temp[0] > temp[1]) {
-						size = temp[0] * 0.5;
-					}
-					else {
-						size = temp[1] * 0.5;
-					}
-
-					basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, FBO);
 					basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, parentNode.texture);
+					if(!parentNode.inTex) {
+						basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, qSize * 2, qSize, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
+						parentNode.inTex = true;
+					}
 					basicCtx.ctx.framebufferTexture2D(basicCtx.ctx.FRAMEBUFFER, basicCtx.ctx.COLOR_ATTACHMENT0, basicCtx.ctx.TEXTURE_2D, parentNode.texture, 0);
 					basicCtx.clear();
 
-					var texMVP = M4x4.mul(M4x4.makeOrtho(-size, size, -size, size, temp[2] * 0.25, temp[2] * 1.75), 
-									   	  M4x4.makeLookAt(V3.add(parentNode.center, V3.$(0, 0, temp[2])), 
-							   				   			  parentNode.center, V3.$(0, 1, 0)));
-
 					basicCtx.ctx.useProgram(quadShader);
-					basicCtx.ctx.uniformMatrix4fv(quadVarLocs[2], false, texMVP);
-					basicCtx.ctx.uniform1i(quadVarLocs[6], 0);
+					basicCtx.ctx.uniformMatrix4fv(quadVarLocs[2], false, parentNode.mvpMat);
 
 					for(var j = 0; j < 8; j++) {
 						basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, parentNode.Children[j].quadVBO);
@@ -562,22 +752,15 @@ var PCTree = (function() {
 						basicCtx.ctx.uniform1i(quadVarLocs[3], parentNode.Children[j].texture);
 
 						for(var x = 0; x < 2; x++) {
-							pc.basicCtx.ctx.viewport(x * 32, 0, 32, 32);
+							basicCtx.ctx.viewport(x * qSize, 0, qSize, qSize);
 							basicCtx.ctx.vertexAttribPointer(quadVarLocs[1], 2, basicCtx.ctx.FLOAT, false, 28, 12 + x * 8);
 							basicCtx.ctx.drawArrays(basicCtx.ctx.TRIANGLE_STRIP, 0, 4);
 						}
-
-						basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 					}
 
-					basicCtx.ctx.uniform1i(quadVarLocs[6], currCE);
-					pc.basicCtx.ctx.viewport(0, 0, 540, 540);
-
-					basicCtx.ctx.bindFramebuffer(basicCtx.ctx.FRAMEBUFFER, null);
-					basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
-
-					parentNode.inTex = true;
-					checkParent(parentNode);
+					if(first) {
+						checkParent(parentNode, true);
+					}
 				}
 			}
 		}
@@ -597,16 +780,13 @@ var PCTree = (function() {
 				Children: {},
 				parent: null,
 				inTex: false,
+				level: 0,
+				dir: [],
+				newDir: [],
+				// newLen: 0,
+				mvpMat: [],
 				path: null
-				// lastRendered: 0,
 			};
-
-			node.texture = basicCtx.ctx.createTexture();
-			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, node.texture);
-			basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 64, 32, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, null);
-			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
-			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MAG_FILTER, basicCtx.ctx.NEAREST);
-			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
 
 			if(parentnode == null) {
 				node.path = index;
@@ -616,29 +796,48 @@ var PCTree = (function() {
 				node.path = parentnode.path + "/" + index;
 				parentnode.Children[index] = node;
 				node.parent = parentnode;
+				node.level = parentnode.level + 1;
 			}
+
+			node.texture = basicCtx.ctx.createTexture();
+			basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, node.texture);
+			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MIN_FILTER, basicCtx.ctx.NEAREST);
+			basicCtx.ctx.texParameteri(basicCtx.ctx.TEXTURE_2D, basicCtx.ctx.TEXTURE_MAG_FILTER, basicCtx.ctx.NEAREST);
+			basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, 1, 1, 0, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+
+			node.image = new Image();
+			node.image.onload = function() {
+				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, node.texture);
+				basicCtx.ctx.pixelStorei(basicCtx.ctx.UNPACK_FLIP_Y_WEBGL, true);
+				basicCtx.ctx.texImage2D(basicCtx.ctx.TEXTURE_2D, 0, basicCtx.ctx.RGBA, basicCtx.ctx.RGBA, basicCtx.ctx.UNSIGNED_BYTE, node.image);
+				basicCtx.ctx.bindTexture(basicCtx.ctx.TEXTURE_2D, null);
+				delete this;
+			}
+			node.image.src = "StartupTextures/" + node.path.replace(/\//g,"-") + ".png";
+
 			requestQueue.push({path: node.path, node: node});
 		}
 
 		function sendRequest() {
-			currentRequest = requestQueue.splice(0, Math.min(5, requestQueue.length));
-			var requestString = '';
-			var i;
-			for(i = 0; i < currentRequest.length - 1; i++) {
-				requestString += currentRequest[i].path + ';';
+			while(requestQueue.length > 0 && requestCount < maxRequest) {
+				var request = new XMLHttpRequest();
+				request.onload = parseCallback;
+				request.currentRequest = requestQueue.splice(0, Math.min(5, requestQueue.length));
+				var requestString = '';
+				var i;
+				for(i = 0; i < request.currentRequest.length - 1; i++) {
+					requestString += request.currentRequest[i].path + ';';
+				}
+				requestString += request.currentRequest[i].path;
+				request.open("GET", "action.php?a=getnode&path="+requestString+"&table="+table, true);
+				request.send();
+				requestCount++;
 			}
-			requestString += currentRequest[i].path;
-			requestFinish = false;
-			request = new XMLHttpRequest();
-			request.onload = parseCallback;
-			request.open("GET", "action.php?a=getnode&path="+requestString+"&table="+table, true);
-			request.send();
 		}
 
-		this.root = function(path, t) {
+		this.root = function(t) {
 			table = t;
-			load(null, path);
-			return Tree;
+			load(null, 'r');
 		}
 	}// constructor
 
