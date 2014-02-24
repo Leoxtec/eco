@@ -114,6 +114,12 @@
             $("#markerhelp").click(function() {flipControl(); $("#dialog-help").dialog("open");});
         });
     </script>
+
+    <script>
+        $(function() {
+            $("#working").progressbar({value: false});
+        });
+    </script>
 </head>
 
 <body onLoad="start(decodeURI(location.search.slice(location.search.indexOf('=')+1, location.search.length)));" bgcolor="#666666">
@@ -242,6 +248,14 @@
             <label for="newDescr">Description:</label>
             <textarea id="newDescr" style="border: 0; color: #000000; font-weight: bold; background-color: #FFFFFF;" /></textarea>
             <input type="button" value="Submit" onclick="setValues();">
+        </form>
+    </div>
+
+    <div id="CalculatingHeight" style="background-color:#666666;height:178px;width:225px;float:left;display:none">
+        <form>
+            <label for="working">working:</label>
+            <!-- <input type="text" id="working" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br> -->
+            <div id="working" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;"></div>
         </form>
     </div>
 

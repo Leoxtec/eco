@@ -582,19 +582,32 @@ var Markers = (function() {
 			var mark = markers[index];
 			mark.species = spec;
 			mark.descr = descr;
-			var points = "[";
+			var points = '{"v":[';
 			var i;
 			for(i = 0; i < mark.verts.length - 1; i++) {
 				points += mark.verts[i][0].toFixed(6) + "," + mark.verts[i][1].toFixed(6) + ",";
 			}
-			points += mark.verts[i][0].toFixed(6) + "," + mark.verts[i][1].toFixed(6) + "]";
+			points += mark.verts[i][0].toFixed(6) + "," + mark.verts[i][1].toFixed(6) + '],"i":[';
+			for(i = 0; i < mark.indices.length - 1; i++) {
+				points += mark.indices[i] + ",";
+			}
+			points += mark.indices[i] + "]}";
 			
 			var xmlhttp = new XMLHttpRequest();
-			xmlhttp.open("GET", "action.php?a=add&id="+mark.id+"&points="+points+"&species="+mark.species+"&descr="+mark.descr+"&user="+mark.user, false);
+			xmlhttp.index = index;
+			xmlhttp.onload = function() {
+				var response = JSON.parse(xmlhttp.responseText);
+				markers[this.index].id = response.id;
+				markers[this.index].height = response.height;
+				calcHeight = 0;
+				document.getElementById('CalculatingHeight').style.display = "none";
+				document.getElementById('markupInfo').style.display = "block";
+			}
+			xmlhttp.open("GET", "action.php?a=add&id="+mark.id+"&points="+points+"&species="+mark.species+"&descr="+mark.descr+"&user="+mark.user, true);
 			xmlhttp.send();
-			var response = JSON.parse(xmlhttp.responseText);
-			mark.id = response.id;
-			mark.height = response.height;
+			// var response = JSON.parse(xmlhttp.responseText);
+			// mark.id = response.id;
+			// mark.height = response.height;
 		};
 		
 		this.removeMarker = function(m) {
@@ -616,7 +629,7 @@ var Markers = (function() {
 														 		   0,			0, 1, 0,
 														 540 - x * 2, 540 - y * 2, 0, 1]);
 				var color = new Float32Array([0.0, 0.0, 0.0, 0.0]);
-				pc.gl.viewport(0, 0, 1, 1);
+				gl.viewport(0, 0, 1, 1);
 				gl.bindFramebuffer(gl.FRAMEBUFFER, pickingFBO);
 				gl.enable(gl.CULL_FACE);
 				gl.useProgram(pickShader);
@@ -653,7 +666,7 @@ var Markers = (function() {
 					$("#markDescr").val('');
 				}
 				basicCtx.clear();
-				pc.gl.viewport(0, 0, 540, 540);
+				gl.viewport(0, 0, 540, 540);
 				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 				return closestIndex;
 			}

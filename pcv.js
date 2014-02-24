@@ -17,6 +17,8 @@ var addPoint = false;
 updateTimeStamp = 0;
 pcvUsername = null;
 editMarker = false, markerFound = false, editVert = false, setMarker = false;
+calcHeight = 0;
+var workStr = [".  ", " . ", "  .", ".  "];
 var markerIndex;
 
 function loginUser(user, password) {
@@ -49,21 +51,34 @@ function flipControl() {
 }
 
 function switchDiv() {
-	var a = document.getElementById('markupInfo');
-	if(a.style.display == "block") {
-		a.style.display = "none";
-	}
-	else {
-		a.style.display = "block";
-	}
+	// var a = document.getElementById('markupInfo');
+	// if(a.style.display == "block") {
+	// 	a.style.display = "none";
+	// }
+	// else {
+	// 	a.style.display = "block";
+	// }
 	
-	a = document.getElementById('newMarkupInfo');
-	if(a.style.display == "block") {
-		a.style.display = "none";
+	// a = document.getElementById('newMarkupInfo');
+	// if(a.style.display == "block") {
+	// 	a.style.display = "none";
+	// }
+	// else {
+	// 	a.style.display = "block";
+	// }
+
+	switch(calcHeight) {
+	case 0:
+		document.getElementById('markupInfo').style.display = "none";
+		document.getElementById('newMarkupInfo').style.display = "block";
+		break;
+	case 1:
+		document.getElementById('newMarkupInfo').style.display = "none";
+		document.getElementById('CalculatingHeight').style.display = "block";
+		// $('#working').progressbar( "option", "value", false );
+		break;
 	}
-	else {
-		a.style.display = "block";
-	}
+	calcHeight++;
 	controllable = !controllable;
 	updateTimeStamp = 1;
 }
@@ -269,7 +284,7 @@ function keyDown() {
 			case 54:
 				// if(pcvUsername && viewMode === 4) {
 				if(viewMode === 4) {
-					if(!editMarker && !setMarker) {
+					if(!editMarker && !setMarker && calcHeight == 0) {
 						setMarker = true;
 					}
 				}
@@ -431,6 +446,10 @@ function renderPC() {
 		updateTimeStamp = 0;
 		lastTime = now;
 	}
+	// if(calcHeight == 2) {
+	// 	var inc = (now - lastTime) % 333;
+	// 	$("#working").val(workStr[inc]);
+	// }
 	pc.users.render();
 	pc.basicCtx.popMatrix();
 
