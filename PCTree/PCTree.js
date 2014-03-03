@@ -376,6 +376,9 @@ var PCTree = (function() {
 		};
 
 		this.pointPicking = function(viewpoint, x, y) {
+			if(navigator.vendor == "") {
+				y += 15;
+			}
 			var pickingTransform = new Float32Array([		   54,			  0, 0, 0,
 																0,		     54, 0, 0,
 																0,			  0, 1, 0,

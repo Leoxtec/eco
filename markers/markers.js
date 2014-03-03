@@ -32,30 +32,32 @@ var Markers = (function() {
 		var vertices = [];
 		var pointCount = 0;
 
-		xmlhttp = new XMLHttpRequest();
-		xmlhttp.onload = function() {
-			if(this.readyState == 4 && this.status == 200) {
-				var temp = JSON.parse(xmlhttp.responseText);
-				temp = temp.markers;
-				for(var i = 0; i < temp.length; i++) {
-					pointCount = temp[i].points.length / 2;
-					vertices = [];
-					for(var j = 0; j < pointCount * 2; j += 2) {
-						vertices.push(V3.$(temp[i].points[j], temp[i].points[j + 1], maxZ));
-					}
-					pc.markers.generateMesh();
-					markers[i].id = temp[i].id;
-					markers[i].height = temp[i].height;
-					markers[i].species = temp[i].species;
-					markers[i].descr = temp[i].descr;
-					markers[i].user = temp[i].user;
-				}
-				delete obj;
-				delete xmlhttp;
-			}
-		}
-		xmlhttp.open("GET", "action.php?a=start", true);
-		xmlhttp.send();
+		// xmlhttp = new XMLHttpRequest();
+		// xmlhttp.markersObj = this;
+		// xmlhttp.onload = function() {
+		// 	if(this.readyState == 4 && this.status == 200) {
+		// 		var temp = JSON.parse(xmlhttp.responseText);
+		// 		temp = temp.markers;
+		// 		for(var i = 0; i < temp.length; i++) {
+		// 			pointCount = temp[i].points.length / 2;
+		// 			vertices = [];
+		// 			for(var j = 0; j < pointCount * 2; j += 2) {
+		// 				vertices.push(V3.$(temp[i].points[j], temp[i].points[j + 1], maxZ));
+		// 			}
+		// 			// pc.markers.generateMesh();
+		// 			this.markersObj.generateMesh();
+		// 			markers[i].id = temp[i].id;
+		// 			markers[i].height = temp[i].height;
+		// 			markers[i].species = temp[i].species;
+		// 			markers[i].descr = temp[i].descr;
+		// 			markers[i].user = temp[i].user;
+		// 		}
+		// 		delete obj;
+		// 		delete xmlhttp;
+		// 	}
+		// }
+		// xmlhttp.open("GET", "action.php?a=start", true);
+		// xmlhttp.send();
 
 		var cylShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/grid.vert'), basicCtx.getShaderStr('shaders/cyl.frag'));
 		gl.useProgram(cylShader);
@@ -701,6 +703,33 @@ var Markers = (function() {
 				gl.depthMask(true);
 			}
 		};
+
+		xmlhttp = new XMLHttpRequest();
+		xmlhttp.markersObj = this;
+		xmlhttp.onload = function() {
+			if(this.readyState == 4 && this.status == 200) {
+				var temp = JSON.parse(xmlhttp.responseText);
+				temp = temp.markers;
+				for(var i = 0; i < temp.length; i++) {
+					pointCount = temp[i].points.length / 2;
+					vertices = [];
+					for(var j = 0; j < pointCount * 2; j += 2) {
+						vertices.push(V3.$(temp[i].points[j], temp[i].points[j + 1], maxZ));
+					}
+					// pc.markers.generateMesh();
+					this.markersObj.generateMesh();
+					markers[i].id = temp[i].id;
+					markers[i].height = temp[i].height;
+					markers[i].species = temp[i].species;
+					markers[i].descr = temp[i].descr;
+					markers[i].user = temp[i].user;
+				}
+				// delete obj;
+				delete xmlhttp;
+			}
+		}
+		xmlhttp.open("GET", "action.php?a=start", true);
+		xmlhttp.send();
 	}
 
 	return Markers;

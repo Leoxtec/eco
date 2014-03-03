@@ -1,4 +1,5 @@
-var pc, ax, map;
+pc = null;
+var ax, map;
 var cam;
 var isDragging = false;
 var placingMarker = false;
@@ -18,7 +19,6 @@ updateTimeStamp = 0;
 pcvUsername = null;
 editMarker = false, markerFound = false, editVert = false, setMarker = false;
 calcHeight = 0;
-var workStr = [".  ", " . ", "  .", ".  "];
 var markerIndex;
 
 function loginUser(user, password) {
@@ -446,10 +446,6 @@ function renderPC() {
 		updateTimeStamp = 0;
 		lastTime = now;
 	}
-	// if(calcHeight == 2) {
-	// 	var inc = (now - lastTime) % 333;
-	// 	$("#working").val(workStr[inc]);
-	// }
 	pc.users.render();
 	pc.basicCtx.popMatrix();
 

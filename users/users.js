@@ -128,23 +128,27 @@ var Users = (function() {
 
 		this.updateUsers = function(pos) {
 			usersRequest = new XMLHttpRequest();
-			usersRequest.open("GET", "action.php?a=updateUsers&id="+pcvUsername+"&x="+pos[0]+"&y="+pos[1]+"&z="+pos[2]+"&update="+updateTimeStamp, false);
-			usersRequest.send();
-			usersResponse = JSON.parse(usersRequest.responseText);
-			currentUsers = usersResponse.users;
-			timeStamp = usersResponse.t;
+			usersRequest.open("GET", "action.php?a=updateUsers&id="+pcvUsername+"&x="+pos[0]+"&y="+pos[1]+"&z="+pos[2]+"&update="+updateTimeStamp, true);
+			usersRequest.onload = function() {
+				if(this.readyState == 4 && this.status == 200) {
+					var temp = JSON.parse(usersRequest.responseText);
+					currentUsers = temp.users;
+					timeStamp = temp.t;
 
-			ctx2d.beginPath();
-			var i;
-			for(i = 0; i < currentUsers.length; i++) {
-				ctx2d.clearRect(0, 0, 128, 32);
-				ctx2d.fillText(currentUsers[i].username, 64, 28);
-				gl.bindTexture(gl.TEXTURE_2D, nameTexture[i]);
-				gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-				gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texImage2d);
-				gl.bindTexture(gl.TEXTURE_2D, null);
+					ctx2d.beginPath();
+					var i;
+					for(i = 0; i < currentUsers.length; i++) {
+						ctx2d.clearRect(0, 0, 128, 32);
+						ctx2d.fillText(currentUsers[i].username, 64, 28);
+						gl.bindTexture(gl.TEXTURE_2D, nameTexture[i]);
+						gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+						gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, texImage2d);
+						gl.bindTexture(gl.TEXTURE_2D, null);
+					}
+					ctx2d.restore();
+				}
 			}
-			ctx2d.restore();
+			usersRequest.send();
 		};
 
 		this.render = function() {
