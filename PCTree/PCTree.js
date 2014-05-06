@@ -1,46 +1,145 @@
+//This class handles queueing, rendering, and deleting a point cloud octree
+//it also handles point picking to show a thumbnail of where a particular point
+//was found
+
 var PCTree = (function() {
-	function PCTree(bctx, b, s) {
+	function PCTree(bctx, metaObj, t) {
+		var Tree = metaObj;
+
+		const STARTED = 1;
+		const COMPLETE = 2;
+		const NODATA = 3;
+
+		//add subnodes to the metadata that include buffers, path name, load status
+		//and "pointers" to other subnodes for use in a least-recently-used queue (LRU)
+		tempQueue = [];
+		tempQueue.push(Tree);
+		while(tempQueue.length > 0) {
+			var n = tempQueue.pop();
+			n.node = {
+				VertexPositionBuffer: {},
+				VertexColorBuffer: {},
+				PickingColorBuffer: {},
+				path: n.p,
+				status: NODATA,
+				prev: null,
+				next: null
+			};
+			for(var i in n.ch) {
+				tempQueue.push(n.ch[i]);
+			}
+		}
+		delete tempQueue;
+
+		//the next few functions are related to the LRU queue and were adapted from the Potree
+		//viewer at http://potree.org
+		var LRU = new Object();
+		var LRUcount = 0;
+		//max number of nodes to hold at any given time
+		const LRUMax = 1000;
+		var head = null;
+		var tail = null;
+
+		//moves a node to the back of the queue (most recently used) or adds the node to the back
+		//if it is not in the queue
+		function DLLTouch(node) {
+			if(LRU[node.path] == null) {
+				node.prev = tail;
+				tail = node;
+				if(node.prev != null) {
+					node.prev.next = node;
+				}
+
+				LRU[node.path] = node;
+				LRUcount++;
+
+				if(head == null) {
+					head = node;
+				}
+			}
+			else {
+				var item = LRU[node.path];
+				if(node.prev == null) {
+					if(node.next != null) {
+						head = node.next;
+						head.prev = null;
+						node.prev = tail;
+						node.next = null;
+						tail = node;
+						node.prev.next = node;
+					}
+					else if(node.next == null) {}
+					else {
+						node.prev.next = node.next;
+						node.next.prev = node.prev;
+						node.prev = tail;
+						node.next = null;
+						tail = node;
+						node.prev.next = node;
+					}
+				}
+			}
+		}
+
+		//remove a node from the front of the queue (least recently used)
+		function DLLRemove() {
+			if(head == null) {
+				return null;
+			}
+
+			var node = head;
+			if(node.next != null) {
+				head = node.next;
+				head.prev = null;
+			}
+			else {
+				head = null;
+				tail = null;
+			}
+
+			delete LRU[node.path];
+			LRUcount--;
+
+			node.prev = null;
+			node.next = null;
+
+			return node;
+		}
+
+		//get the least recently used node
+		function DLLHead() {
+			if(head == null) {
+				return null;
+			}
+			var node = head;
+			return node;
+		}
+
 		var basicCtx = bctx;
 		var gl = basicCtx.ctx;
 
-		var qSize = 128;
-		var e = Math.cos(Math.PI / 180.0);
-		var updateQueue = [];
-		var maxProcess = 50;
+		//used to compare a node's projection size to determine if we render it's children 
+		var qSize = 50;
 
-		var requestQueue = [];
-		var requestCount = 0;
-		var maxRequest = 1;
-
+		//used to determine if a node is within the view frustum
 		var c30 = Math.cos(Math.PI / 6.0);
 		var s30 = Math.sin(Math.PI / 6.0);
 		var t30 = Math.tan(Math.PI / 6.0);
 		var znear = 0.1;
 		var zfar = -1000.0;
 
-		var Tree = null;
-
-		var leafShader;
-		var quadShader;
-
-		var leafVarLocs = [];
-		var quadVarLocs = [];
-
 		var checkOrtho = false;
 		var orthoProjection;
 
-		var table;
+		var table = t;
+
+		//natural color and histogram equalization colors are stored in the same atrribute array
 		var colorOffset = 0;
-
-		const STARTED = 1;
-		const COMPLETE = 2;
-
-		var picInfo = [];
-		var pointPickIndex = 1;
 
 		var thumbCtx = document.getElementById("thumbnail").getContext('2d');
 		var thumbImg = new Image();
 
+		//dsiplay a thumbnail with a box surrounding the pixels where a point/feature was found
 		function drawThumbNail() {
 			thumbCtx.drawImage(thumbImg, 0, 0);
 			thumbCtx.strokeStyle = "#FF00FF";
@@ -53,48 +152,36 @@ var PCTree = (function() {
 			thumbCtx.stroke();
 		};
 
-		quadShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/quad.vert'), basicCtx.getShaderStr('shaders/quad.frag'));
-		gl.useProgram(quadShader);
-		quadVarLocs.push(gl.getAttribLocation(quadShader, "aVertexPosition"));
-		quadVarLocs.push(gl.getAttribLocation(quadShader, "aTexCoord"));
-		quadVarLocs.push(gl.getUniformLocation(quadShader, "uMVP"));
-		// quadVarLocs.push(gl.getUniformLocation(quadShader, "uModelViewMatrix"));
-		// quadVarLocs.push(gl.getUniformLocation(quadShader, "uProjectionMatrix"));
-		quadVarLocs.push(gl.getUniformLocation(quadShader, "uSampler"));
-		quadVarLocs.push(gl.getUniformLocation(quadShader, "uBias"));
-		quadVarLocs.push(gl.getUniformLocation(quadShader, "uScale"));
-		quadVarLocs.push(gl.getUniformLocation(quadShader, "uCEMode"));
-		gl.uniform3fv(quadVarLocs[4], b);
-		gl.uniform3fv(quadVarLocs[5], s);
-		gl.uniform1i(quadVarLocs[6], 0);
+		//create shader for points, cache the attribute and uniform variable locations
+		//and initialize point size, bias and scale for min max color enhancement, and color enhancement mode
+		var pointShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/point.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
+		gl.useProgram(pointShader);
+		var pointVarLocs = [];
+		pointVarLocs.push(gl.getAttribLocation(pointShader, "aVertexPosition"));
+		pointVarLocs.push(gl.getAttribLocation(pointShader, "aVertexColor"));
+		pointVarLocs.push(gl.getUniformLocation(pointShader, "uModelViewMatrix"));
+		pointVarLocs.push(gl.getUniformLocation(pointShader, "uPointSize"));
+		//for undetermined point attenuation feature
+		// pointVarLocs.push(gl.getUniformLocation(pointShader, "uAttenuation"));
+		pointVarLocs.push(gl.getUniformLocation(pointShader, "uBias"));
+		pointVarLocs.push(gl.getUniformLocation(pointShader, "uScale"));
+		pointVarLocs.push(gl.getUniformLocation(pointShader, "uCEMode"));
+		pointVarLocs.push(gl.getUniformLocation(pointShader, "uProjectionMatrix"));
+		gl.uniform1f(pointVarLocs[3], 1);
+		gl.uniform3fv(pointVarLocs[4], Tree.b);
+		gl.uniform3fv(pointVarLocs[5], Tree.s);
+		gl.uniform1i(pointVarLocs[6], 0);
 
-		leafShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/point.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
-		gl.useProgram(leafShader);
-		leafVarLocs.push(gl.getAttribLocation(leafShader, "aVertexPosition"));
-		leafVarLocs.push(gl.getAttribLocation(leafShader, "aVertexColor"));
-		leafVarLocs.push(gl.getUniformLocation(leafShader, "uMVP"));
-		// leafVarLocs.push(gl.getUniformLocation(leafShader, "uModelViewMatrix"));
-		// leafVarLocs.push(gl.getUniformLocation(leafShader, "uProjectionMatrix"));
-		leafVarLocs.push(gl.getUniformLocation(leafShader, "uPointSize"));
-		// leafVarLocs.push(gl.getUniformLocation(leafShader, "uAttenuation"));
-		leafVarLocs.push(gl.getUniformLocation(leafShader, "uBias"));
-		leafVarLocs.push(gl.getUniformLocation(leafShader, "uScale"));
-		leafVarLocs.push(gl.getUniformLocation(leafShader, "uCEMode"));
-		gl.uniform1f(leafVarLocs[3], 1);
-		gl.uniform3fv(leafVarLocs[4], b);
-		gl.uniform3fv(leafVarLocs[5], s);
-		gl.uniform1i(leafVarLocs[6], 0);
-
-		var pointPickShader;
-		var pointPickVarLocs = [];
-		pointPickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/test.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
+		//create shader for point picking, cache the attribute and uniform variable locations
+		var pointPickShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/pointPick.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		gl.useProgram(pointPickShader);
+		var pointPickVarLocs = [];
 		pointPickVarLocs.push(gl.getAttribLocation(pointPickShader, "aVertexPosition"));
 		pointPickVarLocs.push(gl.getAttribLocation(pointPickShader, "aPickColor"));
 		pointPickVarLocs.push(gl.getUniformLocation(pointPickShader, "uPPMV"));
 
-		var pointPickingFBO;
-		pointPickingFBO = gl.createFramebuffer();
+		//create the Frame Buffer Object used for point picking
+		var pointPickingFBO = gl.createFramebuffer();
 		gl.bindFramebuffer(gl.FRAMEBUFFER, pointPickingFBO);
 		pointPickingTexture = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D, pointPickingTexture);
@@ -111,26 +198,31 @@ var PCTree = (function() {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 		gl.deleteTexture(pointPickingTexture);
+
+		//delete temp variables
 		delete pointPickingTexture;
 		delete pointRenderBuffer;
 
-		var crossShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cross.vert'), basicCtx.getShaderStr('shaders/grid.frag'));
-		var crossVarLocs = [];
+		//create shader for cross that shows which point is selected, cache the attribute and uniform variable locations
+		var crossShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/cross.vert'), basicCtx.getShaderStr('shaders/magenta.frag'));
 		gl.useProgram(crossShader);
+		var crossVarLocs = [];
 		crossVarLocs.push(gl.getAttribLocation(crossShader, "aVertexPosition"));
 		crossVarLocs.push(gl.getUniformLocation(crossShader, "uOffset"));
 
+		//cross vertices
 		var crossVBO = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, crossVBO);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 0.0074, 	  0.0,
-																			  0.0814, 	  0.0,
-																			 -0.0074, 	  0.0,
-																			 -0.0814, 	  0.0,
-																			 	 0.0,  0.0074,
-																			 	 0.0,  0.0814,
-																			 	 0.0, -0.0074,
-																			 	 0.0, -0.0814]), gl.STATIC_DRAW);
+														  0.0814, 	  0.0,
+														 -0.0074, 	  0.0,
+														 -0.0814, 	  0.0,
+														 	 0.0,  0.0074,
+														 	 0.0,  0.0814,
+														 	 0.0, -0.0074,
+														 	 0.0, -0.0814]), gl.STATIC_DRAW);
 
+		//set color enhancement mode
 		var currCE;
 		this.setCE = function(val) {
 			currCE = val;
@@ -142,22 +234,17 @@ var PCTree = (function() {
 			}
 		};
 
-
 		this.usePerspective = function(n, f) {
 			znear = n;
 			zfar = -f;
-			// gl.useProgram(quadShader);
-			// gl.uniformMatrix4fv(quadVarLocs[3], false, basicCtx.perspectiveMatrix);
-			// gl.useProgram(leafShader);
-			// gl.uniformMatrix4fv(leafVarLocs[3], false, basicCtx.perspectiveMatrix);
+			// gl.useProgram(pointShader);
+			// gl.uniformMatrix4fv(pointVarLocs[3], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
 			orthoProjection = projectionMatrix;
-			// gl.useProgram(quadShader);
-			// gl.uniformMatrix4fv(quadVarLocs[3], false, projectionMatrix);
-			// gl.useProgram(leafShader);
-			// gl.uniformMatrix4fv(leafVarLocs[2], false, projectionMatrix);
+			// gl.useProgram(pointShader);
+			// gl.uniformMatrix4fv(pointVarLocs[2], false, projectionMatrix);
 		};
 
 		var currPointSize = 1;
@@ -165,54 +252,136 @@ var PCTree = (function() {
 			currPointSize = size;
 		};
 
+		//for undetermined point attenuation feature
 		// this.attenuation = function(constant, linear, quadratic) {
-		// 	gl.useProgram(leafShader);
-		// 	gl.uniform3fv(leafVarLocs[5], [constant, linear, quadratic]);
+		// 	gl.useProgram(pointShader);
+		// 	gl.uniform3fv(pointVarLocs[5], [constant, linear, quadratic]);
 		// };
 
-		this.getCenter = function() {
-			return Tree.center;
+		this.setCheckOrtho = function(val) {
+			checkOrtho = val;
 		}
 
-		this.getRadius = function() {
-			return Tree.radius;
-		}
+		const loadingMax = 10;
+		var currentLoad = 0;
+		var deleteQueue = [];
+		var renderQueue = [];
 
-		this.setCheckOrtho = function(t) {
-			checkOrtho = t;
+		//top level octree render function
+		this.renderTree = function(c) {
+			//set up shader parameters
+			gl.useProgram(pointShader);
+			gl.uniformMatrix4fv(pointVarLocs[2], false, basicCtx.peekMatrix());
 			if(checkOrtho) {
-				checkImps(Tree);
+				gl.uniformMatrix4fv(pointVarLocs[7], false, orthoProjection);
 			}
-		}
+			else {
+				gl.uniformMatrix4fv(pointVarLocs[7], false, basicCtx.perspectiveMatrix);
+			}
+			//this value is used in the shader to make points far away appear bigger
+			//which helps make the cloud look less sparse when far enough away to only see
+			//the first few levels of the octree
+			gl.uniform1f(pointVarLocs[3], -zfar);
+			gl.uniform1i(pointVarLocs[6], currCE);
+			gl.viewport(0, 0, 540, 540);
 
-		var quadsOnly = false;
-		this.toggleLeafDisplayType = function() {
-			quadsOnly = !quadsOnly;
-		}
+			renderQueue = [];
+			this.buildRenderQ(Tree);
 
-		function render(node, size) {
-			if(quadsOnly || !node.Isleaf || size < qSize) {
-				gl.useProgram(quadShader);
-				gl.bindBuffer(gl.ARRAY_BUFFER, node.quadVBO);
-				gl.vertexAttribPointer(quadVarLocs[0], 3, gl.FLOAT, false, 28, 0);
-				gl.vertexAttribPointer(quadVarLocs[1], 2, gl.FLOAT, false, 28, 12 + colorOffset * 2 / 3);
-				gl.bindTexture(gl.TEXTURE_2D, node.texture);
-				gl.uniform1i(quadVarLocs[3], node.texture);
-				gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-				gl.bindTexture(gl.TEXTURE_2D, null);
+			render();
+
+			//properly delete any nodes that have been thrown away
+			var dql = deleteQueue.length;
+			for(var i = 0; i < dql; i++) {
+				if(deleteQueue[i].status == COMPLETE) {
+					gl.deleteBuffer(deleteQueue[i].VertexPositionBuffer.VBO);
+					gl.deleteBuffer(deleteQueue[i].VertexColorBuffer);
+					gl.deleteBuffer(deleteQueue[i].PickingColorBuffer);
+					deleteQueue[i].status = NODATA;
+				}
+				else {
+					deleteQueue.push(deleteQueue[i]);
+				}
 			}
-			else {    //ISLEAF   
-				gl.useProgram(leafShader);
-				gl.bindBuffer(gl.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
-				gl.vertexAttribPointer(leafVarLocs[0], 3, gl.FLOAT, false, 0, 0);
-				gl.bindBuffer(gl.ARRAY_BUFFER, node.VertexColorBuffer);
-				gl.vertexAttribPointer(leafVarLocs[1], 3, gl.FLOAT, false, 24, colorOffset);
-				gl.drawArrays(gl.POINTS, 0, node.VertexPositionBuffer.length / 3);
+			deleteQueue.splice(0, dql);
+
+			//throw away least recently used nodes that are above the threshold
+			if(LRUcount > LRUMax) {
+				while(LRUcount > LRUMax) {
+					var item = DLLHead();
+					if(item != null) {
+						deleteQueue.push(item);
+					}
+					DLLRemove(item);
+				}
 			}
-		}
+		};
+
+		this.buildRenderQ = function(n) {
+			var tempQueue = [];
+
+			//always render the top 2 levels of the octree
+			//leave out of the LRU queue
+			renderQueue.push(n);
+			if(n.node.status == NODATA) {
+				if(currentLoad < loadingMax) {
+					load(n);
+					currentLoad++;
+				}
+			}
+			for(var h in n.ch) {
+				var child = n.ch[h];
+				if(child.node.status == NODATA) {
+					if(currentLoad < loadingMax) {
+						load(child);
+						currentLoad++;
+					}
+				}
+				renderQueue.push(child);
+				//push level 2 (zero indexed) of the octree into the tempQueue
+				for(var j in child.ch) {
+					tempQueue.push(child.ch[j]);
+				}
+			}
+
+			while(tempQueue.length > 0 && renderQueue.length < LRUMax) {
+				var node = tempQueue.splice(0, 1)[0];
+
+				//calculate node center in view space
+				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.c);
+
+				if(isvisible(node.r, centerVS)) {
+					if(checkOrtho) {
+						var size = node.r * basicCtx.height / basicCtx.scaleFactor;
+					}
+					else {
+						//determine size in pixels that the node projects to
+						//use absolute value to keep recursing if the node is close but behind the viewer
+						var size = Math.abs((node.r * basicCtx.height) / (centerVS[2] * t30));
+					}
+					if(size > qSize) {
+						//add node to the render queue, load data if it doesn't exist, put it at the 
+						//back of the LRU (most recently used), and check children
+						renderQueue.push(node);
+						if(node.node.status == NODATA) {
+							if(currentLoad < loadingMax) {
+								load(node);
+								currentLoad++;
+							}
+						}
+						DLLTouch(node.node);
+						for(var i = 0; i < node.ch.length; i++) {
+							tempQueue.push(node.ch[i]);
+						}
+					}
+				}
+			}
+		};
 
 		function isvisible(radius, center) {
 			var d = new Array(6);
+
+			//calculate the view frustum plane equations
 			if(checkOrtho) {
 				d[0] = center[0] - basicCtx.scaleFactor;
 				d[1] = -center[0] - basicCtx.scaleFactor;
@@ -232,6 +401,8 @@ var PCTree = (function() {
 				d[4] = -znear + center[2];
 				d[5] = zfar - center[2];
 			}
+
+			//check the bounding sphere against the view frustum planes
 			for(var i = 0; i < 6; i++) {
 				if(d[i] > radius) {
 					return false;
@@ -240,149 +411,32 @@ var PCTree = (function() {
 			return true;
 		}
 
-		var stat = {viewUp: null, translate: null, camPos: null};
-		var dyn = {viewUp: null, translate: null, camPos: null};
-		var first = true;
-		this.renderTree = function(viewpoint, c) {
-			if(checkOrtho) {
-				var MVP = M4x4.mul(orthoProjection, basicCtx.peekMatrix());
-			}
-			else {
-				var MVP = M4x4.mul(basicCtx.perspectiveMatrix, basicCtx.peekMatrix());
-			}
-
-			if(first) {
-				var staticMV = basicCtx.peekMatrix();
-				stat.viewUp = V3.$(staticMV[1], staticMV[5], staticMV[9]);
-				stat.translateVec = c;
-				stat.camPos = viewpoint;
-				first = false;
-			}
-
-			if(Tree.status == COMPLETE) {
-				if(Tree.inTex) {
-					if(updateQueue.length > 0) {
-						processQueue();
-					}
-					else {
-						var staticMV = basicCtx.peekMatrix();
-						dyn.viewUp = V3.$(staticMV[1], staticMV[5], staticMV[9]);
-						dyn.translateVec = c;
-						dyn.camPos = viewpoint;
-						if(!checkOrtho) {
-							checkImps(Tree);
-						}
-					}
+		function render() {
+			for(var i in renderQueue) {
+				if(renderQueue[i].node.status == COMPLETE) {
+					gl.useProgram(pointShader);
+					gl.bindBuffer(gl.ARRAY_BUFFER, renderQueue[i].node.VertexPositionBuffer.VBO);
+					gl.vertexAttribPointer(pointVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+					gl.bindBuffer(gl.ARRAY_BUFFER, renderQueue[i].node.VertexColorBuffer);
+					gl.vertexAttribPointer(pointVarLocs[1], 3, gl.FLOAT, false, 24, colorOffset);
+					gl.drawArrays(gl.POINTS, 0, renderQueue[i].node.VertexPositionBuffer.length / 3);
 				}
-				gl.useProgram(quadShader);
-				gl.uniformMatrix4fv(quadVarLocs[2], false, MVP);
-				gl.uniform1i(quadVarLocs[6], currCE);
-				gl.useProgram(leafShader);
-				gl.uniformMatrix4fv(leafVarLocs[2], false, MVP);
-				gl.uniform1f(leafVarLocs[3], currPointSize);
-				gl.uniform1i(leafVarLocs[6], currCE);
-				gl.viewport(0, 0, 540, 540);
-
-				this.recurseTree(Tree);
 			}
-			sendRequest();
-		};
-
-		function processQueue() {
-			gl.bindFramebuffer(gl.FRAMEBUFFER, FBO);
-			gl.useProgram(leafShader);
-			gl.uniform1f(leafVarLocs[3], 1.0);
-			gl.uniform1i(leafVarLocs[6], 0);
-			gl.useProgram(quadShader);
-			gl.uniform1i(quadVarLocs[6], 0);
-
-			var count = 0;
-			while(count < maxProcess && updateQueue.length > 0) {
-				var node = updateQueue.splice(0, 1)[0];
-				updateBB(node, node.newDir, dyn);
-				if(node.Isleaf) {
-					rendTexImp(node, false);
-				}
-				else {
-					checkParent(node.Children[0], false);
-				}
-				count++;
-			}
-
-			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		}
 
-		function checkImps(node) {
-			var update = false;
-			node.newDir = V3.normalize(V3.sub(V3.sub(node.center, dyn.translateVec), dyn.camPos));
-			// var vec = V3.sub(V3.sub(node.center, dyn.translateVec), dyn.camPos)
-			// node.newLen = V3.length(vec);
-			// node.newDir = V3.scale(vec, 1 / node.newLen);
-
-			// if(V3.dot(node.newDir, node.dir) < e) {
-			if(checkOrtho || !V3.equals(node.newDir, node.dir)) {
-				update = true;
-				if(node.Isleaf) {
-					updateQueue.push(node);
-					return true;
-				}
-			}
-			if(!node.Isleaf) {
-				for(var i = 0; i < 8; i++) {
-					if(checkImps(node.Children[i])) {
-						update = true;
-					}
-				}
-			}
-			if(update) {
-				updateQueue.push(node);
-			}
-			return update;
-		}
-
-		this.recurseTree = function(node) {
-			var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
-			if(isvisible(node.radius, centerVS)) {
-				if(checkOrtho) {
-					var size = node.radius * basicCtx.height / basicCtx.scaleFactor;
-				}
-				else {
-					var size = Math.abs((node.radius * basicCtx.height) / (centerVS[2] * t30));
-				}
-				if(node.inTex && (size < qSize || node.Isleaf)) {
-					render(node, size);
-				}
-				else {
-					var renderParent = false;
-					for(var i = 0; i < 8; i++) {						
-						if(typeof node.Children[i] == "undefined") {
-							load(node, i);
-							renderParent = true;
-						}
-						else if(node.Children[i].status != COMPLETE) {
-							renderParent = true;
-						}
-					}
-					if(renderParent) {
-						render(node, 0);
-					}
-					else {
-						for(var j = 0; j < 8; j++) {
-							this.recurseTree(node.Children[j]);
-						}
-					}
-				}
-			}
-		};
-
-		this.pointPicking = function(viewpoint, x, y) {
+		this.pointPicking = function(x, y) {
+			//hack to fix mozilla's cursor positioning which is incorrect for some reason (?!)
 			if(navigator.vendor == "") {
 				y += 15;
 			}
+
+			//BROWSER_RESIZE
+			//this matrix transforms the view volume to the 10x10 pixel region centered at the cursor 
 			var pickingTransform = new Float32Array([		   54,			  0, 0, 0,
 																0,		     54, 0, 0,
 																0,			  0, 1, 0,
 													 54 - x * 0.2, 54 - y * 0.2, 0, 1]);
+
 			gl.viewport(0, 0, 10, 10);
 			gl.bindFramebuffer(gl.FRAMEBUFFER, pointPickingFBO);
 			basicCtx.clear();
@@ -396,47 +450,71 @@ var PCTree = (function() {
 			var PPVM = M4x4.mul(pickingTransform, M4x4.mul(proj, basicCtx.peekMatrix()));
 			gl.uniformMatrix4fv(pointPickVarLocs[2], false, PPVM);
 
-			this.recursePP(Tree, viewpoint);
+			//blending enabled and set up in such a way as to allow the alpha channel to be used to hold
+			//relevant photo data
+			gl.enable(gl.BLEND);
+			gl.blendFuncSeparate(gl.ONE, gl.ZERO, gl.ONE, gl.ZERO);
 
+			this.recursePP(Tree);
+
+			gl.disable(gl.BLEND);
+
+			//read pixels and determine the closest non empty (black) color to the center
 			var arr = new Uint8Array(400);
 			gl.readPixels(0, 0, 10, 10, gl.RGBA, gl.UNSIGNED_BYTE, arr);
 			var closest = [-5, -5];
 			var distance = Number.POSITIVE_INFINITY;
-			var id = -1;
+			var rgba = [0, 0, 0, 0];
+			var hit = false;
 			var index;
 			for(var i = 0; i < 10; i++) {
 				for(var j = 0; j < 10; j++) {
 					index = i * 40 + j * 4;
-					if(arr[index] != 0 && arr[index + 1] != 0 && arr[index + 2] != 0) {
+					if(arr[index] != 0 && (arr[index + 1] & 127) != 0) {
 						var temp = (i - 4.5) * (i - 4.5) + (j - 4.5) * (j - 4.5);
 						if(temp < distance) {
 							distance = temp;
 							closest[0] = j - 4.5;
 							closest[1] = i - 4.5;
-							id = arr[index] << 16 | arr[index + 1] << 8 | arr[index + 2];
+							rgba[0] = arr[index];
+							rgba[1] = arr[index + 1];
+							rgba[2] = arr[index + 2];
+							rgba[3] = arr[index + 3];
+							hit = true;
 						}
 					}
 				}
 			}
 
+			//BROWSER_RESIZE
 			gl.viewport(0, 0, 540, 540);
 			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-			if(id > -1) {
-				var tempPic = picInfo[id - 1];
-				thumbImg.tempX = tempPic.x * 300;
-				thumbImg.tempY = tempPic.y * 225;
+			if(hit) {
+				//bit twiddling to retrieve pic id and xy image coordinates from the color
+				//see parseCallback() function for convention used
+				thumbImg.tempX = rgba[2] | ((rgba[1] & 128) << 1);
+				thumbImg.tempY = rgba[3];
 				thumbImg.onload = drawThumbNail;
-				if(tempPic.pic < 10) {
-					thumbImg.src = "thumbnail_pics/0000000" + tempPic.pic + ".jpg";
+				var pic = (rgba[0] | ((rgba[1] & 127) << 8)) - 1;
+
+				//get thumbnail
+				//this can be made simpler by eliminating the need for leading zeros
+				//thumbnail preprocessing needs to be updated to not include leading zeros
+				if(pic < 10) {
+					thumbImg.src = table + "_thumbnails/0000000" + pic + ".jpg";
 				}
-				else if(tempPic.pic < 100) {
-					thumbImg.src = "thumbnail_pics/000000" + tempPic.pic + ".jpg";
+				else if(pic < 100) {
+					thumbImg.src = table + "_thumbnails/000000" + pic + ".jpg";
+				}
+				else if(pic < 1000) {
+					thumbImg.src = table + "_thumbnails/00000" + pic + ".jpg";
 				}
 				else {
-					thumbImg.src = "thumbnail_pics/00000" + tempPic.pic + ".jpg";
+					thumbImg.src = table + "_thumbnails/0000" + pic + ".jpg";
 				}
 
+				//draw cross at point found in the main window
 				gl.useProgram(crossShader);
 				gl.uniform2fv(crossVarLocs[1], new Float32Array([(x + closest[0] - 270) / 270, (y + closest[1] - 270) / 270]));
 				gl.bindBuffer(gl.ARRAY_BUFFER, crossVBO);
@@ -448,398 +526,82 @@ var PCTree = (function() {
 			}
 		};
 
-		this.recursePP = function(node, viewpoint) {
-			if(node.status == COMPLETE) {
-				var centerVS = V3.mul4x4(basicCtx.peekMatrix(), node.center);
-				if(isvisible(node.radius, centerVS)) {
-					if(node.Isleaf) {
-						gl.bindBuffer(gl.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
-						gl.vertexAttribPointer(pointPickVarLocs[0], 3, gl.FLOAT, false, 0, 0);
-						gl.bindBuffer(gl.ARRAY_BUFFER, node.PickingColorBuffer);
-						gl.vertexAttribPointer(pointPickVarLocs[1], 3, gl.FLOAT, false, 0, 0);
-						gl.drawArrays(gl.POINTS, 0, node.VertexPositionBuffer.length / 3);
-					}
-					else {
-						for(var k = 0; k < 8; k++) {
-							if(typeof node.Children[k] != "undefined" && node.Children[k].status == COMPLETE) {
-								this.recursePP(node.Children[k], viewpoint);
-							}
-						}
-					}
+		this.recursePP = function(node) {
+			for(var i in renderQueue) {
+				if(renderQueue[i].node.status == COMPLETE) {
+					gl.bindBuffer(gl.ARRAY_BUFFER, renderQueue[i].node.VertexPositionBuffer.VBO);
+					gl.vertexAttribPointer(pointPickVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+					gl.bindBuffer(gl.ARRAY_BUFFER, renderQueue[i].node.PickingColorBuffer);
+					gl.vertexAttribPointer(pointPickVarLocs[1], 4, gl.FLOAT, false, 0, 0);
+					gl.drawArrays(gl.POINTS, 0, renderQueue[i].node.VertexPositionBuffer.length / 3);
 				}
 			}
 		};
 
-		var FBO = gl.createFramebuffer();
-		gl.bindFramebuffer(gl.FRAMEBUFFER, FBO);
-		depthBuffer = gl.createRenderbuffer();
-		gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
-		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, qSize, qSize);
-		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
-		gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-		gl.deleteRenderbuffer(depthBuffer);
-		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-		delete depthBuffer;
-
-		function transformBB(BB, transform) {
-			var newBB = [transform[12], transform[13], transform[14], transform[12], transform[13], transform[14]];
-
-			if(transform[0] > 0) {newBB[0] += transform[0] * BB[0]; newBB[3] += transform[0] * BB[3];}
-			else {newBB[3] += transform[0] * BB[0]; newBB[0] += transform[0] * BB[3];}
-
-			if(transform[4] > 0) {newBB[0] += transform[4] * BB[1]; newBB[3] += transform[4] * BB[4];}
-			else {newBB[3] += transform[4] * BB[1]; newBB[0] += transform[4] * BB[4];}
-
-			if(transform[8] > 0) {newBB[0] += transform[8] * BB[2]; newBB[3] += transform[8] * BB[5];}
-			else {newBB[3] += transform[8] * BB[2]; newBB[0] += transform[8] * BB[5];}
-
-			if(transform[1] > 0) {newBB[1] += transform[1] * BB[0]; newBB[4] += transform[1] * BB[3];}
-			else {newBB[4] += transform[1] * BB[0]; newBB[1] += transform[1] * BB[3];}
-
-			if(transform[5] > 0) {newBB[1] += transform[5] * BB[1]; newBB[4] += transform[5] * BB[4];}
-			else {newBB[4] += transform[5] * BB[1]; newBB[1] += transform[5] * BB[4];}
-
-			if(transform[9] > 0) {newBB[1] += transform[9] * BB[2]; newBB[4] += transform[9] * BB[5];}
-			else {newBB[4] += transform[9] * BB[2]; newBB[1] += transform[9] * BB[5];}
-
-			if(transform[2] > 0) {newBB[2] += transform[2] * BB[0]; newBB[5] += transform[2] * BB[3];}
-			else {newBB[5] += transform[2] * BB[0]; newBB[2] += transform[2] * BB[3];}
-
-			if(transform[6] > 0) {newBB[2] += transform[6] * BB[1]; newBB[5] += transform[6] * BB[4];}
-			else {newBB[5] += transform[6] * BB[1]; newBB[2] += transform[6] * BB[4];}
-
-			if(transform[10] > 0) {newBB[2] += transform[10] * BB[2]; newBB[5] += transform[10] * BB[5];}
-			else {newBB[5] += transform[10] * BB[2]; newBB[2] += transform[10] * BB[5];}
-
-			return newBB;
-		}
-
-		var quad = new Float32Array(28);
-		quad[3]  = 0.5; quad[4]  = 0;
-		quad[10] = 0.5; quad[11] = 1;
-		quad[17] = 0.0; quad[18] = 0;
-		quad[24] = 0.0; quad[25] = 1;
-		quad[5]  = 1.0; quad[6]  = 0;
-		quad[12] = 1.0; quad[13] = 1;
-		quad[19] = 0.5; quad[20] = 0;
-		quad[26] = 0.5; quad[27] = 1;
-
-		function updateBB(node, newDir, obj) {
-			if(checkOrtho) {
-				node.dir = [0, 0, 0];
-				var pos = [(node.BB[3] + node.BB[0]) * 0.5, (node.BB[4] + node.BB[1]) * 0.5, node.BB[5] + 1];
-				var viewMat = M4x4.makeLookAt(pos, V3.add(pos, [0, 0, -1]), [0, 1, 0]);
-
-				quad[0]  = node.BB[3]; quad[1]  = node.BB[1]; quad[2]  = node.BB[5];
-				quad[7]  = node.BB[3]; quad[8]  = node.BB[4]; quad[9]  = node.BB[5];
-				quad[14] = node.BB[0]; quad[15] = node.BB[1]; quad[16] = node.BB[5];
-				quad[21] = node.BB[0]; quad[22] = node.BB[4]; quad[23] = node.BB[5];
-
-				gl.bindBuffer(gl.ARRAY_BUFFER, node.quadVBO);
-				gl.bufferSubData(gl.ARRAY_BUFFER, 0, quad);
-
-				var halfWidth = (node.BB[3] - node.BB[0]) * 0.5;
-				var halfHeight = (node.BB[4] - node.BB[1]) * 0.5;
-				node.mvpMat = M4x4.mul(M4x4.makeOrtho(-halfWidth, halfWidth, -halfHeight, halfHeight, 1, 1 + node.BB[5] - node.BB[2]), viewMat);
-			}
-			else {
-				node.dir = newDir;
-				var viewMat = M4x4.makeLookAt(obj.camPos, V3.add(obj.camPos, newDir), obj.viewUp);
-				viewMat = M4x4.translate(V3.scale(obj.translateVec, -1), viewMat);
-				var viewMatInv = M4x4.inverse(viewMat);
-				var newBB = transformBB(node.BB, viewMat);
-
-				var point = V3.mul4x4(viewMatInv, [newBB[3], newBB[1], newBB[5]]);
-				quad[0] = point[0]; quad[1] = point[1]; quad[2] = point[2];
-
-				point = V3.mul4x4(viewMatInv, [newBB[3], newBB[4], newBB[5]]);
-				quad[7] = point[0]; quad[8] = point[1]; quad[9] = point[2];
-
-				point = V3.mul4x4(viewMatInv, [newBB[0], newBB[1], newBB[5]]);
-				quad[14] = point[0]; quad[15] = point[1]; quad[16] = point[2];
-
-				point = V3.mul4x4(viewMatInv, [newBB[0], newBB[4], newBB[5]]);
-				quad[21] = point[0]; quad[22] = point[1]; quad[23] = point[2];
-
-				gl.bindBuffer(gl.ARRAY_BUFFER, node.quadVBO);
-				gl.bufferSubData(gl.ARRAY_BUFFER, 0, quad);
-
-				var newBBDiameter = V3.length(V3.sub(V3.mul4x4(viewMatInv, [newBB[3], newBB[4], newBB[2]]), [quad[14], quad[15], quad[16]]));
-
-				var quadCenter = V3.sub([(quad[0] + quad[7] + quad[14] + quad[21]) * 0.25, 
-								  		 (quad[1] + quad[8] + quad[15] + quad[22]) * 0.25, 
-								  		 (quad[2] + quad[9] + quad[16] + quad[23]) * 0.25],
-								  		obj.translateVec);
-
-				var halfWidth = V3.length(V3.sub([quad[0], quad[1], quad[2]], [quad[14], quad[15], quad[16]])) * 0.5;
-				var halfHeight = V3.length(V3.sub([quad[7], quad[8], quad[9]], [quad[0], quad[1], quad[2]])) * 0.5;
-				var nearPlane = V3.length(V3.sub(obj.camPos, quadCenter));
-				node.mvpMat = M4x4.mul(M4x4.makeFrustum(-halfWidth, halfWidth, -halfHeight, halfHeight, nearPlane, nearPlane + newBBDiameter), viewMat);
-
-				// node.dir = newDir;
-				// var viewMat = M4x4.makeLookAt(obj.camPos, V3.add(obj.camPos, newDir), obj.viewUp);
-				// var right = V3.scale([viewMat[0], viewMat[4], viewMat[8]], node.radius);
-				// var left = V3.scale(right, -1);
-				// var up = V3.scale([viewMat[1], viewMat[5], viewMat[9]], node.radius);
-				// var down = V3.scale(up, -1);
-				// var back = V3.scale([viewMat[2], viewMat[6], viewMat[10]], node.radius);
-
-				// quad[0] = right[0] + down[0] + back[0] + node.center[0];
-				// quad[1] = right[1] + down[1] + back[1] + node.center[1];
-				// quad[2] = right[2] + down[2] + back[2] + node.center[2];
-
-				// quad[7] = right[0] + up[0] + back[0] + node.center[0];
-				// quad[8] = right[1] + up[1] + back[1] + node.center[1];
-				// quad[9] = right[2] + up[2] + back[2] + node.center[2];
-
-				// quad[14] = left[0] + down[0] + back[0] + node.center[0];
-				// quad[15] = left[1] + down[1] + back[1] + node.center[1];
-				// quad[16] = left[2] + down[2] + back[2] + node.center[2];
-
-				// quad[21] = left[0] + up[0] + back[0] + node.center[0];
-				// quad[22] = left[1] + up[1] + back[1] + node.center[1];
-				// quad[23] = left[2] + up[2] + back[2] + node.center[2];
-
-				// gl.bindBuffer(gl.ARRAY_BUFFER, node.quadVBO);
-				// gl.bufferSubData(gl.ARRAY_BUFFER, 0, quad);
-
-				// viewMat = M4x4.translate(V3.scale(obj.translateVec, -1), viewMat);
-				// node.mvpMat = M4x4.mul(M4x4.makeFrustum(-node.radius, node.radius, -node.radius, node.radius, node.newLen - node.radius, node.newLen + node.radius), viewMat);
-			}
-		}
-
 		function parseCallback() {
 			if(this.readyState == 4 && this.status == 200) {
 				var obj = JSON.parse(this.responseText);
-				if(obj[0] === undefined) {
-					obj[0] = obj;
+				var node = this.node;
+
+				var verts = new Float32Array(obj.length / 4);
+				var cols = new Float32Array(verts.length * 2);
+				//include alpha channel to hold extra photo data
+				var pickCols = new Float32Array(verts.length / 3 * 4);
+
+				//response is an array of points where each point is x, y, z, r, g, b, r2, g2, b2, i, ix, iy
+				//r2, g2, b2 are histogram equalized colors
+				//i, ix, iy are photo index and xy image coordinates
+				for(var i = 0, j = 0, k = 0, m = 0; i < obj.length; i += 12, j += 3, k += 6, m += 4) {
+					verts[j] 	 = obj[i];
+					verts[j + 1] = obj[i + 1];
+					verts[j + 2] = obj[i + 2];
+					cols[k] 	 = obj[i + 3] / 255;
+					cols[k + 1]  = obj[i + 4] / 255;
+					cols[k + 2]  = obj[i + 5] / 255;
+					cols[k + 3]  = obj[i + 6] / 255;
+					cols[k + 4]  = obj[i + 7] / 255;
+					cols[k + 5]  = obj[i + 8] / 255;
+
+					//bit twiddling
+					//thumbnail is 300x225 pixels, so need need 9 bits for x coord and 8 bits for y coord
+					//remaining 15 bits are used for photo id
+					//red is the lower 8 bits of photo id
+					//the low 7 bits of green are used for the high 7 bits of photo id
+					//the high bit of green is the 9th bit of x while all of blue is used for the lower 8 bits of x
+					//alpha is used for y
+					pickCols[m] 	= ((obj[i + 9] + 1) & 255) / 255;
+					pickCols[m + 1] = ((((obj[i + 9] + 1) >> 8) & 127) | (((obj[i + 10] * 300) >> 1) & 128)) / 255;
+					pickCols[m + 2] = ((obj[i + 10] * 300) & 255) / 255;
+					pickCols[m + 3] = (obj[i + 11] * 225) / 255;
 				}
 
-				var currentRequest = this.currentRequest;
+				//buffer vertices and colors for this node
+				var VBO = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
+				gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+				node.VertexPositionBuffer = {length: verts.length, VBO: VBO};
+				
+				node.PickingColorBuffer = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, node.PickingColorBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, pickCols, gl.STATIC_DRAW);
 
-				for(var h = 0; h < currentRequest.length; h++) {
-					currentRequest[h].node.Isleaf = obj[h].Isleaf;
-					currentRequest[h].node.BB = obj[h].BB;
+				node.VertexColorBuffer = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, node.VertexColorBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, cols, gl.STATIC_DRAW);
 
-					var temp = [currentRequest[h].node.BB[3] - currentRequest[h].node.BB[0], 
-								currentRequest[h].node.BB[4] - currentRequest[h].node.BB[1], 
-								currentRequest[h].node.BB[5] - currentRequest[h].node.BB[2]];
-					currentRequest[h].node.center[0] = temp[0] * 0.5 + currentRequest[h].node.BB[0];
-					currentRequest[h].node.center[1] = temp[1] * 0.5 + currentRequest[h].node.BB[1];
-					currentRequest[h].node.center[2] = temp[2] * 0.5 + currentRequest[h].node.BB[2];
-					currentRequest[h].node.radius =  Math.sqrt(temp[0] * temp[0] + temp[1] * temp[1] + temp[2] * temp[2]) * 0.5;
-
-					var dir = V3.normalize(V3.sub(V3.sub(currentRequest[h].node.center, stat.translateVec), stat.camPos));
-					// var vec = V3.sub(V3.sub(currentRequest[h].node.center, stat.translateVec), stat.camPos);
-					// currentRequest[h].node.newLen = V3.length(vec);
-					// var dir = V3.scale(vec, 1 / currentRequest[h].node.newLen);
-
-					currentRequest[h].node.quadVBO = gl.createBuffer();
-					gl.bindBuffer(gl.ARRAY_BUFFER, currentRequest[h].node.quadVBO);
-					gl.bufferData(gl.ARRAY_BUFFER, 112, gl.DYNAMIC_DRAW);
-					updateBB(currentRequest[h].node, dir, stat);
-
-					if(obj[h].Isleaf) {
-						var verts = new Float32Array(obj[h].Point.length / 4);
-						var cols = new Float32Array(verts.length * 2);
-						var pickCols = new Float32Array(verts.length);
-
-						for(var i = 0, j = 0, k = 0; i < obj[h].Point.length; i += 12, j += 3, k += 6) {
-							verts[j] 	 = obj[h].Point[i];
-							verts[j + 1] = obj[h].Point[i + 1];
-							verts[j + 2] = obj[h].Point[i + 2];
-							cols[k] 	= obj[h].Point[i + 3] / 255;
-							cols[k + 1] = obj[h].Point[i + 4] / 255;
-							cols[k + 2] = obj[h].Point[i + 5] / 255;
-							cols[k + 3] = obj[h].Point[i + 6] / 255;
-							cols[k + 4] = obj[h].Point[i + 7] / 255;
-							cols[k + 5] = obj[h].Point[i + 8] / 255;
-							picInfo.push({pic: obj[h].Point[i + 9], x: obj[h].Point[i + 10], y: obj[h].Point[i + 11]});
-							pickCols[j]     = (pointPickIndex >> 16) / 255;
-							pickCols[j + 1] = ((pointPickIndex >> 8) & 255) / 255;
-							pickCols[j + 2] = (pointPickIndex & 255) / 255;
-							pointPickIndex++;
-						}
-
-						var VBO = gl.createBuffer();
-						gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
-						gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
-						currentRequest[h].node.VertexPositionBuffer = {length: verts.length, VBO: VBO};
-						
-						currentRequest[h].node.PickingColorBuffer = gl.createBuffer();
-						gl.bindBuffer(gl.ARRAY_BUFFER, currentRequest[h].node.PickingColorBuffer);
-						gl.bufferData(gl.ARRAY_BUFFER, pickCols, gl.STATIC_DRAW);
-
-						currentRequest[h].node.VertexColorBuffer = gl.createBuffer();
-						gl.bindBuffer(gl.ARRAY_BUFFER, currentRequest[h].node.VertexColorBuffer);
-						gl.bufferData(gl.ARRAY_BUFFER, cols, gl.STATIC_DRAW);
-
-						gl.bindFramebuffer(gl.FRAMEBUFFER, FBO);
-						gl.useProgram(leafShader);
-						gl.uniform1f(leafVarLocs[3], 1.0);
-						gl.uniform1i(leafVarLocs[6], 0);
-						gl.useProgram(quadShader);
-						gl.uniform1i(quadVarLocs[6], 0);
-
-						rendTexImp(currentRequest[h].node, true);
-
-						gl.useProgram(leafShader);
-						gl.uniform1f(leafVarLocs[3], currPointSize);
-						gl.uniform1i(leafVarLocs[6], currCE);
-						gl.useProgram(quadShader);
-						gl.uniform1i(quadVarLocs[6], currCE);
-						gl.viewport(0, 0, 540, 540);
-						gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-					}
-					currentRequest[h].node.status = COMPLETE;
-				}
-				requestCount--;
+				node.status = COMPLETE;
+				currentLoad--;
 				delete this;
 			}
 		}
 
-		function rendTexImp(node, first) {
-			gl.bindTexture(gl.TEXTURE_2D, node.texture);
-			if(!node.inTex) {
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, qSize * 2, qSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-				node.inTex = true;
-			}
-			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, node.texture, 0);
-			basicCtx.clear();
-
-			gl.useProgram(leafShader);
-			gl.uniformMatrix4fv(leafVarLocs[2], false, node.mvpMat);
-			gl.bindBuffer(gl.ARRAY_BUFFER, node.VertexPositionBuffer.VBO);
-			gl.vertexAttribPointer(leafVarLocs[0], 3, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, node.VertexColorBuffer);
-			
-			for (var x = 0; x < 2; x++) {
-				gl.viewport(x * qSize, 0, qSize, qSize);
-				gl.vertexAttribPointer(leafVarLocs[1], 3, gl.FLOAT, false, 24, x * 12);
-				gl.drawArrays(gl.POINTS, 0, node.VertexPositionBuffer.length / 3);
-			}
-
-			if(first) {
-				checkParent(node, true);
-			}
-		}
-
-		function checkParent(node, first) {
-			parentNode = node.parent;
-			if(parentNode != null) {
-				var go = true;
-				if(first) {
-					for(var i = 0; i < 8; i++) {
-						if(typeof parentNode.Children[i] == "undefined" || !parentNode.Children[i].inTex) {
-							go = false;
-						}
-					}
-				}
-				if(go) {
-					gl.bindTexture(gl.TEXTURE_2D, parentNode.texture);
-					if(!parentNode.inTex) {
-						gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, qSize * 2, qSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-						parentNode.inTex = true;
-					}
-					gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, parentNode.texture, 0);
-					basicCtx.clear();
-
-					gl.useProgram(quadShader);
-					gl.uniformMatrix4fv(quadVarLocs[2], false, parentNode.mvpMat);
-
-					for(var j = 0; j < 8; j++) {
-						gl.bindBuffer(gl.ARRAY_BUFFER, parentNode.Children[j].quadVBO);
-						gl.vertexAttribPointer(quadVarLocs[0], 3, gl.FLOAT, false, 28, 0);
-						gl.bindTexture(gl.TEXTURE_2D, parentNode.Children[j].texture);
-						gl.uniform1i(quadVarLocs[3], parentNode.Children[j].texture);
-
-						for(var x = 0; x < 2; x++) {
-							gl.viewport(x * qSize, 0, qSize, qSize);
-							gl.vertexAttribPointer(quadVarLocs[1], 2, gl.FLOAT, false, 28, 12 + x * 8);
-							gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-						}
-					}
-
-					if(first) {
-						checkParent(parentNode, true);
-					}
-				}
-			}
-		}
-
-		function load(parentnode, index) {
-			var node = {
-				VertexPositionBuffer: {},
-				VertexColorBuffer: {},
-				PickingColorBuffer: {},
-				texture: null,
-				quadVBO: [],
-				BB: [],
-				status: STARTED, 
-				center: [0, 0, 0],
-				radius: 1,
-				Isleaf: 0,
-				Children: {},
-				parent: null,
-				inTex: false,
-				level: 0,
-				dir: [],
-				newDir: [],
-				// newLen: 0,
-				mvpMat: [],
-				path: null
-			};
-
-			if(parentnode == null) {
-				node.path = index;
-				Tree = node;
-			}
-			else {
-				node.path = parentnode.path + "/" + index;
-				parentnode.Children[index] = node;
-				node.parent = parentnode;
-				node.level = parentnode.level + 1;
-			}
-
-			node.texture = gl.createTexture();
-			gl.bindTexture(gl.TEXTURE_2D, node.texture);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-
-			node.image = new Image();
-			node.image.onload = function() {
-				gl.bindTexture(gl.TEXTURE_2D, node.texture);
-				gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, node.image);
-				gl.bindTexture(gl.TEXTURE_2D, null);
-				delete this;
-			}
-			node.image.src = "StartupTextures/" + node.path.replace(/\//g,"-") + ".png";
-
-			requestQueue.push({path: node.path, node: node});
-		}
-
-		function sendRequest() {
-			while(requestQueue.length > 0 && requestCount < maxRequest) {
-				var request = new XMLHttpRequest();
-				request.onload = parseCallback;
-				request.currentRequest = requestQueue.splice(0, Math.min(5, requestQueue.length));
-				var requestString = '';
-				var i;
-				for(i = 0; i < request.currentRequest.length - 1; i++) {
-					requestString += request.currentRequest[i].path + ';';
-				}
-				requestString += request.currentRequest[i].path;
-				request.open("GET", "action.php?a=getnode&path="+requestString+"&table="+table, true);
-				request.send();
-				requestCount++;
-			}
-		}
-
-		this.root = function(t) {
-			table = t;
-			load(null, 'r');
+		function load(node) {
+			var request = new XMLHttpRequest();
+			request.onload = parseCallback;
+			node.status = STARTED;
+			request.node = node.node;
+			request.open("GET", "action.php?a=getnode&path="+node.p+"&table="+table, true);
+			request.send();
 		}
 	}// constructor
 

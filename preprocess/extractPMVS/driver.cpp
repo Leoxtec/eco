@@ -1,3 +1,9 @@
+//main driver for generating the per point ecosynth browser data
+//from a pmvs output
+//per point data includes georeferenced position, original color and 
+//photo reference (photo id plus xy position in the photo)
+//this code needs to jump through some extra hoops to be able to generate the photo info
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -5,6 +11,8 @@
 #include <math.h>
 #include <sstream>
 #include <iomanip>
+#include <stdio.h>
+#include <stdlib.h>
 using namespace std;
 
 struct camera {
@@ -16,18 +24,25 @@ struct geoRefTrans {
 	double s, Tz;
 };
 
+//prototypes
 void calculateImageCoords(struct camera cam, const double point[], double imageCoords[]);
-
 void fromLocalToWorld(struct geoRefTrans geoRef, const double localPoint[], double worldPoint[]);
 
 int main(int argc, const char* argv[]) {
+	//parse command line arguments
 	if(argc < 2) {
 		cout << "please add working directory as command line argument" << endl;
-		// current local dir = "../../pointpickingstuff/511_pics"
 		exit(1);
 	}
 
 	string path(argv[1]);
+
+	//strip off the leading directory for the base filename
+	string filename(argv[1]);
+	unsigned int slashPos = filename.rfind("/");
+	if(slashPos != string::npos) {
+		filename.erase(0, slashPos + 1);
+	}
 
 	ifstream inFile;
 	ostringstream oss;
@@ -38,9 +53,10 @@ int main(int argc, const char* argv[]) {
 	vector<struct camera> cams;
 	struct camera currCam;
 
+	//grab all the camera transforms needed to determine point location within a photo
 	while(found) {
 		oss << path << "/pmvs/txt/" << setw(8) << camCount++ << ".txt";
-		inFile.open(oss.str());
+		inFile.open(oss.str().c_str());
 		if(!inFile) {
 			found = false;
 		}
@@ -62,9 +78,10 @@ int main(int argc, const char* argv[]) {
 		exit(1);
 	}
 
+	//read in and store the georefence transform
 	struct geoRefTrans geoRef;
 	double omega, phi, kappa, ignoreDouble;
-	inFile.open(path + "/georef_transform.txt");
+	inFile.open((path + "/georef_transform.txt").c_str());
 	if(!inFile) {
 		cout << "could not open georeference transform file." << endl;
 		exit(0);
@@ -81,7 +98,8 @@ int main(int argc, const char* argv[]) {
 	geoRef.mat[2][1] = -sin(omega) * cos(phi);
 	geoRef.mat[2][2] = cos(omega) * cos(phi);
 
-	ifstream inPatchFile(path + "/pmvs/models/pmvs_options.txt.patch");
+	//open pmvs patch file to obtain the photo id for each point
+	ifstream inPatchFile((path + "/pmvs/models/pmvs_options.txt.patch").c_str());
 	if(!inPatchFile) {
 		cout << "could not open .patch file" << endl;
 		cout << "please ensure file path is correct" << endl;
@@ -95,7 +113,8 @@ int main(int argc, const char* argv[]) {
 	double localPoint[3], worldPoint[3];
 	int camIndex;
 
-	ifstream inPlyFile(path + "/pmvs/models/pmvs_options.txt.ply");
+	//open the pmvs .ply file for each point's position and color
+	ifstream inPlyFile((path + "/pmvs/models/pmvs_options.txt.ply").c_str());
 	if(!inPlyFile) {
 		cout << "could not open .ply file" << endl;
 		cout << "please ensure file path is correct" << endl;
@@ -108,7 +127,8 @@ int main(int argc, const char* argv[]) {
 	int color[3];
 	float ignoreFloat;
 
-	ofstream outPlyFile(path + "/pmvs/models/point_pick_test.ply");
+	//generate new .ply file to store the extra information
+	ofstream outPlyFile((path + "/" + filename + ".ply").c_str());
 	outPlyFile << "ply" << endl;
 	outPlyFile << "format ascii 1.0" << endl;
 	outPlyFile << "element vertex " << pointCount << endl;
@@ -123,6 +143,7 @@ int main(int argc, const char* argv[]) {
 	outPlyFile << "property float image_y_coord" << endl;
 	outPlyFile << "end_header" << endl;
 
+	//per point, output transformed point along with photo info
 	double imageCoords[2];
 	for(int i = 0; i < pointCount; i++) {
 		inPatchFile >> localPoint[0] >> localPoint[1] >> localPoint[2];
@@ -154,12 +175,15 @@ int main(int argc, const char* argv[]) {
 	outPlyFile.close();
 }
 
+//deteremine image coordinates using pmvs camera transforms
+//cacluation if provided by the pmvs documentation
 void calculateImageCoords(struct camera cam, const double point[], double imageCoords[]) {
 	double z = cam.projection[2][0] * point[0] + cam.projection[2][1] * point[1] + cam.projection[2][2] * point[2] + cam.projection[2][3];
 	imageCoords[0] = (cam.projection[0][0] * point[0] + cam.projection[0][1] * point[1] + cam.projection[0][2] * point[2] + cam.projection[0][3]) / (z * 3648.0);
 	imageCoords[1] = (cam.projection[1][0] * point[0] + cam.projection[1][1] * point[1] + cam.projection[1][2] * point[2] + cam.projection[1][3]) / (z * 2736.0);
 }
 
+//georeference a point per the cloud's specific georefence transform
 void fromLocalToWorld(struct geoRefTrans geoRef, const double localPoint[], double worldPoint[]) {
 	worldPoint[0] = geoRef.s * (geoRef.mat[0][0] * localPoint[0] + geoRef.mat[1][0] * localPoint[1] + geoRef.mat[2][0] * localPoint[2]);
 	worldPoint[1] = geoRef.s * (geoRef.mat[0][1] * localPoint[0] + geoRef.mat[1][1] * localPoint[1] + geoRef.mat[2][1] * localPoint[2]);

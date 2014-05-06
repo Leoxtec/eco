@@ -1,3 +1,5 @@
+//for setting a uniform color per draw 
+
 attribute vec3 aVertexPosition;
 
 uniform mat4 uModelViewMatrix;

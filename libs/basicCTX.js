@@ -1,3 +1,7 @@
+//adapted from http://zenit.senecac.on.ca/wiki/index.php/XB_PointStream
+//sets up a webGL context, provides functions for resizing, rendering loop,
+//creating shaders and implements a matrix stack
+
 /*
 	Copyright (c) 2010  Seneca College
 	MIT LICENSE

@@ -1,8 +1,17 @@
+//adapted from http://zenit.senecac.on.ca/wiki/index.php/XB_PointStream
+//portion adapted sets up a point cloud with keyboard and mouse controls.
+//Functionality added includes setting up a junk buffer trick,
+//adding in markers, map, axes, grid and user features,
+//and updating projection matrices for each of these additional features
+
 var PointCloud = (function() {
 	function PointCloud(cvsElement, table) {
 		this.basicCtx = new BasicCTX();
 		this.basicCtx.setup(cvsElement);
 
+		//junkbuffer trick used to avoid having to always enable and disable vertex attribute arrays
+		//for every single draw command
+		//need to enable enough for the maximum that any shader would need
 		this.basicCtx.setDefaults(540, 540);
 		var junkBuffer = this.basicCtx.ctx.createBuffer();
 		this.basicCtx.ctx.bindBuffer(this.basicCtx.ctx.ARRAY_BUFFER, junkBuffer);
@@ -12,14 +21,32 @@ var PointCloud = (function() {
 		this.basicCtx.ctx.vertexAttribPointer(0, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
 		this.basicCtx.ctx.vertexAttribPointer(1, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
 
+		//request metadata for values specific to the cloud
+		//metadata is an octree structure that holds (per node) the path name, 
+		//center and radius for the bounding box, and an array of child nodes.
+		//the root node also stores addtional per cloud data including total bound box,
+		//ortho size for map display, and scale and bias parameters for min max color enhancement
 		request = new XMLHttpRequest();
-		request.open("GET", "action.php?a=getnode&path=r&table="+table, false);
+		request.open("GET", "action.php?a=getnode&path=meta&table="+table, false);
 		request.send();
 		obj = JSON.parse(request.responseText);
+		this.tree = new PCTree(this.basicCtx, obj, table);
 
-		this.tree = new PCTree(this.basicCtx, obj.b, obj.s);
-		//this.tree2 = new PCTree(this.basicCtx);
-		this.markers = new Markers(this.basicCtx, obj.BB);
+		//request metadata for values specific to 2 clouds, used for leaf on and leaf off
+		// request = new XMLHttpRequest();
+		// request.open("GET", "action.php?a=getnode&path=meta&table="+table+"_leaf_off", false);
+		// request.send();
+		// obj = JSON.parse(request.responseText);
+		// this.tree = new PCTree(this.basicCtx, obj, table+"_leaf_off");
+		
+		// request = new XMLHttpRequest();
+		// request.open("GET", "action.php?a=getnode&path=meta&table="+table+"_leaf_on", false);
+		// request.send();
+		// obj = JSON.parse(request.responseText);
+		// this.tree2 = new PCTree(this.basicCtx, obj, table+"_leaf_on");
+		
+		//initialize class to handle ecosynth specific features
+		this.markers = new Markers(this.basicCtx, obj.BB, table);
 		this.map = new Map(this.basicCtx, obj.o);
 		this.axes = new Axes(this.basicCtx);
 		this.grid = new Grid(this.basicCtx, obj.BB);
@@ -41,6 +68,9 @@ var PointCloud = (function() {
 		// 	window.console.log('sorry, no OES_standard_derivatives');
 		// }
 
+		//set the perspective projection for each piece that displays in the main window
+		//the projection changes per frame such that the near and far planes are fit to the point cloud
+		//this is to avoid z-fighting
 		this.usePerspective = function() {
 			var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.grid.getCenter());
 			var near = -this.grid.getRadius() - centerVS[2]; // - 5.0;
@@ -57,6 +87,7 @@ var PointCloud = (function() {
 			this.grid.usePerspective();
 		};
 
+		//set the default ortho size based on the grid radius
 		this.useOrthographic = function() {
 			this.basicCtx.scaleFactor = this.grid.getRadius();
 			var projectionMatrix = M4x4.scale3(1 / this.basicCtx.scaleFactor, 1 / this.basicCtx.scaleFactor, 1, this.basicCtx.orthographicMatrix);
@@ -67,6 +98,7 @@ var PointCloud = (function() {
 			this.users.useOrthographic(projectionMatrix);
 		};
 
+		//update the ortho size for zooming in ortho mode
 		this.scaleOrthographic = function(deltaS) {
 			this.basicCtx.scaleFactor += deltaS;
 			if(this.basicCtx.scaleFactor < 5) {

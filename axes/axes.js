@@ -1,46 +1,46 @@
+//This class handles rendering 3D axes to show the user his/her current 3D orientation
+
 var Axes = (function() {
 	function Axes(bctx) {
 		var basicCtx = bctx;
 		var gl = basicCtx.ctx;
 
-		var axesVBO;
-		var axesColorsVBO;
-		var letterPositionVBO;
-		var letterIndexVBO;
-
-		var axesShader;
-		var letterShader;
-
-		var axesVarLocs = [];
-		var letterVarLocs = [];
-
-		axesShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basic.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
+		//create shader for axes, cache the attribute and uniform variable locations
+		//and initialize projection matrix
+		var axesShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/basic.vert'), basicCtx.getShaderStr('shaders/basic.frag'));
 		gl.useProgram(axesShader);
+		var axesVarLocs = [];
 		axesVarLocs.push(gl.getAttribLocation(axesShader, "aVertexPosition"));
 		axesVarLocs.push(gl.getAttribLocation(axesShader, "aVertexColor"));
 		axesVarLocs.push(gl.getUniformLocation(axesShader, "uModelViewMatrix"));
 		axesVarLocs.push(gl.getUniformLocation(axesShader, "uProjectionMatrix"));
 		gl.uniformMatrix4fv(axesVarLocs[3], false, basicCtx.perspectiveMatrix);
-		axesVBO = gl.createBuffer();
+
+		//axes lines vertices
+		var axesVBO = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, axesVBO);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0.0,0.0,0.0,
-																			 1.0,0.0,0.0,
-																			 0.0,0.0,0.0,
-																			 0.0,1.0,0.0,
-																			 0.0,0.0,0.0,
-																			 0.0,0.0,1.0]), gl.STATIC_DRAW);
+														 1.0,0.0,0.0,
+														 0.0,0.0,0.0,
+														 0.0,1.0,0.0,
+														 0.0,0.0,0.0,
+														 0.0,0.0,1.0]), gl.STATIC_DRAW);
 
-		axesColorsVBO = gl.createBuffer();
+		//axes lines colors
+		var axesColorsVBO = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, axesColorsVBO);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1.0,0.0,0.0,
-																			 1.0,0.0,0.0,
-																			 0.0,1.0,0.0, 
-																			 0.0,1.0,0.0, 
-																			 0.0,0.0,1.0,
-																			 0.0,0.0,1.0]), gl.STATIC_DRAW);
+														 1.0,0.0,0.0,
+														 0.0,1.0,0.0, 
+														 0.0,1.0,0.0, 
+														 0.0,0.0,1.0,
+														 0.0,0.0,1.0]), gl.STATIC_DRAW);
 
-		letterShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/letter.vert'), basicCtx.getShaderStr('shaders/map.frag'));
+		//create shader for letters (to show East, North and Up) and cache the attribute and uniform variable locations
+		//and initialize projection matrix
+		var letterShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/letter.vert'), basicCtx.getShaderStr('shaders/basicTexture.frag'));
 		gl.useProgram(letterShader);
+		var letterVarLocs = [];
 		letterVarLocs.push(gl.getAttribLocation(letterShader, "aVertexPosition"));
 		letterVarLocs.push(gl.getAttribLocation(letterShader, "aLetterIndex"));
 		letterVarLocs.push(gl.getUniformLocation(letterShader, "uModelViewMatrix"));
@@ -48,32 +48,37 @@ var Axes = (function() {
 		letterVarLocs.push(gl.getUniformLocation(letterShader, "uSampler"));
 		gl.uniformMatrix4fv(letterVarLocs[3], false, basicCtx.perspectiveMatrix);
 
-		letterPositionVBO = gl.createBuffer();
+		//letter texture vertices
+		//sending the same vertex and using the shader to offset
+		var letterPositionVBO = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, letterPositionVBO);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1.075, 0.0, 0.0,
-																			 1.075, 0.0, 0.0,
-																			 1.075, 0.0, 0.0,
-																			 1.075, 0.0, 0.0,
-																			 1.075, 0.0, 0.0,
-																			 1.075, 0.0, 0.0,
-																			 0.0, 1.075, 0.0,
-																			 0.0, 1.075, 0.0,
-																			 0.0, 1.075, 0.0,
-																			 0.0, 1.075, 0.0,
-																			 0.0, 1.075, 0.0,
-																			 0.0, 1.075, 0.0,
-																			 0.0, 0.0, 1.075,
-																			 0.0, 0.0, 1.075,
-																			 0.0, 0.0, 1.075,
-																			 0.0, 0.0, 1.075,
-																			 0.0, 0.0, 1.075,
-																			 0.0, 0.0, 1.075]), gl.STATIC_DRAW);
+														 1.075, 0.0, 0.0,
+														 1.075, 0.0, 0.0,
+														 1.075, 0.0, 0.0,
+														 1.075, 0.0, 0.0,
+														 1.075, 0.0, 0.0,
+														 0.0, 1.075, 0.0,
+														 0.0, 1.075, 0.0,
+														 0.0, 1.075, 0.0,
+														 0.0, 1.075, 0.0,
+														 0.0, 1.075, 0.0,
+														 0.0, 1.075, 0.0,
+														 0.0, 0.0, 1.075,
+														 0.0, 0.0, 1.075,
+														 0.0, 0.0, 1.075,
+														 0.0, 0.0, 1.075,
+														 0.0, 0.0, 1.075,
+														 0.0, 0.0, 1.075]), gl.STATIC_DRAW);
 
-		letterIndexVBO = gl.createBuffer();
+		//have to use our own indices as webGL does not have auto generated vertex id
+		var letterIndexVBO = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, letterIndexVBO);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0.0, 1.0, 2.0, 2.0, 1.0, 3.0,
-																			 4.0, 5.0, 6.0, 6.0, 5.0, 7.0,
-																			 8.0, 9.0, 10.0, 10.0, 9.0, 11.0]), gl.STATIC_DRAW);
+														 4.0, 5.0, 6.0, 6.0, 5.0, 7.0,
+														 8.0, 9.0, 10.0, 10.0, 9.0, 11.0]), gl.STATIC_DRAW);
+
+		//set texture parameters and load texture image
 		letterTexture = gl.createTexture();
 		gl.bindTexture(gl.TEXTURE_2D, letterTexture);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -91,15 +96,15 @@ var Axes = (function() {
 		}
 		letterImage.src = "preprocess/letters.png";
 
-		this.getBasicCTX = function() {
-			return basicCtx;
-		};
-
 		this.render = function() {
+			//use blending to void rendering the letter's background
 			gl.enable(gl.BLEND);
 			gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+			//BROWSER_RESIZE
 			gl.viewport(540, 270, 270, 270);
 
+			//draw axes
 			gl.useProgram(axesShader);
 			gl.uniformMatrix4fv(axesVarLocs[2], false, basicCtx.peekMatrix());
 			gl.bindBuffer(gl.ARRAY_BUFFER, axesVBO);
@@ -108,6 +113,7 @@ var Axes = (function() {
 			gl.vertexAttribPointer(axesVarLocs[1], 3, gl.FLOAT, false, 0, 0);
 			gl.drawArrays(gl.LINES, 0, 6);
 
+			//draw letters
 			gl.useProgram(letterShader);
 			gl.uniformMatrix4fv(letterVarLocs[2], false, basicCtx.peekMatrix());
 			gl.bindBuffer(gl.ARRAY_BUFFER, letterPositionVBO);
