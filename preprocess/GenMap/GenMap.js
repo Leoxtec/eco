@@ -104,7 +104,7 @@ var GenMap = (function() {
 
 			this.recurseTree(Tree);
 
-			sendStringRepresentation("map");
+			sendStringRepresentation();
 		};
 
 		//draw a node and recurse through the children
@@ -200,7 +200,7 @@ var GenMap = (function() {
 
 		//code adapted from http://stackoverflow.com/questions/9771986/fabric-js-canvas-todataurl-sent-to-php-by-ajax
 		//send the generated png to the server
-		function sendStringRepresentation(path) {
+		function sendStringRepresentation() {
 			gl.finish();
 			var strDataURI = canvas.toDataURL();
 			strDataURI = strDataURI.substr(22, strDataURI.length);
@@ -208,7 +208,7 @@ var GenMap = (function() {
 			$.post("img.php",
 			{ 
 				str: strDataURI,
-				file: table + "/" + path
+				file: table
 			},
 			function(data) {
 				if(data == "OK") {

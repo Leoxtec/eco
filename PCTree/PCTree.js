@@ -502,16 +502,16 @@ var PCTree = (function() {
 				//this can be made simpler by eliminating the need for leading zeros
 				//thumbnail preprocessing needs to be updated to not include leading zeros
 				if(pic < 10) {
-					thumbImg.src = table + "_thumbnails/0000000" + pic + ".jpg";
+					thumbImg.src = "../thumbnails/" + table + "/0000000" + pic + ".jpg";
 				}
 				else if(pic < 100) {
-					thumbImg.src = table + "_thumbnails/000000" + pic + ".jpg";
+					thumbImg.src = "../thumbnails/" + table + "/000000" + pic + ".jpg";
 				}
 				else if(pic < 1000) {
-					thumbImg.src = table + "_thumbnails/00000" + pic + ".jpg";
+					thumbImg.src = "../thumbnails/" + table + "/00000" + pic + ".jpg";
 				}
 				else {
-					thumbImg.src = table + "_thumbnails/0000" + pic + ".jpg";
+					thumbImg.src = "../thumbnails/" + table + "/0000" + pic + ".jpg";
 				}
 
 				//draw cross at point found in the main window

@@ -47,7 +47,7 @@ var PointCloud = (function() {
 		
 		//initialize class to handle ecosynth specific features
 		this.markers = new Markers(this.basicCtx, obj.BB, table);
-		this.map = new Map(this.basicCtx, obj.o);
+		this.map = new Map(this.basicCtx, obj.o, table);
 		this.axes = new Axes(this.basicCtx);
 		this.grid = new Grid(this.basicCtx, obj.BB);
 		this.users = new Users(this.basicCtx);

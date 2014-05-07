@@ -4,8 +4,8 @@
 include 'PasswordHash.php';
 
 //establish database connection
-$link = mysql_connect('localhost', 'root', 'jessica');
-$db = mysql_select_db('markers', $link);
+$link = mysql_connect('ip', 'user', 'password');
+$db = mysql_select_db('database', $link);
 
 $key = $_GET["a"];
 

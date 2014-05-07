@@ -4,8 +4,7 @@
 
 $data = base64_decode($_POST["str"]);
 
-$urlUploadImages = "../StartupTextures/";
-// $urlUploadImages = "../startTextures/";
+$urlUploadImages = "../mapTextures/";
 $nameImage = $_POST["file"] . ".png";
 
 $img = imagecreatefromstring($data);

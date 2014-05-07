@@ -2,7 +2,7 @@
 //position and (top down) orientation
 
 var Map = (function() {
-	function Map(bctx, orthoSize) {
+	function Map(bctx, orthoSize, t) {
 		var basicCtx = bctx;
 		var gl = basicCtx.ctx;
 
@@ -85,7 +85,7 @@ var Map = (function() {
 			gl.bindTexture(gl.TEXTURE_2D, null);
 			delete this;
 		}
-		mapImage.src = "StartupTextures/map.png";
+		mapImage.src = "../mapTextures/" + t + ".png";
 
 		//delete temp variables
 		delete orthographicMatrix;
