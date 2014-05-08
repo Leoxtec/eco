@@ -264,7 +264,7 @@ var PCTree = (function() {
 
 		const loadingMax = 10;
 		var currentLoad = 0;
-		var deleteQueue = [];
+		var deleteQueue = new Object();
 		var renderQueue = [];
 
 		//top level octree render function
@@ -291,8 +291,8 @@ var PCTree = (function() {
 			render();
 
 			//properly delete any nodes that have been thrown away
-			var dql = deleteQueue.length;
-			for(var i = 0; i < dql; i++) {
+			var newDQ = new Object();
+			for(var i in deleteQueue) {
 				if(deleteQueue[i].status == COMPLETE) {
 					gl.deleteBuffer(deleteQueue[i].VertexPositionBuffer.VBO);
 					gl.deleteBuffer(deleteQueue[i].VertexColorBuffer);
@@ -300,17 +300,18 @@ var PCTree = (function() {
 					deleteQueue[i].status = NODATA;
 				}
 				else {
-					deleteQueue.push(deleteQueue[i]);
+					newDQ[deleteQueue[i]];
 				}
 			}
-			deleteQueue.splice(0, dql);
+			deleteQueue = newDQ;
+
 
 			//throw away least recently used nodes that are above the threshold
 			if(LRUcount > LRUMax) {
 				while(LRUcount > LRUMax) {
 					var item = DLLHead();
-					if(item != null) {
-						deleteQueue.push(item);
+					if(item != null && deleteQueue[item.path] == null) {
+						deleteQueue[item.path] = item;
 					}
 					DLLRemove(item);
 				}
@@ -361,8 +362,12 @@ var PCTree = (function() {
 					}
 					if(size > qSize) {
 						//add node to the render queue, load data if it doesn't exist, put it at the 
-						//back of the LRU (most recently used), and check children
+						//back of the LRU (most recently used), pull it out of the delete queue if it's in there
+						//and check children
 						renderQueue.push(node);
+						if(deleteQueue[node.path]) {
+							delete deleteQueue[node.path];
+						}
 						if(node.node.status == NODATA) {
 							if(currentLoad < loadingMax) {
 								load(node);
