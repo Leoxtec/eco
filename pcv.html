@@ -14,6 +14,7 @@
     <script src="axes/axes.js"></script>
     <script src="map/map.js"></script>
     <script src="pcv.js"></script>
+    <script src="interactiveFunctions.js"></script>
     <link rel="stylesheet" href="jquery-ui-1.10.3/themes/base/minified/jquery-ui.min.css"/>
     <script src="jquery-ui-1.10.3/jquery-1.9.1.min.js"></script>
     <script src="jquery-ui-1.10.3/ui/minified/jquery-ui.min.js"></script>
@@ -33,6 +34,7 @@
         #pointSizeSlider .ui-slider-handle { height: 1.1em;}
     </style>
     <script>
+        //set the piont size slider default values and update function
         $(function() {
                 $("#pointSizeSlider").slider({min: 1, 
                                               max: 10, 
@@ -46,12 +48,14 @@
         $("#pSize").val($("#pointSizeSlider").slider("value"));
         });
     </script>
+
     <style>
         #gridSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
         #gridSizeSlider .ui-slider-range { background: #000000; }
         #gridSizeSlider .ui-slider-handle { height: 1.1em;}
     </style>
     <script>
+    //set the grid size slider default values and update function
         $(function() {
                 $("#gridSizeSlider").slider({min: 0, 
                                              max: 10, 
@@ -64,12 +68,14 @@
                                             });
         });
     </script>
+
     <style>
         #gridPositionSlider{float: left; clear: left; height: 72px; width: 10px; margin-left: 15px; margin-bottom: 10px;}
         #gridPositionSlider .ui-slider-range { background: #000000; }
         #gridPositionSlider .ui-slider-handle { width: 1.1em;}
     </style>
     <script>
+        //set the grid position slider default values and update function
         $(function() {
                 $("#gridPositionSlider").slider({min: -50, 
                                                  max: 50, 
@@ -84,6 +90,7 @@
     </script>
 
     <script>
+        //login dialog box
         $(function() {
             var username = $("#username"), password = $("#password");
             $("#login-form").dialog({
@@ -109,18 +116,27 @@
     <div id="falied-login" title="Error" style="display:none">password and username does not match</div>
 
     <script>
+        //dialog box to display marker controls
+        //only shows when a user is logged in
         $(function() {
             $("#dialog-help").dialog({autoOpen: false, modal: true, close: function() {flipControl();}});
             $("#markerhelp").click(function() {flipControl(); $("#dialog-help").dialog("open");});
         });
     </script>
+
+    <script>
+        //progress bar is displayed when a user submits a marker and the server is calculating the 95th height percentile
+        $(function() {
+            $("#working").progressbar({value: false});
+        });
+    </script>
 </head>
 
+<!--//BROWSER_RESIZE-->
+<!-- almost all elements in this file will need to be updated for browser window resizing -->
 
-
-
-
-<body onLoad="start();" bgcolor="#666666">
+<!-- grab the table parameter that was set in the URL and send it to the application start function -->
+<body onLoad="start(decodeURI(location.search.slice(location.search.indexOf('=')+1, location.search.length)));" bgcolor="#666666">
     <div id="login-form" title="Login" style="font-size: 14;">
         <form>
             <fieldset>
@@ -143,6 +159,8 @@
     <div id="menu" style="background-color:#FFFFFF;height:540px;width:225px;float:left;">
         <span style="font-family:arial;title='hello'">
         <b>Menu</b><br>
+
+        <!-- toggle on and off various functionality -->
         <div id="checkbox" style="font-size: 10; float: left; width: 100">
             <input type="checkbox" id="pc2" name="checkbox" checked="checked">
             <Label for="pc2" title="Toggle the leaf_on point cloud.">Leaf On</Label>
@@ -152,13 +170,13 @@
             <Label for="grid" title="Toggle the grid.">Grid</Label>
             <input type="checkbox" id="markers" name="checkbox" checked="checked">
             <Label for="markers" title="Toggle the markers.">Markers</Label>
+            <!-- gui element for undetermined point attenuation feature -->
             <!-- <input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
             <Label for="atten" title="Make the points closer to you bigger.">Attentuation</Label> -->
         </div>
-        <!--<span>scale bar:</span> <input type="checkbox" id="scale"/></br>
-        <span>overlay:</span> <input type="checkbox" id="overlay"/></br>-->
-
         </br>
+
+        <!-- radio buttons for different color enhancements -->
         <div id="CEradio" style="font-size: 10;">
             <input type="radio" id="radio6" name="CEradio" checked="checked" onclick="colorEnhance(0);">
             <Label for="radio6" title="Use natural colors">Original</Label>
@@ -167,8 +185,9 @@
             <input type="radio" id="radio8" name="CEradio" onclick="colorEnhance(2);">
             <Label for="radio8" title="Use histogram equalization color enhancement.">Hist EQ</Label>
         </div>
-
         </br>
+
+        <!-- radio buttons for different view modes -->
         <div id="radio" style="font-size: 10;">
             <input type="radio" id="radio1" name="radio" checked="checked" onclick="viewRadioButton(0);">
             <Label for="radio1" 
@@ -191,6 +210,8 @@
                 title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
                 Map Camera</Label>
         </div>
+
+        <!-- point size slider -->
         <p>
             <div title="Change the minimum size for all points." style="font-size: 12;">
                 <label for="pSize">Point Size:</label>
@@ -199,6 +220,7 @@
             </div>
         </p></br>
 
+        <!-- login and logout buttons are dynamically swapped -->
         <div id="login-section" style="font-size: 10; display:block">
             <button id="login">
             <Label for="login" title="Login to place markers">Log in</Label>
@@ -211,6 +233,7 @@
             <Label for="markerhelp" title="Click for instructions on placing markers">Placing Markers</Label>
         </div>
 
+        <!-- grid size slider -->
         <p>
             <div title="Change the grid size." style="font-size: 12;">
                 <label for="gSize">Grid Size:</label>
@@ -219,6 +242,7 @@
             </div>
         </p></br>
 
+        <!-- grid position slider -->
         <div title="Change the grid position." style="font-size: 12;">
             <label for="gPos">Grid Position:</label>
             <input type="text" id="gPos" style="border: 0; font-weight: bold; background-color: #FFFFFF;" />
@@ -226,10 +250,12 @@
         </div></br>
     </div>
 
+    <!-- fallback div for when webGL is not supported -->
     <div id="content1" style="background-color:#000000;height:540px;width:810px;float:left;">
         <canvas id="canvas" width="810" height="540">Your browser doesn't support WebGL</canvas>
     </div>
     
+    <!-- display marker info for an existing marker -->
     <div id="markupInfo" style="background-color:#666666;height:178px;width:225px;float:left;display:block">
         <label for="createdBy">Set By:</label>
         <input type="text" id="createdBy" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></br>
@@ -241,6 +267,7 @@
         <textarea id="markDescr" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;" /></textarea>
     </div>
     
+    <!-- set marker info for a new marker.  This div dynamically swaps with the previous div and the progress bar below -->
     <div id="newMarkupInfo" style="background-color:#666666;height:178px;width:225px;float:left;display:none">
         <form>
             <label for="newSpecies">Species:</label>
@@ -251,7 +278,15 @@
         </form>
     </div>
 
-    <!-- <img id="thumbnail" src="" width=300 height=225 style="border:0;margin:7px;float:left"> -->
+    <!-- display progress bar when calculating the 95th height percentile of a marker -->
+    <div id="CalculatingHeight" style="background-color:#666666;height:178px;width:225px;float:left;display:none">
+        <form>
+            <label for="working">working:</label>
+            <div id="working" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666;"></div>
+        </form>
+    </div>
+
+    <!-- display a thumbnail of a source image when point picking -->
     <canvas id="thumbnail" src="" width=300 height=225 style="border:0;margin:7px;float:left"></canvas>
     <input type="text" id="onOffMap" style="border: 0; color: #FFFFFF; font-weight: bold; background-color: #666666; margin: 15px; float: left;"/>
 

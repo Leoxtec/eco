@@ -1,119 +1,129 @@
-var Grid = (function() {
-	function Grid(bctx) {
-		var basicCtx = bctx;
+//This class handles generating and rendering the grid at various heights and spacings
 
-		var gridVBO;
+var Grid = (function() {
+	function Grid(bctx, BB) {
+		var basicCtx = bctx;
+		var gl = basicCtx.ctx;
+
+		//used to hold how many vertices to draw at each power of 10 level
 		var gridCount = [];
 		var grid = 0;
 		var gridZPos;
 		var gridZOffset = 0.0;
-		var gridZinc;
+		var gridZinc;		
 
-		var gridShader;
+		var center;
+		var radius;
 
+		//create shader for grid, cache the attribute and uniform variable locations
+		var gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/noColor.vert'), basicCtx.getShaderStr('shaders/magenta.frag'));
+		gl.useProgram(gridShader);
 		var gridVarLocs = [];
+		gridVarLocs.push(gl.getAttribLocation(gridShader, "aVertexPosition"));
+		gridVarLocs.push(gl.getUniformLocation(gridShader, "uModelViewMatrix"));
+		gridVarLocs.push(gl.getUniformLocation(gridShader, "uProjectionMatrix"));
 
-		var tempCenter;
-		var tempRadius;
-
-		gridShader = basicCtx.createProgramObject(basicCtx.getShaderStr('shaders/gridVertShader.c'), basicCtx.getShaderStr('shaders/gridFragShader.c'));
-		basicCtx.ctx.useProgram(gridShader);
-		gridVarLocs.push(basicCtx.ctx.getAttribLocation(gridShader, "aVertexPosition"));
-		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uModelViewMatrix"));
-		gridVarLocs.push(basicCtx.ctx.getUniformLocation(gridShader, "uProjectionMatrix"));
-
-		xmlhttpForBB = new XMLHttpRequest();
-		xmlhttpForBB.open("GET", "action.php?a=getnode&path=r&table=point_pick_test_sep", false);
-		xmlhttpForBB.send();
-		BB = JSON.parse(xmlhttpForBB.responseText).BB;
-
+		//calculate center and extents
 		tempSpan = [BB[3] - BB[0], BB[4] - BB[1], BB[5] - BB[2]];
-		tempCenter = [];
-		tempCenter[0] = tempSpan[0] * 0.5 + BB[0];
-		tempCenter[1] = tempSpan[1] * 0.5 + BB[1];
-		tempCenter[2] = tempSpan[2] * 0.5 + BB[2];
+		center = [];
+		center[0] = tempSpan[0] * 0.5 + BB[0];
+		center[1] = tempSpan[1] * 0.5 + BB[1];
+		center[2] = tempSpan[2] * 0.5 + BB[2];
 
+		//set grid's z increment amount to a hundreth of the z extent and set it's
+		//default z position the center of the point cloud
 		gridZinc = tempSpan[2] / 100.0;
-		gridZPos = tempCenter[2];
+		gridZPos = center[2];
 		$("#gPos").val(gridZPos.toFixed(3));
+
+		//set radius to the larger of the x and y extents
 		if(tempSpan[0] > tempSpan[1]) {
-			tempRadius1 = tempSpan[0] * 0.5;
+			tempRadius = tempSpan[0] * 0.5;
 		}
 		else {
-			tempRadius1 = tempSpan[1] * 0.5;
+			tempRadius = tempSpan[1] * 0.5;
 		}
 
+		//determine largest power of 10 for the radius
 		tempExponent = 1;
-		while(Math.floor(tempRadius1 / Math.pow(10.0, tempExponent)) > 0) {
+		while(Math.floor(tempRadius / Math.pow(10.0, tempExponent)) > 0) {
 			tempExponent++;
 		}
 		tempExponent--;
-		tempFactor = Math.pow(10.0, tempExponent);
-		tempRadius2 = Math.ceil(tempRadius1 / tempFactor) * tempFactor;
-		tempRadius = Math.sqrt(2 * tempRadius2 * tempRadius2 + 0.25 * tempSpan[2] * tempSpan[2]);
 
-		tempArray = new Float32Array((tempRadius2 * 8 + 4) * 3);
-		for(i = 0; i < (tempRadius2 / tempFactor * 8 + 4) * 3; i += 12) {
-			tempArray[i] = tempCenter[0] - tempRadius2;
-			tempArray[i + 3] = tempCenter[0] + tempRadius2;
-			tempArray[i + 1] = tempArray[i + 4] = tempCenter[1] + i / 12.0 * tempFactor - tempRadius2;
-			tempArray[i + 6] = tempArray[i + 9] = tempCenter[0] + i / 12.0 * tempFactor - tempRadius2;
-			tempArray[i + 7] = tempCenter[1] - tempRadius2;
-			tempArray[i + 10] = tempCenter[1] + tempRadius2;
-			tempArray[i + 2] = tempArray[i + 5] = tempArray[i + 8] = tempArray[i + 11] = tempCenter[2];
+		//expand radius to boundary that is a multiple of the largest power of 10
+		tempFactor = Math.pow(10.0, tempExponent);
+		tempRadius = Math.ceil(tempRadius / tempFactor) * tempFactor;
+
+		//calculate proper radius that takes into account the z extent
+		radius = Math.sqrt(2 * tempRadius * tempRadius + 0.25 * tempSpan[2] * tempSpan[2]);
+
+		//calculate grid lines at largest power of 10 and store the vertex count
+		tempArray = new Float32Array((tempRadius * 8 + 4) * 3);
+		for(i = 0; i < (tempRadius / tempFactor * 8 + 4) * 3; i += 12) {
+			tempArray[i] = center[0] - tempRadius;
+			tempArray[i + 3] = center[0] + tempRadius;
+			tempArray[i + 1] = tempArray[i + 4] = center[1] + i / 12.0 * tempFactor - tempRadius;
+			tempArray[i + 6] = tempArray[i + 9] = center[0] + i / 12.0 * tempFactor - tempRadius;
+			tempArray[i + 7] = center[1] - tempRadius;
+			tempArray[i + 10] = center[1] + tempRadius;
+			tempArray[i + 2] = tempArray[i + 5] = tempArray[i + 8] = tempArray[i + 11] = center[2];
 		}
 		gridCount.push(i / 3);
+
+		//set current and max value allowed on the slider
 		$("#gridSizeSlider").slider("option", "max", tempExponent);
 		$("#gridSizeSlider").slider("option", "value", tempExponent);
 		$("#gSize").val(tempFactor + " meter(s)");
+
+		//for each power of 10 level between 1 and tempExponent, calculate intermediate grid lines
+		//and store vertex count (which includes the counts from previous levels)
 		while(tempExponent >= 1) {
-			for(var j = 0; j < 2 * tempRadius2 / tempFactor; j++) {
+			for(var j = 0; j < 2 * tempRadius / tempFactor; j++) {
 				for(var k = 1; k < 10; i += 12, k++) {
-					tempArray[i] = tempCenter[0] - tempRadius2;
-					tempArray[i + 3] = tempCenter[0] + tempRadius2;
-					tempArray[i + 1] = tempArray[i + 4] = tempCenter[1] + (k * 0.1 + j) * tempFactor - tempRadius2;
-					tempArray[i + 6] = tempArray[i + 9] = tempCenter[0] + (k * 0.1 + j) * tempFactor - tempRadius2;
-					tempArray[i + 7] = tempCenter[1] - tempRadius2;
-					tempArray[i + 10] = tempCenter[1] + tempRadius2;
-					tempArray[i + 2] = tempArray[i + 5] = tempArray[i + 8] = tempArray[i + 11] = tempCenter[2];
+					tempArray[i] = center[0] - tempRadius;
+					tempArray[i + 3] = center[0] + tempRadius;
+					tempArray[i + 1] = tempArray[i + 4] = center[1] + (k * 0.1 + j) * tempFactor - tempRadius;
+					tempArray[i + 6] = tempArray[i + 9] = center[0] + (k * 0.1 + j) * tempFactor - tempRadius;
+					tempArray[i + 7] = center[1] - tempRadius;
+					tempArray[i + 10] = center[1] + tempRadius;
+					tempArray[i + 2] = tempArray[i + 5] = tempArray[i + 8] = tempArray[i + 11] = center[2];
 				}
 			}
 			gridCount.push(i / 3);
 			tempExponent--;
 			tempFactor *= 0.1;
 		}
-		gridVBO = basicCtx.ctx.createBuffer();
-		basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
-		basicCtx.ctx.bufferData(basicCtx.ctx.ARRAY_BUFFER, tempArray, basicCtx.ctx.STATIC_DRAW);
 
-		delete xmlhttpForBB;
-		delete BB;
+		//buffer grid vertices
+		var gridVBO = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, gridVBO);
+		gl.bufferData(gl.ARRAY_BUFFER, tempArray, gl.STATIC_DRAW);
+
+		//delete temp variables
 		delete tempSpan;
 		delete tempExponent;
 		delete tempFactor;
-		delete tempRadius1;
-		delete tempRadius2;
+		delete tempRadius;
 		delete tempArray;
 		delete i;
 
-
 		this.getCenter = function() {
-			return tempCenter;
+			return center;
 		}
 
 		this.getRadius = function() {
-			return tempRadius;
+			return radius;
 		}
 
-
 		this.usePerspective = function() {
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, basicCtx.perspectiveMatrix);
+			gl.useProgram(gridShader);
+			gl.uniformMatrix4fv(gridVarLocs[2], false, basicCtx.perspectiveMatrix);
 		};
 
 		this.useOrthographic = function(projectionMatrix) {
-			basicCtx.ctx.useProgram(gridShader);
-			basicCtx.ctx.uniformMatrix4fv(gridVarLocs[2], false, projectionMatrix);
+			gl.useProgram(gridShader);
+			gl.uniformMatrix4fv(gridVarLocs[2], false, projectionMatrix);
 		};
 
 		this.gridSize = function(g) {
@@ -126,18 +136,22 @@ var Grid = (function() {
 		}
 
 		this.render = function() {
-			if(basicCtx) {
-				basicCtx.ctx.useProgram(gridShader);
-				basicCtx.pushMatrix();
-				basicCtx.translate(0.0, 0.0, gridZOffset);
-				basicCtx.ctx.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
-				basicCtx.ctx.bindBuffer(basicCtx.ctx.ARRAY_BUFFER, gridVBO);
-				basicCtx.ctx.vertexAttribPointer(gridVarLocs[0], 3, basicCtx.ctx.FLOAT, false, 0, 0);
-				basicCtx.ctx.enableVertexAttribArray(gridVarLocs[0]);
-				basicCtx.ctx.drawArrays(basicCtx.ctx.LINES, 0, gridCount[grid]);
-				basicCtx.ctx.disableVertexAttribArray(gridVarLocs[0]);
-				basicCtx.popMatrix();
-			}
+			//draw grid with variable z offset
+			gl.useProgram(gridShader);
+
+			//even though junk buffer trick helps avoid disabling and enabling vertex attribute arrays
+			//we still need to turn off unused ones
+			gl.disableVertexAttribArray(1);
+			basicCtx.pushMatrix();
+			basicCtx.translate(0.0, 0.0, gridZOffset);
+			gl.uniformMatrix4fv(gridVarLocs[1], false, basicCtx.peekMatrix());
+			gl.bindBuffer(gl.ARRAY_BUFFER, gridVBO);
+			gl.vertexAttribPointer(gridVarLocs[0], 3, gl.FLOAT, false, 0, 0);
+
+			//determine spacing displayed by using precalculated grid counts
+			gl.drawArrays(gl.LINES, 0, gridCount[grid]);
+			basicCtx.popMatrix();
+			gl.enableVertexAttribArray(1);
 		};
 	}// constructor
 

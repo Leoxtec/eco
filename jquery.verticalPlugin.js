@@ -1,3 +1,6 @@
+//code adapted from http://stackoverflow.com/questions/4098054/vertically-displayed-jquery-buttonset
+//used to create vertical slider
+
 (function( $ ){
 //plugin buttonset vertical
 $.fn.buttonsetv = function() {
