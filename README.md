@@ -71,6 +71,7 @@ Do On Server
 
 (Necessary?)
 4. Create 300x225 PNG Thumbnails
+	
 	Inputs:
 		Image Set
 
