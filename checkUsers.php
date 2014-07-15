@@ -3,8 +3,8 @@
 //which assumes they have closed the borwser without logging out
 //now that sessions are being used, this should be replaced to log out when the session expires
 
-$link = mysql_connect('ip', 'user', 'password');
-$db = mysql_select_db('database', $link);
+$link = mysql_connect('localhost', 'root', 'root');  //  'ip', 'user', 'password'
+$db = mysql_select_db('EcoBrowser', $link);
 
 $result = mysql_query(sprintf("SELECT * FROM users WHERE loggedin = 1"));
 while ($row = mysql_fetch_assoc($result)) {

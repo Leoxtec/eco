@@ -75,7 +75,7 @@ public:
 		//establish connection to the database and recursively commit the quad tree to the database
 		try {
 			driver = get_driver_instance();
-			con = driver->connect("tcp://127.0.0.1:3306", "root", "jessica");
+			con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
 			con->setSchema("EcoBrowser");
 			stmt = con->createStatement();
 			stmt->execute("DROP TABLE IF EXISTS " + tableName);

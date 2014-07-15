@@ -20,6 +20,23 @@ struct geoRefTrans {
 //prototype
 void fromLocalToWorld(struct geoRefTrans geoRef, const double localPoint[], double worldPoint[]);
 
+/**
+	Main function for extracting Bundler file. Creates modified PLY.
+	The ply does not translate over the X and Y dimensions.
+	The ply has extra information mapping images to points
+
+	@param Filepath with Bundler directory and georef_transform.txt
+		/bundleDir/bundle.out
+		/georef_transform.ply
+	
+	Output:
+		unfiltered_ecobrowser.ply
+
+	Example PLY: 
+		<x> <y> <z> <r> <g> <b> <cam_index> <image_x> <image_y>
+		XYZRGB_Idxcam_Ximg_Yimg
+
+*/
 int main(int argc, const char* argv[]) {
 	//parse command line arguments
 	if(argc < 2) {

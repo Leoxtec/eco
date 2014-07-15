@@ -144,8 +144,8 @@ public:
 	void commit() {
 		//establish connection to the database
 		driver = get_driver_instance();
-		con = driver->connect("tcp://127.0.0.1:3306", "root", "jessica");
-		con->setSchema("markers");
+		con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+		con->setSchema("EcoBrowser");
 		stmt = con->createStatement();
 
 		//build database table for markers related to this particular point cloud
