@@ -7,6 +7,7 @@ Web-based browser of ecosynth datasets
 ## Dependencies (For Preprocessing Code)
 	make
 	build-essential
+	mysql-server
 	libmysqlcppconn-dev
 
 ## MySQL Database Setup
@@ -17,6 +18,11 @@ Web-based browser of ecosynth datasets
 3. Enter: 'CREATE TABLE users(username VARCHAR(20), password CHAR(77), loggedin TINYINT(1), secs INT(11), x FLOAT, y FLOAT, z FLOAT);'
 4. Exit: '\q'
 
+
+## Clone Repository
+
+	git clone [BitBucket url]
+	mv ecosynthbrowser Viewer
 
 ## Setting Up EcosynthBrowser with MySQL
 
