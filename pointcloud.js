@@ -27,13 +27,6 @@ var PointCloud = (function() {
 		//the root node also stores addtional per cloud data including total bound box,
 		//ortho size for map display, and scale and bias parameters for min max color enhancement
 		request = new XMLHttpRequest();
-		table = "kn_leaf_on";
-		console.log("Table: " + table);
-		var host = '';
-		console.log("URL: " + document.location.hostname);
-		if(document.location.hostname == 'localhost'){
-			host = 'http://3dvis.ecosynth.org/';
-		}
 		request.open("GET", "action.php?a=getnode&path=meta&table="+table, false);
 		request.send();
 		obj = JSON.parse(request.responseText);

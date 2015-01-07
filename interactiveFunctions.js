@@ -14,7 +14,7 @@ function loginUser(user, password) {
 	}
 	else {
 		flipControl();
-		$("#falied-login").dialog({close: function() {flipControl();}});
+		$("#failed-login").dialog({close: function() {flipControl();}});
 	}
 }
 
