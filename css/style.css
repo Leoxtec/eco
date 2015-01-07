@@ -1,0 +1,52 @@
+html{overflow:hidden;}
+body{background:#666;}
+*{font-family:Arial, sans-serif;}
+h1 {font-family: 'Permanent Marker';}
+h3 {margin:0;}
+.clear{clear:both;height:0;width:100%;overflow:hidden;}
+
+#pointSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
+#pointSizeSlider .ui-slider-range { background: #000000; }
+#pointSizeSlider .ui-slider-handle { height: 1.1em;}
+
+#gridSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
+#gridSizeSlider .ui-slider-range { background: #000000; }
+#gridSizeSlider .ui-slider-handle { height: 1.1em;}
+
+#gridPositionSlider{float: left; clear: left; height: 72px; width: 10px; margin-left: 15px; margin-bottom: 10px;}
+#gridPositionSlider .ui-slider-range { background: #000000; }
+#gridPositionSlider .ui-slider-handle { width: 1.1em;}
+
+#failed-login{display:none;}
+
+#login-form{font-size:14px;}
+#dialog-help{font-size:14px;}
+
+#header{background:#949aa1;}
+#header h1{margin-bottom:0;color:#fff;}
+
+#menu{background-color:#fff;height:540px;width:225px;float:left;font-size:10px;padding:0 10px;}
+#menu div{margin:0 0 10px 0;}
+#checkbox{float:left;width:100px;}
+
+.slider{font-size:12px;}
+.slider input{border:0px;font-weight:bold;background:#fff;}
+
+.logout-section{display:none;}
+
+.glWrap{background:#000;height:540px;width:810px;float:left;}
+.glWrap canvas{height:540px;width:810px;}
+
+.markup{background:#666;height:178px;width:225px;float:left;display:block}
+.markup input,
+.markup textarea{border:0px;color:#fff;font-weight:bold;background:#666;}
+#newMarkupInfo {background:#666;height:178px;width:225px;float:left;display:none;}
+
+#CalculatingHeight{background:#666;height:178px;width:225px;float:left;display:none;}
+#working{border:0px;color:#fff;font-weight:bold;background:#666;}
+
+#thumbnail{width:300px;height:225px;border:0px;margin:7px;float:left;}
+#onOffMapp{border:0px;color:#fff;font-weight:bold;background:#666;margin:15px;float: left;}
+
+#footer{background:#949aa1;clear:both;text-align:center;}
+#footer a.left{float:left;}
