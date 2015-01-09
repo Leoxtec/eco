@@ -95,7 +95,7 @@ function renderPC() {
 	pc.basicCtx.popMatrix();
 	
 	//render markers
-	if(document.getElementById('markers').checked) {
+	if(document.getElementById('markers-cb').checked) {
 		//allow marker placement, removal and editing only in top down ortho mode
 		if(viewMode === 4) {
 			pickResults = V3.$();

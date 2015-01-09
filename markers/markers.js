@@ -663,6 +663,11 @@ var Markers = (function() {
 		
 		//send the vertices and indices and user entered information to the database
 		this.setMarkerValues = function(index, spec, descr) {
+
+      // The markerIndex is -1 by default for some reason, but just inserting
+      // at the next available marker index seems to work fine.
+      index = markers.length - 1;
+
 			var mark = markers[index];
 			mark.species = spec;
 			mark.descr = descr;
