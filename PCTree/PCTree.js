@@ -139,7 +139,7 @@ var PCTree = (function() {
 		var thumbCtx = document.getElementById("thumbnail").getContext('2d');
 		var thumbImg = new Image();
 
-		//dsiplay a thumbnail with a box surrounding the pixels where a point/feature was found
+		//display a thumbnail with a box surrounding the pixels where a point/feature was found
 		function drawThumbNail() {
 			thumbCtx.drawImage(thumbImg, 0, 0);
 			thumbCtx.strokeStyle = "#FF00FF";

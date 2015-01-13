@@ -85,7 +85,14 @@ $(function() {
 //only shows when a user is logged in
 $(function() {
     $("#dialog-help").dialog({autoOpen: false, modal: true, close: function() {flipControl();}});
+    $("#controls-help").dialog({autoOpen: false, modal: true, close: function() {flipControl();}});
     $("#markerhelp").click(function() {flipControl(); $("#dialog-help").dialog("open");});
+    $("#controls-btn").click(function() {
+      flipControl(); $("#controls-help")
+        .dialog("open")
+        .dialog("option", "width", 800)
+        .dialog("option", "height", 400);
+    });
 });
 
 //progress bar is displayed when a user submits a marker and the server is calculating the 95th height percentile

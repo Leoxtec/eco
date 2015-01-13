@@ -22,6 +22,9 @@ h3 {margin:0;}
 #login-form{font-size:14px;}
 #dialog-help{font-size:14px;}
 
+#controls-help { padmargin: 5px; margin: 5px; }
+#controls-help h3 { margin: 5px; margin-top: 15px; }
+
 #header{background:#949aa1;}
 #header h1{margin-bottom:0;color:#fff;}
 

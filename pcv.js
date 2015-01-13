@@ -186,7 +186,6 @@ function renderPC() {
 
 //application entry point
 function start(table) {
-	console.log(table);
 	pc = new PointCloud(document.getElementById('canvas'), table);
 	cam = new Camera({radius: pc.grid.getRadius() / Math.tan(Math.PI / 6.0)});
 	pc.basicCtx.onRender = renderPC;

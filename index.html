@@ -1,7 +1,5 @@
 <html>
 <head>
-    <link rel="stylesheet" href="/css/style.css" />
-
     <script src="pointcloud.js"></script>
     <script src="libs/mjs.js"></script>
     <script src="libs/camera.js"></script>
@@ -19,6 +17,8 @@
     <script src="jquery-ui-1.10.3/ui/minified/jquery-ui.min.js"></script>
     <script src="jquery.verticalPlugin.js"></script>
     <script src="all.js"></script>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.5.0/pure-min.css">
+    <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
     <div id="failed-login" title="Error">password and username does not match</div>
@@ -36,18 +36,116 @@
     <div id="dialog-help" title="Placing Markers">
         <ul>
             <li>To view a marker's statistics, hold the 'v' key while hovering over a marker.</li>
-            <li>To set a marker, first switch to map camera.  Hover the mouse where you want the marker's center.  Then hold the '1' key and move the mouse to adjust the radius.  To cancel, let go of the '1' key.</li>
+            <li>To set a marker, first switch to map camera.  Hover the mouse where you want the marker's center.  Then hold the '1' key and move the mouse to adjust the radius.  To cancel, hit the '5' key. </li>
             <li>To finish placing, hit the '4' key and enter the tree info in the upper right of the page.</li>
-            <li>To delete a marker, switch to Map Camera, hover over the marker to delete and press the '3' key.</li>
+            <li>To delete a marker, switch to Map Camera, hover over the marker to delete and press the '5' key.</li>
         </ul>
     </div>
 
+    <div id="controls-help" title="Controls">
+      <h3>Basic Controls</h3>
+      <table id="controls-help-basic" class="pure-table pure-table-bordered">
+        <thead>
+          <tr>
+            <th><div style="width:80px"></div>Key</th>
+            <th><div style="width:150px"></div>Action</th>
+            <th>Explanation</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr>
+            <td>WASD</td>
+            <td>Move / Rotate view</td>
+            <td> - </td>
+          </tr>
+
+          <tr>
+            <td>X and Z</td>
+            <td>Zoom in and out</td>
+            <td> - </td>
+          </tr>
+
+          <tr>
+            <td>B</td>
+            <td>Display image used for current point</td>
+            <td>This will display the thumbnail image cooresponding to the
+              current point being hovered over.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Marker Controls <small>(Requires login)</small></h3>
+      <table id="controls-help-markers" class="pure-table pure-table-bordered">
+        <thead>
+          <tr>
+            <th><div style="width:80px"></div>Key</th>
+            <th><div style="width:150px"></div>Action</th>
+            <th>Explanation</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Begin creating new marker</td>
+            <td>Pressing 1 will start the marker creation mode, and place a
+              marker at the current cursor location. For each vertex of the
+              desired marker, press 1 to place each.</td>
+          </tr>
+
+          <tr>
+            <td>2</td>
+            <td>Remove last placed marker vertex</td>
+            <td>While inserting marker vertices, if you make a mistake, press 2
+              to remove the previously placed vertex.</td>
+          </tr>
+
+          <tr>
+            <td>3</td>
+            <td>Cancel editing marker</td>
+            <td>This takes you out of the marker creation mode.</td>
+          </tr>
+
+          <tr>
+            <td>4</td>
+            <td>Accept and finish marker shape</td>
+            <td>On the final vertex of the marker, hit 4 to complete the shape.
+              The right panel will prompt for marker information before
+              insertion into the database.</td>
+          </tr>
+
+          <tr>
+            <td>5</td>
+            <td>Delete marker under cursor</td>
+            <td>This removes from the database the marker currently being hovered
+              over. Be careful, there's no confirmation.</td>
+          </tr>
+
+          <tr>
+            <td>V (hold)</td>
+            <td>View marker info under cursor</td>
+            <td>Holding V over a marker area will display the marker's info in the
+              right panel.</td>
+          </tr>
+
+          <!-- <tr> -->
+          <!--   <td>N</td> -->
+          <!--   <td>Toggle editing existing marker</td> -->
+          <!--   <td>TODO</td> -->
+          <!-- </tr> -->
+
+        </tbody>
+      </table>
+    </div>
+
     <div id="header">
-        <h1>Ecosynth browser</h1>
+        <h1>Ecosynth browser (Chris test)</h1>
     </div>
 
     <div id="menu">
         <h3>Menu</h3>
+
         <!-- toggle on and off various functionality -->
         <div id="checkbox">
             <input type="checkbox" id="pc2" name="checkbox" checked="checked">
@@ -67,8 +165,8 @@
         <div id="CEradio">
             <input type="radio" id="radio6" name="CEradio" checked="checked" onclick="colorEnhance(0);">
             <label for="radio6" title="Use natural colors">Original</label>
-            <input type="radio" id="radio7" name="CEradio" onclick="colorEnhance(1);"> 
-            <label for="radio7" title="Use min max color enhancement.">Min Max</label>
+            <!-- <input type="radio" id="radio7" name="CEradio" onclick="colorEnhance(1);">  -->
+            <!-- <label for="radio7" title="Use min max color enhancement.">Min Max</label> -->
             <input type="radio" id="radio8" name="CEradio" onclick="colorEnhance(2);">
             <label for="radio8" title="Use histogram equalization color enhancement.">Hist EQ</label>
         </div>
@@ -81,18 +179,18 @@
             <label for="radio1" 
                 title="Hold the left mouse button and move the mouse to orbit (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
                 Orbit Camera</label>
-            <input type="radio" id="radio2" name="radio" onclick="viewRadioButton(1);"> 
-            <label for="radio2" 
-                title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right.">
-                Free Form Camera</label>
+            <!-- <input type="radio" id="radio2" name="radio" onclick="viewRadioButton(1);">  -->
+            <!-- <label for="radio2"  -->
+            <!--     title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right."> -->
+            <!--     Free Form Camera</label> -->
             <input type="radio" id="radio3" name="radio" onclick="viewRadioButton(2);">
             <label for="radio3" 
                 title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right.">
                 Ground Camera</label>
-            <input type="radio" id="radio4" name="radio" onclick="viewRadioButton(3);">
-            <label for="radio4" 
-                title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
-                Hover Camera</label>
+            <!-- <input type="radio" id="radio4" name="radio" onclick="viewRadioButton(3);"> -->
+            <!-- <label for="radio4"  -->
+            <!--     title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons)."> -->
+            <!--     Hover Camera</label> -->
             <input type="radio" id="radio5" name="radio" onclick="viewRadioButton(4);">
             <label for="radio5" 
                 title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
@@ -119,6 +217,8 @@
             <label for="logout" title="Click to log out">Log out</label>
             <button id="markerhelp">
             <label for="markerhelp" title="Click for instructions on placing markers">Placing Markers</label>
+            <button id="controls-btn">
+            <label for="controls-btn" title="Click for controls info">Keyboard Controls</label>
         </div>
         <div class="clear"></div>
 
@@ -157,7 +257,7 @@
     </div>
     
     <!-- set marker info for a new marker.  This div dynamically swaps with the previous div and the progress bar below -->
-    <div id="newMarkupInfo" class="markup">
+    <div id="newMarkupInfo">
         <form>
             <label for="newSpecies">Species:</label>
             <input type="text" id="newSpecies" /></br>
@@ -176,7 +276,7 @@
     </div>
 
     <!-- display a thumbnail of a source image when point picking -->
-    <canvas id="thumbnail" src="" width=300 height=225></canvas>
+    <canvas id="thumbnail" src="" width=300 height=225 style="background: black"></canvas>
     <input type="text" id="onOffMap" />
     <div class="clear"></div>
 

@@ -266,7 +266,7 @@ function keyDown() {
 				// if(viewMode === 4) {
 					if(placingMarker) {
 						placingMarker = isDragging = pc.markers.recordNewMarker(pickResults);
-						//switchDiv();
+						switchDiv();
 					}
 				}
 				break;
@@ -304,6 +304,7 @@ function keyDown() {
 				break;
 		}
 	}
+
 	updateTimeStamp = 1;
 }
 
