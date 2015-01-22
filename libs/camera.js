@@ -38,7 +38,7 @@ var Camera = (function(){
 					point = V3.$(0, 0, 0);
 					pan = -Math.PI / 2;
 					tilt = tiltMin;
-					globalUp = V3.$(0, 0, 1);
+					globalUp = V3.$(0, 1, 0);
 					temp = V3.$(0, -1, 0);
 					break;
 				case 1:
@@ -186,9 +186,15 @@ var Camera = (function(){
 
 				//orbit mode
 				//update angles and radius
+        //WASD controls move the center of origin.
 				case 0:
-					self.updatePan(sideVel * -0.03 * elapsedTime);
-					self.updateTilt(straightVel * 0.03 * elapsedTime);
+          // Uncomment for WASD rotate controls instead.
+					// self.updatePan(sideVel * -0.03 * elapsedTime);
+					// self.updateTilt(straightVel * 0.03 * elapsedTime);
+					dir = sphericalToCartesian();
+					var forward = V3.normalize(V3.$(dir[0], dir[1], 0));
+					var right = V3.cross(forward, globalUp);
+					point = V3.add(point, V3.scale(V3.add(V3.scale(forward, -straightVel), V3.scale(right, -sideVel)), elapsedTime));
 					self.updateRadius(elapsedTime * zoomVel);
 					break;
 
