@@ -1,6 +1,11 @@
 <html>
 <head>
-    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="css/style.css" />
+
+    <link rel="stylesheet" href="jquery-ui-1.10.3/themes/base/minified/jquery-ui.min.css"/>
+    <script src="jquery-ui-1.10.3/jquery-1.9.1.min.js"></script>
+    <script src="jquery-ui-1.10.3/ui/minified/jquery-ui.min.js"></script>
+    <script src="jquery.verticalPlugin.js"></script>
 
     <script src="pointcloud.js"></script>
     <script src="libs/mjs.js"></script>
@@ -14,10 +19,7 @@
     <script src="map/map.js"></script>
     <script src="pcv.js"></script>
     <script src="interactiveFunctions.js"></script>
-    <link rel="stylesheet" href="jquery-ui-1.10.3/themes/base/minified/jquery-ui.min.css"/>
-    <script src="jquery-ui-1.10.3/jquery-1.9.1.min.js"></script>
-    <script src="jquery-ui-1.10.3/ui/minified/jquery-ui.min.js"></script>
-    <script src="jquery.verticalPlugin.js"></script>
+    
     <script src="all.js"></script>
 </head>
 <body>
@@ -48,93 +50,105 @@
 
     <div id="menu">
         <h3>Menu</h3>
-        <!-- toggle on and off various functionality -->
-        <div id="checkbox">
-            <input type="checkbox" id="pc2" name="checkbox" checked="checked">
-            <label for="pc2" title="Toggle the leaf_on point cloud.">Leaf On</label>
-            <input type="checkbox" id="pc1" name="checkbox" checked="checked">
-            <label for="pc1" title="Toggle the leaf_off point cloud.">Leaf Off</label>
-            <input type="checkbox" id="grid" name="checkbox" checked="checked">
-            <label for="grid" title="Toggle the grid.">Grid</label>
-            <input type="checkbox" id="markers" name="checkbox" checked="checked">
-            <label for="markers" title="Toggle the markers.">Markers</label>
-            <!-- gui element for undetermined point attenuation feature -->
-            <!-- <input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
-            <label for="atten" title="Make the points closer to you bigger.">Attentuation</label> -->
+        <div class="leftColumn">
+            <!-- toggle on and off various functionality -->
+            <div id="checkbox">
+                <input type="checkbox" id="pc2" name="checkbox" checked="checked">
+                <label for="pc2" title="Toggle the leaf_on point cloud.">Leaf On</label>
+                <input type="checkbox" id="pc1" name="checkbox" checked="checked">
+                <label for="pc1" title="Toggle the leaf_off point cloud.">Leaf Off</label>
+                <input type="checkbox" id="grid" name="checkbox" checked="checked">
+                <label for="grid" title="Toggle the grid.">Grid</label>
+                <input type="checkbox" id="markers" name="checkbox" checked="checked">
+                <label for="markers" title="Toggle the markers.">Markers</label>
+                <!-- gui element for undetermined point attenuation feature -->
+                <!-- <input type="checkbox" id="atten" name="checkbox" onclick="toggleAttenuation()">
+                <label for="atten" title="Make the points closer to you bigger.">Attentuation</label> -->
+            </div>
+
+            <!-- radio buttons for different color enhancements -->
+            <div id="CEradio">
+                <input type="radio" id="radio6" name="CEradio" checked="checked" onclick="colorEnhance(0);">
+                <label for="radio6" title="Use natural colors">Original</label>
+                <input type="radio" id="radio7" name="CEradio" onclick="colorEnhance(1);"> 
+                <label for="radio7" title="Use min max color enhancement.">Min Max</label>
+                <input type="radio" id="radio8" name="CEradio" onclick="colorEnhance(2);">
+                <label for="radio8" title="Use histogram equalization color enhancement.">Hist EQ</label>
+            </div>
+
+            <div class="clear"></div>
+
+            <div id="addMoreWrap">
+                <a href="#tableOptions" id="addMore" class="linkButton">Add Pointcloud</a>
+            </div>
+
+            <div id="pulledTablesWrap">
+
+            </div>
         </div>
+        <div class="leftColumn">
+            <!-- radio buttons for different view modes -->
+            <div id="radio">
+                <input type="radio" id="radio1" name="radio" checked="checked" onclick="viewRadioButton(0);">
+                <label for="radio1" 
+                    title="Hold the left mouse button and move the mouse to orbit (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
+                    Orbit Camera</label>
+                <input type="radio" id="radio2" name="radio" onclick="viewRadioButton(1);"> 
+                <label for="radio2" 
+                    title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right.">
+                    Free Form Camera</label>
+                <input type="radio" id="radio3" name="radio" onclick="viewRadioButton(2);">
+                <label for="radio3" 
+                    title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right.">
+                    Ground Camera</label>
+                <input type="radio" id="radio4" name="radio" onclick="viewRadioButton(3);">
+                <label for="radio4" 
+                    title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
+                    Hover Camera</label>
+                <input type="radio" id="radio5" name="radio" onclick="viewRadioButton(4);">
+                <label for="radio5" 
+                    title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
+                    Map Camera</label>
+            </div>
+            <div class="clear"></div>
 
-        <!-- radio buttons for different color enhancements -->
-        <div id="CEradio">
-            <input type="radio" id="radio6" name="CEradio" checked="checked" onclick="colorEnhance(0);">
-            <label for="radio6" title="Use natural colors">Original</label>
-            <input type="radio" id="radio7" name="CEradio" onclick="colorEnhance(1);"> 
-            <label for="radio7" title="Use min max color enhancement.">Min Max</label>
-            <input type="radio" id="radio8" name="CEradio" onclick="colorEnhance(2);">
-            <label for="radio8" title="Use histogram equalization color enhancement.">Hist EQ</label>
-        </div>
+            <!-- point size slider -->
+            <div title="Change the minimum size for all points." class="slider">
+                <label for="pSize">Point Size:</label>
+                <input type="text" id="pSize" />
+                <div id="pointSizeSlider"></div>
+            </div>
+            <div class="clear"></div>
 
-        <div class="clear"></div>
+            <!-- login and logout buttons are dynamically swapped -->
+            <div id="login-section">
+                <button id="login">
+                <label for="login" title="Login to place markers">Log in</label>
+            </div>
 
-        <!-- radio buttons for different view modes -->
-        <div id="radio">
-            <input type="radio" id="radio1" name="radio" checked="checked" onclick="viewRadioButton(0);">
-            <label for="radio1" 
-                title="Hold the left mouse button and move the mouse to orbit (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
-                Orbit Camera</label>
-            <input type="radio" id="radio2" name="radio" onclick="viewRadioButton(1);"> 
-            <label for="radio2" 
-                title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right.">
-                Free Form Camera</label>
-            <input type="radio" id="radio3" name="radio" onclick="viewRadioButton(2);">
-            <label for="radio3" 
-                title="Hold the left mouse button and move the mouse to orient your view.  Use W/A/S/D to move forward/left/back/right.">
-                Ground Camera</label>
-            <input type="radio" id="radio4" name="radio" onclick="viewRadioButton(3);">
-            <label for="radio4" 
-                title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
-                Hover Camera</label>
-            <input type="radio" id="radio5" name="radio" onclick="viewRadioButton(4);">
-            <label for="radio5" 
-                title="Hold the left mouse button and move the mouse to change latitude and longitude (you can also use the W/A/S/D buttons).  Use the mouse wheel to zoom (you can also use the Z/X buttons).">
-                Map Camera</label>
-        </div>
-        <div class="clear"></div>
+            <div id="logout-section">
+                <button id="logout" onclick="logoutUser();">
+                <label for="logout" title="Click to log out">Log out</label>
+                <button id="markerhelp">
+                <label for="markerhelp" title="Click for instructions on placing markers">Placing Markers</label>
+            </div>
+            <div class="clear"></div>
 
-        <!-- point size slider -->
-        <div title="Change the minimum size for all points." class="slider">
-            <label for="pSize">Point Size:</label>
-            <input type="text" id="pSize" />
-            <div id="pointSizeSlider"></div>
-        </div>
-        <div class="clear"></div>
+            <!-- grid size slider -->
+            <div title="Change the grid size." class="slider">
+                <label for="gSize">Grid Size:</label>
+                <input type="text" id="gSize" />
+                <div id="gridSizeSlider"></div>
+            </div>
+            <div class="clear"></div>
 
-        <!-- login and logout buttons are dynamically swapped -->
-        <div id="login-section">
-            <button id="login">
-            <label for="login" title="Login to place markers">Log in</label>
-        </div>
-
-        <div id="logout-section">
-            <button id="logout" onclick="logoutUser();">
-            <label for="logout" title="Click to log out">Log out</label>
-            <button id="markerhelp">
-            <label for="markerhelp" title="Click for instructions on placing markers">Placing Markers</label>
-        </div>
-        <div class="clear"></div>
-
-        <!-- grid size slider -->
-        <div title="Change the grid size." class="slider">
-            <label for="gSize">Grid Size:</label>
-            <input type="text" id="gSize" />
-            <div id="gridSizeSlider"></div>
-        </div>
-        <div class="clear"></div>
-
-        <!-- grid position slider -->
-        <div title="Change the grid position." class="slider">
-            <label for="gPos">Grid Position:</label>
-            <input type="text" id="gPos" />
-            <div id="gridPositionSlider"></div>
+            <!-- grid position slider -->
+            <div title="Change the grid position." class="slider">
+                <label for="gPos">Grid Position:</label>
+                <input type="text" id="gPos" />
+                <div id="gridPositionSlider"></div>
+            </div>
+            <div class="clear"></div>
         </div>
         <div class="clear"></div>
     </div>
@@ -184,6 +198,12 @@
         <a href="http://data.ecosynth.org/pc_viewer/clouds/leaf_on.ply" title="Click to download point cloud" class="left">Get the point cloud</a>
         <a id="ecosynth" href="http://ecosynth.org/" title="Click to visit our website">This is a web application for ecosynth.org</a>
         <div class="clear"></div>
+    </div>
+
+    <div class="modal" id="tableOptions">
+        <div>
+            <form id="tableForm" method="post"></form>
+        </div>
     </div>
 </body>
 </html>

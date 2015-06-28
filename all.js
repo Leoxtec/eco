@@ -4,20 +4,10 @@ $(document).ready(function(){
         $("#checkbox").buttonsetv();
 });
 
+// grab the table parameter that was set in the URL and send it to the application start function -->
 /*$(window).load(function(){
-	var query = window.location.search.substring(1);
-	var vars = query.split("&");
-	var tables[vars.length][vars.length];
-	for(var i = 0; i < vars.length; i++){
-
-	}
-	console.log(vars);
-});*/
-
-<!-- grab the table parameter that was set in the URL and send it to the application start function -->
-$(window).load(function(){
 	start(decodeURI(location.search.slice(location.search.indexOf('=')+1, location.search.length)));
-});
+});*/
 
 //set the piont size slider default values and update function
 $(function() {

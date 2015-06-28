@@ -22,6 +22,9 @@ switch($key) {
 	case 'getnode':
 		getnode();
 		break;
+	case 'gettables':
+		gettables();
+		break;
 	case 'login':
 		login();
 		break;
@@ -239,6 +242,14 @@ function getnode() {
 	//this code allows for unlimited requests
 	$result = mysql_fetch_assoc(mysql_query(sprintf("SELECT data FROM %s_oct WHERE path = '%s'", mysql_real_escape_string($_GET['table']), mysql_real_escape_string($_GET['path']))));
 	echo $result['data'];
+}
+
+function gettables(){
+	$result = mysql_query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'EcoBrowser' AND TABLE_NAME LIKE '%_oct'");
+	while ($row = mysql_fetch_row($result)){
+	    echo $row[0].', ';  
+	}
+	//$rowcount=mysqli_num_rows($result3);
 }
 
 //check for user and start a session if they are in the system

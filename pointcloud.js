@@ -4,6 +4,15 @@
 //adding in markers, map, axes, grid and user features,
 //and updating projection matrices for each of these additional features
 
+this.tree = [];
+this.markers = [];
+this.map = [];
+this.axes = [];
+this.grid = [];
+this.users = [];
+
+var tableNum;
+
 var PointCloud = (function() {
 	function PointCloud(cvsElement, table) {
 		this.basicCtx = new BasicCTX();
@@ -21,23 +30,58 @@ var PointCloud = (function() {
 		this.basicCtx.ctx.vertexAttribPointer(0, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
 		this.basicCtx.ctx.vertexAttribPointer(1, 1, this.basicCtx.ctx.FLOAT, false, 0, 0);
 
+		this.tree = [];
+		this.markers = [];
+		this.map = [];
+		this.axes = [];
+		this.grid = [];
+		this.users = [];
+
 		//request metadata for values specific to the cloud
 		//metadata is an octree structure that holds (per node) the path name, 
 		//center and radius for the bounding box, and an array of child nodes.
 		//the root node also stores addtional per cloud data including total bound box,
 		//ortho size for map display, and scale and bias parameters for min max color enhancement
-		request = new XMLHttpRequest();
+		for(tableNum = 0; tableNum < tableArray.length; tableNum++){
+			if(tableArray[tableNum][1] == true){
+				request = new XMLHttpRequest();
+				request.open("GET", "action.php?a=getnode&path=meta&table="+tableArray[tableNum][0], false);
+				request.send();
+				obj = JSON.parse(request.responseText);
+
+				/*this.tree = new PCTree(this.basicCtx, obj, tableArray[tableNum][0]);
+				this.markers = new Markers(this.basicCtx, obj.BB, table);
+				this.map = new Map(this.basicCtx, obj.o, table);
+				this.axes = new Axes(this.basicCtx);
+				this.grid = new Grid(this.basicCtx, obj.BB);
+				this.users = new Users(this.basicCtx);*/
+
+				this.tree.push(new PCTree(this.basicCtx, obj, tableArray[tableNum][0]));
+				this.markers.push(new Markers(this.basicCtx, obj.BB, tableArray[tableNum][0]));
+				this.map.push(new Map(this.basicCtx, obj.o, tableArray[tableNum][0]));
+				this.axes.push(new Axes(this.basicCtx));
+				this.grid.push(new Grid(this.basicCtx, obj.BB));
+				this.users.push(new Users(this.basicCtx))	;
+
+				delete request;
+				delete obj;
+			}
+			
+		}
+
+		//request metadata for values specific to 2 clouds, used for leaf on and leaf off
+		/*request = new XMLHttpRequest();
+		request.open("GET", "action.php?a=getnode&path=meta&table=kn_leaf_off", false);
+		request.send();
+		console.log(request.status);
+		obj = JSON.parse(request.responseText);
+		this.tree = new PCTree(this.basicCtx, obj, "kn_leaf_off");*/
+
+		/*request = new XMLHttpRequest();
 		request.open("GET", "action.php?a=getnode&path=meta&table="+table, false);
 		request.send();
 		obj = JSON.parse(request.responseText);
-		this.tree = new PCTree(this.basicCtx, obj, table);
-
-		//request metadata for values specific to 2 clouds, used for leaf on and leaf off
-		// request = new XMLHttpRequest();
-		// request.open("GET", "action.php?a=getnode&path=meta&table="+table+"_leaf_off", false);
-		// request.send();
-		// obj = JSON.parse(request.responseText);
-		// this.tree = new PCTree(this.basicCtx, obj, table+"_leaf_off");
+		this.tree = new PCTree(this.basicCtx, obj, table);*/
 		
 		// request = new XMLHttpRequest();
 		// request.open("GET", "action.php?a=getnode&path=meta&table="+table+"_leaf_on", false);
@@ -46,14 +90,14 @@ var PointCloud = (function() {
 		// this.tree2 = new PCTree(this.basicCtx, obj, table+"_leaf_on");
 		
 		//initialize class to handle ecosynth specific features
-		this.markers = new Markers(this.basicCtx, obj.BB, table);
+		/*this.markers = new Markers(this.basicCtx, obj.BB, table);
 		this.map = new Map(this.basicCtx, obj.o, table);
 		this.axes = new Axes(this.basicCtx);
 		this.grid = new Grid(this.basicCtx, obj.BB);
 		this.users = new Users(this.basicCtx);
 
 		delete request;
-		delete obj;
+		delete obj;*/
 
 		// enable extensions
 		// var ext = (
@@ -72,48 +116,54 @@ var PointCloud = (function() {
 		//the projection changes per frame such that the near and far planes are fit to the point cloud
 		//this is to avoid z-fighting
 		this.usePerspective = function() {
-			var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.grid.getCenter());
-			var near = -this.grid.getRadius() - centerVS[2]; // - 5.0;
-			if(near < 0.1) {
-				near = 0.1;
-			}
-			var far = this.grid.getRadius() - centerVS[2]; // + 5.0;
-			var bound = near * this.basicCtx.t30;
-			this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
+			for(var gridNum = 0; gridNum < this.grid.length; gridNum++){
+				var centerVS = V3.mul4x4(this.basicCtx.peekMatrix(), this.grid[gridNum].getCenter());
+				var near = -this.grid[gridNum].getRadius() - centerVS[2]; // - 5.0;
+				if(near < 0.1) {
+					near = 0.1;
+				}
+				var far = this.grid[gridNum].getRadius() - centerVS[2]; // + 5.0;
+				var bound = near * this.basicCtx.t30;
+				this.basicCtx.perspectiveMatrix = M4x4.makeFrustum(-bound, bound, -bound, bound, near, far);
 
-			this.tree.usePerspective(near, far);
-			//this.tree2.usePerspective(near, far);			
-			this.markers.usePerspective();
-			this.grid.usePerspective();
+				this.tree[gridNum].usePerspective(near, far);
+				//this.tree2.usePerspective(near, far);			
+				this.markers[gridNum].usePerspective();
+				this.grid[gridNum].usePerspective();
+			}
 		};
 
 		//set the default ortho size based on the grid radius
 		this.useOrthographic = function() {
-			this.basicCtx.scaleFactor = this.grid.getRadius();
-			var projectionMatrix = M4x4.scale3(1 / this.basicCtx.scaleFactor, 1 / this.basicCtx.scaleFactor, 1, this.basicCtx.orthographicMatrix);
-			this.tree.useOrthographic(projectionMatrix);
-			//this.tree2.useOrthographic(projectionMatrix);
-			this.markers.useOrthographic(projectionMatrix);
-			this.grid.useOrthographic(projectionMatrix);
-			this.users.useOrthographic(projectionMatrix);
+			for(var gridNum = 0; gridNum < this.grid.length; gridNum++){
+				this.basicCtx.scaleFactor = this.grid[gridNum].getRadius();
+				var projectionMatrix = M4x4.scale3(1 / this.basicCtx.scaleFactor, 1 / this.basicCtx.scaleFactor, 1, this.basicCtx.orthographicMatrix);
+				this.tree[gridNum].useOrthographic(projectionMatrix);
+				//this.tree2.useOrthographic(projectionMatrix);
+				this.markers[gridNum].useOrthographic(projectionMatrix);
+				this.grid[gridNum].useOrthographic(projectionMatrix);
+				this.users[gridNum].useOrthographic(projectionMatrix);
+			}
 		};
 
 		//update the ortho size for zooming in ortho mode
 		this.scaleOrthographic = function(deltaS) {
-			this.basicCtx.scaleFactor += deltaS;
-			if(this.basicCtx.scaleFactor < 5) {
-				this.basicCtx.scaleFactor = 5;
+			for(var gridNum = 0; gridNum < this.grid.length; gridNum++){
+				this.basicCtx.scaleFactor += deltaS;
+				if(this.basicCtx.scaleFactor < 5) {
+					this.basicCtx.scaleFactor = 5;
+				}
+				else if(this.basicCtx.scaleFactor > 600) {
+					this.basicCtx.scaleFactor = 600;
+				}
+				var temp = 1.0 / this.basicCtx.scaleFactor;
+				var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
+				this.tree[gridNum].useOrthographic(projectionMatrix);
+				//this.tree2.useOrthographic(projectionMatrix);
+				this.markers[gridNum].useOrthographic(projectionMatrix);
+				this.grid[gridNum].useOrthographic(projectionMatrix);
+				this.users[gridNum].useOrthographic(projectionMatrix);
 			}
-			else if(this.basicCtx.scaleFactor > 600) {
-				this.basicCtx.scaleFactor = 600;
-			}
-			var temp = 1.0 / this.basicCtx.scaleFactor;
-			var projectionMatrix = M4x4.scale3(temp, temp, 1, this.basicCtx.orthographicMatrix);
-			this.tree.useOrthographic(projectionMatrix);
-			//this.tree2.useOrthographic(projectionMatrix);
-			this.markers.useOrthographic(projectionMatrix);
-			this.grid.useOrthographic(projectionMatrix);
-			this.users.useOrthographic(projectionMatrix);
 		};
 
 		var __empty_func = function() {};
