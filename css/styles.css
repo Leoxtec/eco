@@ -1,0 +1,13 @@
+html{overflow-x: hidden; overflow-y: hidden;}
+
+#pointSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
+#pointSizeSlider .ui-slider-range { background: #000000; }
+#pointSizeSlider .ui-slider-handle { height: 1.1em;}
+
+#gridSizeSlider{float: left; clear: left; width: 117px; height: 10px; margin-left: 10px; margin-bottom: 15px;}
+#gridSizeSlider .ui-slider-range { background: #000000; }
+#gridSizeSlider .ui-slider-handle { height: 1.1em;}
+
+#gridPositionSlider{float: left; clear: left; height: 72px; width: 10px; margin-left: 15px; margin-bottom: 10px;}
+#gridPositionSlider .ui-slider-range { background: #000000; }
+#gridPositionSlider .ui-slider-handle { width: 1.1em;}
